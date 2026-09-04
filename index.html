@@ -646,13 +646,14 @@
 <body>
 
 <div class="container">
-    <!-- Left Column: Profile -->
+    <!-- Left Column: Profile & Attributes -->
     <div class="sidebar">
         <!-- Logo Section -->
         <div class="logo-container">
             <img src="https://133870449.cdn6.editmysite.com/uploads/1/3/3/8/133870449/ZGK5MHHRZUJXLDLAINVFJ7F4.png?width=2400&optimize=medium" alt="Dungeon Crawler Carl Roleplaying Game">
         </div>
 
+        <!-- Crawler Profile Card -->
         <div class="card">
             <h2>Crawler Profile</h2>
             <div class="avatar-box">
@@ -693,110 +694,7 @@
             </div>
         </div>
 
-        <div class="card">
-            <h2>Actions</h2>
-            <div class="btn-group">
-                <button type="button" onclick="saveData()">Save Character</button>
-                <button type="button" class="btn-reset" onclick="openResetModal()">Clear Sheet</button>
-            </div>
-            <p id="save-status" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
-        </div>
-    </div>
-
-    <!-- Right Column: Stats & Vitals -->
-    <div class="main-content">
-        <!-- Vitals & Defenses -->
-        <div class="card">
-            <h2>Vitals & Pool Trackers</h2>
-            
-            <div class="resource-group">
-                <div class="resource-header">
-                    <span>Health Capacity (<span id="hp-total-text">0</span> HP)</span>
-                    <span>
-                        Slots Max: <input type="number" id="hp-max-slots" value="10" min="0" style="width: 60px; padding: 2px 5px; display: inline-block;" onchange="calculateSheet()">
-                    </span>
-                    <span id="hp-slot-count">0 / 10 Slots</span>
-                </div>
-                <div class="tracker-grid" id="hp-tracker"></div>
-            </div>
-
-            <!-- Percentage Mana Bar Section -->
-            <div class="resource-group">
-                <div class="resource-header">
-                    <span style="color: #60a5fa;">Mana Pool</span>
-                    <span id="mana-text-count" style="color: #60a5fa;">0 / 0 Mana (0%)</span>
-                </div>
-                <div class="mana-bar-container">
-                    <div class="mana-bar-fill" id="mana-bar-fill"></div>
-                </div>
-                <div class="mana-controls">
-                    <button type="button" class="btn-mana-sub" onclick="adjustMana(-1)">- Sub</button>
-                    <input type="number" id="mana-adjust-amt" value="1" min="1">
-                    <button type="button" class="btn-mana-add" onclick="adjustMana(1)">+ Add</button>
-                </div>
-            </div>
-
-            <!-- Defenses: Evade & Damage Resistance Calculations -->
-            <div class="defense-grid">
-                <!-- Evade Calculation -->
-                <div class="defense-box">
-                    <div class="defense-title">Evade Check</div>
-                    <div class="form-group">
-                        <label>Evade Buffs / Modifiers</label>
-                        <input type="number" id="evade-buffs" value="0" placeholder="+0" oninput="calculateSheet()">
-                    </div>
-                    <div class="defense-badge">
-                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Evade Formula</span>
-                        <span class="defense-badge-val" id="evade-total-disp">d20 + 0</span>
-                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="evade-subtext">(d20 + DEX +0 + Buffs +0)</span>
-                    </div>
-                </div>
-
-                <!-- Damage Resistance Calculation -->
-                <div class="defense-box">
-                    <div class="defense-title">Damage Resistance</div>
-                    <div class="form-row-2">
-                        <div class="form-group">
-                            <label>Armor</label>
-                            <input type="number" id="armor-val" value="0" min="0" oninput="calculateSheet()">
-                        </div>
-                        <div class="form-group">
-                            <label>DR Buffs</label>
-                            <input type="number" id="dr-buffs" value="0" oninput="calculateSheet()">
-                        </div>
-                    </div>
-                    <div class="defense-badge">
-                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Total Resistance</span>
-                        <span class="defense-badge-val" id="dr-total-disp">0 DR</span>
-                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="dr-subtext">(Armor 0 + Buffs 0)</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Debuffs Section -->
-            <div class="sub-section-header" style="color: var(--debuff-color); border-color: rgba(239, 68, 68, 0.3);">
-                <span>Debuffs & Status Effects</span>
-                <div class="header-actions">
-                    <button type="button" class="btn-toggle" id="btn-toggle-debuffs" onclick="toggleSection('debuffs')">▼ Collapse</button>
-                    <button type="button" class="btn-add" style="background: var(--debuff-color);" onclick="addDebuff()">+ Add Debuff</button>
-                </div>
-            </div>
-            <div id="debuffs-summary" class="summary-box" style="display: none;"></div>
-            <div id="debuffs-list"></div>
-
-            <!-- External Buffs Section -->
-            <div class="sub-section-header" style="color: var(--buff-color); border-color: rgba(6, 182, 212, 0.3);">
-                <span>External Buffs (<span id="buff-count-disp">0</span>/3 Max)</span>
-                <div class="header-actions">
-                    <button type="button" class="btn-toggle" id="btn-toggle-buffs" onclick="toggleSection('buffs')">▼ Collapse</button>
-                    <button type="button" class="btn-add" id="btn-add-buff" style="background: var(--buff-color);" onclick="addExternalBuff()">+ Add Buff</button>
-                </div>
-            </div>
-            <div id="buffs-summary" class="summary-box" style="display: none;"></div>
-            <div id="buffs-list"></div>
-        </div>
-
-        <!-- Attributes -->
+        <!-- Core Attributes Card -->
         <div class="card">
             <h2>Core Attributes</h2>
             <div class="stats-grid">
@@ -931,6 +829,110 @@
                     </tbody>
                 </table>
             </details>
+        </div>
+
+        <!-- Actions Card -->
+        <div class="card">
+            <h2>Actions</h2>
+            <div class="btn-group">
+                <button type="button" onclick="saveData()">Save Character</button>
+                <button type="button" class="btn-reset" onclick="openResetModal()">Clear Sheet</button>
+            </div>
+            <p id="save-status" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
+        </div>
+    </div>
+
+    <!-- Right Column: Vitals, Actions, Skills & Inventory -->
+    <div class="main-content">
+        <!-- Vitals & Defenses -->
+        <div class="card">
+            <h2>Vitals & Pool Trackers</h2>
+            
+            <div class="resource-group">
+                <div class="resource-header">
+                    <span>Health Capacity (<span id="hp-total-text">0</span> HP)</span>
+                    <span>
+                        Slots Max: <input type="number" id="hp-max-slots" value="10" min="0" style="width: 60px; padding: 2px 5px; display: inline-block;" onchange="calculateSheet()">
+                    </span>
+                    <span id="hp-slot-count">0 / 10 Slots</span>
+                </div>
+                <div class="tracker-grid" id="hp-tracker"></div>
+            </div>
+
+            <!-- Percentage Mana Bar Section -->
+            <div class="resource-group">
+                <div class="resource-header">
+                    <span style="color: #60a5fa;">Mana Pool</span>
+                    <span id="mana-text-count" style="color: #60a5fa;">0 / 0 Mana (0%)</span>
+                </div>
+                <div class="mana-bar-container">
+                    <div class="mana-bar-fill" id="mana-bar-fill"></div>
+                </div>
+                <div class="mana-controls">
+                    <button type="button" class="btn-mana-sub" onclick="adjustMana(-1)">- Sub</button>
+                    <input type="number" id="mana-adjust-amt" value="1" min="1">
+                    <button type="button" class="btn-mana-add" onclick="adjustMana(1)">+ Add</button>
+                </div>
+            </div>
+
+            <!-- Defenses: Evade & Damage Resistance Calculations -->
+            <div class="defense-grid">
+                <!-- Evade Calculation -->
+                <div class="defense-box">
+                    <div class="defense-title">Evade Check</div>
+                    <div class="form-group">
+                        <label>Evade Buffs / Modifiers</label>
+                        <input type="number" id="evade-buffs" value="0" placeholder="+0" oninput="calculateSheet()">
+                    </div>
+                    <div class="defense-badge">
+                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Evade Formula</span>
+                        <span class="defense-badge-val" id="evade-total-disp">d20 + 0</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="evade-subtext">(d20 + DEX +0 + Buffs +0)</span>
+                    </div>
+                </div>
+
+                <!-- Damage Resistance Calculation -->
+                <div class="defense-box">
+                    <div class="defense-title">Damage Resistance</div>
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label>Armor</label>
+                            <input type="number" id="armor-val" value="0" min="0" oninput="calculateSheet()">
+                        </div>
+                        <div class="form-group">
+                            <label>DR Buffs</label>
+                            <input type="number" id="dr-buffs" value="0" oninput="calculateSheet()">
+                        </div>
+                    </div>
+                    <div class="defense-badge">
+                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Total Resistance</span>
+                        <span class="defense-badge-val" id="dr-total-disp">0 DR</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="dr-subtext">(Armor 0 + Buffs 0)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debuffs Section -->
+            <div class="sub-section-header" style="color: var(--debuff-color); border-color: rgba(239, 68, 68, 0.3);">
+                <span>Debuffs & Status Effects</span>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-debuffs" onclick="toggleSection('debuffs')">▼ Collapse</button>
+                    <button type="button" class="btn-add" style="background: var(--debuff-color);" onclick="addDebuff()">+ Add Debuff</button>
+                </div>
+            </div>
+            <div id="debuffs-summary" class="summary-box" style="display: none;"></div>
+            <div id="debuffs-list"></div>
+
+            <!-- External Buffs Section -->
+            <div class="sub-section-header" style="color: var(--buff-color); border-color: rgba(6, 182, 212, 0.3);">
+                <span>External Buffs (<span id="buff-count-disp">0</span>/3 Max)</span>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-buffs" onclick="toggleSection('buffs')">▼ Collapse</button>
+                    <button type="button" class="btn-add" id="btn-add-buff" style="background: var(--buff-color);" onclick="addExternalBuff()">+ Add Buff</button>
+                </div>
+            </div>
+            <div id="buffs-summary" class="summary-box" style="display: none;"></div>
+            <div id="buffs-list"></div>
         </div>
 
         <!-- Attacks Section -->
