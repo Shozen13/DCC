@@ -380,7 +380,7 @@
             text-shadow: 0 0 10px var(--defense-glow);
         }
 
-        /* Generic Condition Card (Debuffs / Buffs) */
+        /* Condition Cards */
         .condition-card {
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
@@ -1155,10 +1155,6 @@
             document.getElementById(`debuff-notes-${id}`).value = data.notes || '';
         }
 
-        if (collapsedState.debuffs) {
-            toggleSection('debuffs');
-        }
-
         updateAllDebuffs();
     }
 
@@ -1226,10 +1222,6 @@
         if (data) {
             document.getElementById(`buff-name-${id}`).value = data.name || '';
             document.getElementById(`buff-notes-${id}`).value = data.notes || '';
-        }
-
-        if (collapsedState.buffs) {
-            toggleSection('buffs');
         }
 
         updateAllBuffs();
@@ -1354,10 +1346,6 @@
             }
         } else {
             addDieEntry(id, 1, 'd6');
-        }
-
-        if (collapsedState.attacks) {
-            toggleSection('attacks');
         }
 
         updateAttackCard(id);
@@ -1555,10 +1543,6 @@
             document.getElementById(`skl-effect-${id}`).value = data.effect || '';
         }
 
-        if (collapsedState.skills) {
-            toggleSection('skills');
-        }
-
         updateSkillCard(id);
     }
 
@@ -1660,10 +1644,6 @@
             document.getElementById(`item-name-${id}`).value = data.name || '';
             document.getElementById(`item-qty-${id}`).value = data.qty !== undefined ? data.qty : 1;
             document.getElementById(`item-notes-${id}`).value = data.notes || '';
-        }
-
-        if (collapsedState.items) {
-            toggleSection('items');
         }
 
         updateAllItems();
@@ -1902,13 +1882,14 @@
             }
         }
 
+        calculateSheet();
+        
         applySectionVisibility('attacks');
         applySectionVisibility('skills');
         applySectionVisibility('items');
         applySectionVisibility('debuffs');
         applySectionVisibility('buffs');
 
-        calculateSheet();
         isInitialLoad = false;
     }
 
@@ -1938,12 +1919,6 @@
         collapsedState.debuffs = false;
         collapsedState.buffs = false;
 
-        applySectionVisibility('attacks');
-        applySectionVisibility('skills');
-        applySectionVisibility('items');
-        applySectionVisibility('debuffs');
-        applySectionVisibility('buffs');
-        
         document.querySelectorAll('input, textarea').forEach(input => {
             if (input.id === 'hp-max-slots') {
                 input.value = 10;
@@ -1960,6 +1935,13 @@
         document.getElementById('avatar-placeholder').style.display = 'block';
         
         calculateSheet();
+
+        applySectionVisibility('attacks');
+        applySectionVisibility('skills');
+        applySectionVisibility('items');
+        applySectionVisibility('debuffs');
+        applySectionVisibility('buffs');
+
         closeResetModal();
     }
 
