@@ -15,6 +15,8 @@
             --mana-glow: rgba(59, 130, 246, 0.4);
             --skill-color: #10b981;
             --skill-glow: rgba(16, 185, 129, 0.4);
+            --item-color: #f59e0b;
+            --item-glow: rgba(245, 158, 11, 0.4);
             --text-main: #e2e8f0;
             --text-muted: #94a3b8;
             --input-bg: #121524;
@@ -303,8 +305,8 @@
             font-weight: bold;
         }
 
-        /* Attacks & Skills Section Styling */
-        .attack-card, .skill-card {
+        /* Card Section Styling */
+        .attack-card, .skill-card, .item-card {
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
             border-radius: 8px;
@@ -317,15 +319,23 @@
             border-left: 4px solid var(--skill-color);
         }
 
-        .attack-row, .skill-row {
+        .item-card {
+            border-left: 4px solid var(--item-color);
+        }
+
+        .attack-row, .skill-row, .item-row {
             display: grid;
             grid-template-columns: 2.2fr 2.5fr 2.3fr;
             gap: 12px;
             margin-bottom: 10px;
         }
 
+        .item-row {
+            grid-template-columns: 1fr 2fr;
+        }
+
         @media (max-width: 750px) {
-            .attack-row, .skill-row { grid-template-columns: 1fr; }
+            .attack-row, .skill-row, .item-row { grid-template-columns: 1fr; }
         }
 
         .sub-group {
@@ -349,9 +359,8 @@
             align-items: center;
         }
 
-        .skill-title {
-            color: var(--skill-color);
-        }
+        .skill-title { color: var(--skill-color); }
+        .item-title { color: var(--item-color); }
 
         .hit-badge-box {
             background: rgba(224, 79, 95, 0.15);
@@ -383,6 +392,18 @@
             font-weight: 900;
             color: var(--skill-color);
             text-shadow: 0 0 10px var(--skill-glow);
+        }
+
+        .qty-controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .qty-controls input {
+            text-align: center;
+            font-weight: bold;
+            font-size: 1rem;
         }
 
         .dice-entry {
@@ -425,6 +446,7 @@
         button.btn-add { background: #10b981; }
         button.btn-mana-add { background: #3b82f6; padding: 6px 12px; }
         button.btn-mana-sub { background: #ef4444; padding: 6px 12px; }
+        button.btn-qty-btn { background: #374151; padding: 8px 12px; }
         button.btn-small-add {
             background: #2563eb;
             font-size: 0.65rem;
@@ -734,6 +756,15 @@
             </h2>
             <div id="skills-list"></div>
         </div>
+
+        <!-- Inventory Section -->
+        <div class="card">
+            <h2 style="color: var(--item-color);">
+                <span>Inventory</span>
+                <button type="button" class="btn-add" style="background: var(--item-color);" onclick="addItem()">+ Add Item</button>
+            </h2>
+            <div id="items-list"></div>
+        </div>
     </div>
 </div>
 
@@ -741,7 +772,7 @@
 <div class="modal-overlay" id="resetModal">
     <div class="modal-card">
         <h3>Clear Character Sheet?</h3>
-        <p>This will erase all stats, attacks, and skills saved on this device. This action cannot be undone.</p>
+        <p>This will erase all stats, attacks, skills, and items saved on this device. This action cannot be undone.</p>
         <div class="modal-actions">
             <button type="button" onclick="confirmReset()">Yes, Clear</button>
             <button type="button" class="btn-reset" onclick="closeResetModal()">Cancel</button>
@@ -756,6 +787,7 @@
     let maxMana = 0;
     let attackCounter = 0;
     let skillCounter = 0;
+    let itemCounter = 0;
 
     const currentMods = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
 
@@ -864,7 +896,6 @@
             </div>
             
             <div class="attack-row">
-                <!-- To Hit Group -->
                 <div class="sub-group">
                     <div class="sub-group-title">To Hit</div>
                     <div class="form-group">
@@ -890,7 +921,6 @@
                     </div>
                 </div>
 
-                <!-- Damage Pool Group -->
                 <div class="sub-group">
                     <div class="sub-group-title">
                         <span>Damage Dice</span>
@@ -905,7 +935,6 @@
                     </div>
                 </div>
 
-                <!-- Effect Group -->
                 <div class="sub-group">
                     <div class="sub-group-title">Effect & Properties</div>
                     <textarea id="atk-effect-${id}" rows="6" placeholder="Describe current rank effects, damage types, debuffs..." oninput="saveDataSilently()"></textarea>
@@ -1036,7 +1065,6 @@
             </div>
             
             <div class="skill-row">
-                <!-- Rank & Stat Group -->
                 <div class="sub-group">
                     <div class="sub-group-title skill-title">Rank & Stat</div>
                     <div class="form-group">
@@ -1062,7 +1090,6 @@
                     </div>
                 </div>
 
-                <!-- Check Type Group -->
                 <div class="sub-group">
                     <div class="sub-group-title skill-title">Check Type</div>
                     <div class="form-group">
@@ -1081,7 +1108,6 @@
                     </div>
                 </div>
 
-                <!-- Effect & Upgrades Group -->
                 <div class="sub-group">
                     <div class="sub-group-title skill-title">Effect, Notes & Upgrades</div>
                     <textarea id="skl-effect-${id}" rows="6" placeholder="Describe skill effect, damage scaling, passive perks, or upgrade milestones..." oninput="saveDataSilently()"></textarea>
@@ -1125,6 +1151,67 @@
 
     function deleteSkill(id) {
         const card = document.getElementById(`skill-card-${id}`);
+        if (card) card.remove();
+        saveDataSilently();
+    }
+
+    /* Inventory Management */
+    function addItem(data = null) {
+        itemCounter++;
+        const id = itemCounter;
+        const container = document.getElementById('items-list');
+
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.id = `item-card-${id}`;
+        card.innerHTML = `
+            <button type="button" class="btn-delete" onclick="deleteItem(${id})">Delete</button>
+            <div class="form-group" style="padding-right: 60px;">
+                <label>Item Name</label>
+                <input type="text" id="item-name-${id}" placeholder="e.g. Health Potion, Reinforced Shield" oninput="saveDataSilently()">
+            </div>
+
+            <div class="item-row">
+                <div class="sub-group">
+                    <div class="sub-group-title item-title">Quantity</div>
+                    <div class="form-group">
+                        <label>Count</label>
+                        <div class="qty-controls">
+                            <button type="button" class="btn-qty-btn" onclick="adjustItemQty(${id}, -1)">-</button>
+                            <input type="number" id="item-qty-${id}" value="1" min="0" oninput="saveDataSilently()">
+                            <button type="button" class="btn-qty-btn" onclick="adjustItemQty(${id}, 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sub-group">
+                    <div class="sub-group-title item-title">Item Details & Notes</div>
+                    <textarea id="item-notes-${id}" rows="3" placeholder="Describe stats, active effects, duration, weight, or charges..." oninput="saveDataSilently()"></textarea>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(card);
+
+        if (data) {
+            document.getElementById(`item-name-${id}`).value = data.name || '';
+            document.getElementById(`item-qty-${id}`).value = data.qty !== undefined ? data.qty : 1;
+            document.getElementById(`item-notes-${id}`).value = data.notes || '';
+        }
+
+        saveDataSilently();
+    }
+
+    function adjustItemQty(id, direction) {
+        const qtyInput = document.getElementById(`item-qty-${id}`);
+        let current = parseInt(qtyInput.value) || 0;
+        current = Math.max(0, current + direction);
+        qtyInput.value = current;
+        saveDataSilently();
+    }
+
+    function deleteItem(id) {
+        const card = document.getElementById(`item-card-${id}`);
         if (card) card.remove();
         saveDataSilently();
     }
@@ -1186,6 +1273,16 @@
             });
         });
 
+        const items = [];
+        document.querySelectorAll('.item-card').forEach(card => {
+            const id = card.id.replace('item-card-', '');
+            items.push({
+                name: document.getElementById(`item-name-${id}`).value,
+                qty: document.getElementById(`item-qty-${id}`).value,
+                notes: document.getElementById(`item-notes-${id}`).value
+            });
+        });
+
         const data = {
             name: document.getElementById('char-name').value,
             number: document.getElementById('char-number').value,
@@ -1210,7 +1307,8 @@
             hpCurrent: hpCurrentSlots,
             manaCurrent: manaCurrent,
             attacks: attacks,
-            skills: skills
+            skills: skills,
+            items: items
         };
         localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
     }
@@ -1253,6 +1351,11 @@
             if (data.skills && data.skills.length > 0) {
                 data.skills.forEach(skl => addSkill(skl));
             }
+
+            document.getElementById('items-list').innerHTML = '';
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(itm => addItem(itm));
+            }
         }
         calculateSheet();
     }
@@ -1272,6 +1375,7 @@
         manaCurrent = 0;
         document.getElementById('attacks-list').innerHTML = '';
         document.getElementById('skills-list').innerHTML = '';
+        document.getElementById('items-list').innerHTML = '';
         
         document.querySelectorAll('input, textarea').forEach(input => {
             if (input.id === 'hp-max-slots') {
