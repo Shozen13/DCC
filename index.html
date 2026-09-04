@@ -62,6 +62,17 @@
             .container { grid-template-columns: 1fr; }
         }
 
+        .logo-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .logo-container img {
+            max-width: 100%;
+            height: auto;
+            filter: drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.6));
+        }
+
         .card {
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
@@ -380,7 +391,6 @@
             text-shadow: 0 0 10px var(--defense-glow);
         }
 
-        /* Condition Cards */
         .condition-card {
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
@@ -638,6 +648,11 @@
 <div class="container">
     <!-- Left Column: Profile -->
     <div class="sidebar">
+        <!-- Logo Section -->
+        <div class="logo-container">
+            <img src="https://133870449.cdn6.editmysite.com/uploads/1/3/3/8/133870449/ZGK5MHHRZUJXLDLAINVFJ7F4.png?width=2400&optimize=medium" alt="Dungeon Crawler Carl Roleplaying Game">
+        </div>
+
         <div class="card">
             <h2>Crawler Profile</h2>
             <div class="avatar-box">
@@ -1883,7 +1898,7 @@
         }
 
         calculateSheet();
-        
+
         applySectionVisibility('attacks');
         applySectionVisibility('skills');
         applySectionVisibility('items');
