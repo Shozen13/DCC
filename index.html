@@ -105,7 +105,7 @@
             margin-bottom: 4px;
         }
 
-        input, select, textarea {
+        input, select {
             width: 100%;
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
@@ -116,7 +116,7 @@
             transition: border 0.3s;
         }
 
-        input:focus, select:focus, textarea:focus {
+        input:focus, select:focus {
             border-color: var(--accent-color);
         }
 
@@ -289,23 +289,6 @@
         button:hover { opacity: 0.9; }
         button.btn-reset { background: #475569; }
 
-        .gear-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-        }
-
-        .gear-slot {
-            background: var(--input-bg);
-            border: 1px solid var(--panel-border);
-            border-radius: 6px;
-            padding: 10px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        /* iPad Friendly Reset Modal */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -388,7 +371,7 @@
         </div>
     </div>
 
-    <!-- Right Column: Stats & Combat -->
+    <!-- Right Column: Stats & Vitals -->
     <div class="main-content">
         <!-- Vitals -->
         <div class="card">
@@ -551,45 +534,6 @@
                 </table>
             </details>
         </div>
-
-        <!-- Gear -->
-        <div class="card">
-            <h2>Equipped Gear & Loadout</h2>
-            <div class="gear-grid">
-                <div class="gear-slot">
-                    <div style="width: 100%;">
-                        <label>Torso</label>
-                        <input type="text" id="gear-torso" placeholder="Armor / Armor Rating" oninput="saveDataSilently()">
-                    </div>
-                </div>
-                <div class="gear-slot">
-                    <div style="width: 100%;">
-                        <label>Main Hand</label>
-                        <input type="text" id="gear-main" placeholder="Weapon & Damage" oninput="saveDataSilently()">
-                    </div>
-                </div>
-                <div class="gear-slot">
-                    <div style="width: 100%;">
-                        <label>Off Hand</label>
-                        <input type="text" id="gear-off" placeholder="Shield / Offhand item" oninput="saveDataSilently()">
-                    </div>
-                </div>
-                <div class="gear-slot">
-                    <div style="width: 100%;">
-                        <label>Feet</label>
-                        <input type="text" id="gear-feet" placeholder="Boots / Mobility gear" oninput="saveDataSilently()">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Notes -->
-        <div class="card">
-            <h2>Skills, Passives & Notes</h2>
-            <div class="form-group">
-                <textarea id="char-notes" rows="5" placeholder="Record skills, active debuffs, inventory, or rule traits..." oninput="saveDataSilently()"></textarea>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -597,7 +541,7 @@
 <div class="modal-overlay" id="resetModal">
     <div class="modal-card">
         <h3>Clear Character Sheet?</h3>
-        <p>This will erase all stats, gear, and notes saved on this device. This action cannot be undone.</p>
+        <p>This will erase all stats saved on this device. This action cannot be undone.</p>
         <div class="modal-actions">
             <button type="button" onclick="confirmReset()">Yes, Clear</button>
             <button type="button" class="btn-reset" onclick="closeResetModal()">Cancel</button>
@@ -736,12 +680,7 @@
 
             maxHpSlots: document.getElementById('hp-max-slots').value,
             hpCurrent: hpCurrentSlots,
-            manaCurrent: manaCurrent,
-            torso: document.getElementById('gear-torso').value,
-            main: document.getElementById('gear-main').value,
-            off: document.getElementById('gear-off').value,
-            feet: document.getElementById('gear-feet').value,
-            notes: document.getElementById('char-notes').value
+            manaCurrent: manaCurrent
         };
         localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
     }
@@ -770,18 +709,11 @@
             hpCurrentSlots = data.hpCurrent || 0;
             manaCurrent = data.manaCurrent || 0;
 
-            document.getElementById('gear-torso').value = data.torso || '';
-            document.getElementById('gear-main').value = data.main || '';
-            document.getElementById('gear-off').value = data.off || '';
-            document.getElementById('gear-feet').value = data.feet || '';
-            document.getElementById('char-notes').value = data.notes || '';
-
             if (data.avatarUrl) updateAvatar();
         }
         calculateSheet();
     }
 
-    /* iPad-Friendly Reset Logic */
     function openResetModal() {
         document.getElementById('resetModal').style.display = 'flex';
     }
@@ -793,12 +725,10 @@
     function confirmReset() {
         localStorage.removeItem('crawler_split_attrs_data');
         
-        // Reset state variables
         hpCurrentSlots = 0;
         manaCurrent = 0;
         
-        // Clear form inputs manually without relying on full page reload
-        document.querySelectorAll('input, textarea').forEach(input => {
+        document.querySelectorAll('input').forEach(input => {
             if (input.type === 'number') {
                 input.value = input.id === 'hp-max-slots' || input.id === 'char-floor' ? 10 : 0;
             } else {
