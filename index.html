@@ -918,6 +918,7 @@
     let maxHpSlots = 10;
     let manaCurrent = 0;
     let maxMana = 0;
+    let isInitialLoad = true;
     let attackCounter = 0;
     let skillCounter = 0;
     let itemCounter = 0;
@@ -970,14 +971,16 @@
         const totalHp = maxHpSlots * con.mod;
         document.getElementById('hp-total-text').innerText = totalHp;
         
-        // Dynamic Mana scaling: adjust available mana by the change in total INT
+        // Mana calculations
         const newMaxMana = int.total;
-        const manaDelta = newMaxMana - maxMana;
-        
-        if (maxMana !== 0 && manaDelta !== 0) {
-            manaCurrent = Math.max(0, manaCurrent + manaDelta);
-        } else if (maxMana === 0) {
-            manaCurrent = newMaxMana;
+
+        if (!isInitialLoad) {
+            const manaDelta = newMaxMana - maxMana;
+            if (maxMana !== 0 && manaDelta !== 0) {
+                manaCurrent = Math.max(0, manaCurrent + manaDelta);
+            } else if (maxMana === 0) {
+                manaCurrent = newMaxMana;
+            }
         }
 
         maxMana = newMaxMana;
@@ -1523,6 +1526,8 @@
     }
 
     function saveDataSilently() {
+        if (isInitialLoad) return;
+
         const attacks = [];
         document.querySelectorAll('.attack-card').forEach(card => {
             const id = card.id.replace('attack-card-', '');
@@ -1662,6 +1667,7 @@
         applySectionVisibility('items');
 
         calculateSheet();
+        isInitialLoad = false;
     }
 
     function openResetModal() {
