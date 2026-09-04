@@ -313,7 +313,6 @@
             font-weight: bold;
         }
 
-        /* Defense Grid (Evade & Resistance) */
         .defense-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -361,7 +360,6 @@
             text-shadow: 0 0 10px var(--defense-glow);
         }
 
-        /* Card Section Styling */
         .attack-card, .skill-card, .item-card {
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
@@ -967,12 +965,22 @@
         const int = calculateAttribute('int');
         const cha = calculateAttribute('cha');
 
-        // HP & Mana Calculations
+        // HP Calculations
         maxHpSlots = parseInt(document.getElementById('hp-max-slots').value) || 10;
         const totalHp = maxHpSlots * con.mod;
         document.getElementById('hp-total-text').innerText = totalHp;
         
-        maxMana = int.total;
+        // Dynamic Mana scaling: adjust available mana by the change in total INT
+        const newMaxMana = int.total;
+        const manaDelta = newMaxMana - maxMana;
+        
+        if (maxMana !== 0 && manaDelta !== 0) {
+            manaCurrent = Math.max(0, manaCurrent + manaDelta);
+        } else if (maxMana === 0) {
+            manaCurrent = newMaxMana;
+        }
+
+        maxMana = newMaxMana;
 
         if (hpCurrentSlots > maxHpSlots) hpCurrentSlots = maxHpSlots;
         if (manaCurrent > maxMana) manaCurrent = maxMana;
@@ -1669,6 +1677,7 @@
         
         hpCurrentSlots = 0;
         manaCurrent = 0;
+        maxMana = 0;
         document.getElementById('attacks-list').innerHTML = '';
         document.getElementById('skills-list').innerHTML = '';
         document.getElementById('items-list').innerHTML = '';
