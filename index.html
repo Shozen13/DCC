@@ -12,6 +12,7 @@
             --accent-color: #e04f5f;
             --accent-glow: rgba(224, 79, 95, 0.4);
             --mana-color: #3b82f6;
+            --mana-glow: rgba(59, 130, 246, 0.4);
             --text-main: #e2e8f0;
             --text-muted: #94a3b8;
             --input-bg: #121524;
@@ -43,7 +44,7 @@
             max-width: 1100px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 300px 1fr;
+            grid-template-columns: 320px 1fr;
             gap: 20px;
         }
 
@@ -95,6 +96,12 @@
 
         .form-group {
             margin-bottom: 12px;
+        }
+
+        .form-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
         }
 
         label {
@@ -229,7 +236,7 @@
         }
 
         .resource-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
 
         .resource-header {
@@ -262,10 +269,37 @@
             box-shadow: 0 0 8px var(--accent-glow);
         }
 
-        .mana-box { background: rgba(59, 130, 246, 0.2); }
-        .mana-box.filled { 
-            background: var(--mana-color); 
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+        /* Mana Progress Bar & Control Layout */
+        .mana-bar-container {
+            width: 100%;
+            height: 28px;
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .mana-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb, var(--mana-color));
+            box-shadow: 0 0 12px var(--mana-glow);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .mana-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            align-items: center;
+        }
+
+        .mana-controls input {
+            width: 70px;
+            text-align: center;
+            padding: 6px;
+            font-weight: bold;
         }
 
         /* Attacks Section Styling */
@@ -310,7 +344,6 @@
             align-items: center;
         }
 
-        /* High Visibility Hit Badge */
         .hit-badge-box {
             background: rgba(224, 79, 95, 0.15);
             border: 1px solid var(--accent-color);
@@ -327,7 +360,6 @@
             text-shadow: 0 0 10px var(--accent-glow);
         }
 
-        /* Dynamic Dice Entries */
         .dice-entry {
             display: flex;
             gap: 6px;
@@ -366,6 +398,8 @@
         button:hover { opacity: 0.9; }
         button.btn-reset { background: #475569; }
         button.btn-add { background: #10b981; }
+        button.btn-mana-add { background: #3b82f6; padding: 6px 12px; }
+        button.btn-mana-sub { background: #ef4444; padding: 6px 12px; }
         button.btn-small-add {
             background: #2563eb;
             font-size: 0.65rem;
@@ -448,16 +482,32 @@
                 <input type="text" id="avatar-url" onchange="updateAvatar()" placeholder="Paste image link...">
             </div>
             <div class="form-group">
-                <label>Character Name</label>
-                <input type="text" id="char-name" placeholder="Character Name" oninput="saveDataSilently()">
+                <label>Crawler</label>
+                <input type="text" id="char-name" placeholder="Crawler Name" oninput="saveDataSilently()">
             </div>
             <div class="form-group">
-                <label>Race & Class</label>
-                <input type="text" id="char-class" placeholder="e.g. Human Warrior" oninput="saveDataSilently()">
+                <label>Crawler Number</label>
+                <input type="text" id="char-number" placeholder="e.g. #08492" oninput="saveDataSilently()">
             </div>
-            <div class="form-group">
-                <label>Current Floor</label>
-                <input type="number" id="char-floor" value="1" oninput="saveDataSilently()">
+            <div class="form-row-2">
+                <div class="form-group">
+                    <label>Race</label>
+                    <input type="text" id="char-race" placeholder="Race" oninput="saveDataSilently()">
+                </div>
+                <div class="form-group">
+                    <label>Class</label>
+                    <input type="text" id="char-class" placeholder="Class" oninput="saveDataSilently()">
+                </div>
+            </div>
+            <div class="form-row-2">
+                <div class="form-group">
+                    <label>Level</label>
+                    <input type="number" id="char-level" value="1" min="1" oninput="saveDataSilently()">
+                </div>
+                <div class="form-group">
+                    <label>Current Floor</label>
+                    <input type="number" id="char-floor" value="1" min="1" oninput="saveDataSilently()">
+                </div>
             </div>
         </div>
 
@@ -488,12 +538,20 @@
                 <div class="tracker-grid" id="hp-tracker"></div>
             </div>
 
+            <!-- Percentage Mana Bar Section -->
             <div class="resource-group">
                 <div class="resource-header">
-                    <span>Mana Pool</span>
-                    <span id="mana-slot-count">0 / 0 Mana</span>
+                    <span style="color: #60a5fa;">Mana Pool</span>
+                    <span id="mana-text-count" style="color: #60a5fa;">0 / 0 Mana (0%)</span>
                 </div>
-                <div class="tracker-grid" id="mana-tracker"></div>
+                <div class="mana-bar-container">
+                    <div class="mana-bar-fill" id="mana-bar-fill"></div>
+                </div>
+                <div class="mana-controls">
+                    <button type="button" class="btn-mana-sub" onclick="adjustMana(-1)">- Sub</button>
+                    <input type="number" id="mana-adjust-amt" value="1" min="1">
+                    <button type="button" class="btn-mana-add" onclick="adjustMana(1)">+ Add</button>
+                </div>
             </div>
         </div>
 
@@ -713,6 +771,7 @@
 
         updateAllAttacks();
         renderTrackers();
+        renderManaBar();
         saveDataSilently();
     }
 
@@ -726,26 +785,23 @@
             hpContainer.appendChild(box);
         }
         document.getElementById('hp-slot-count').innerText = `${hpCurrentSlots} / ${maxHpSlots} Slots`;
+    }
 
-        const manaContainer = document.getElementById('mana-tracker');
-        manaContainer.innerHTML = '';
-        for (let i = 0; i < maxMana; i++) {
-            const box = document.createElement('div');
-            box.className = `tracker-box mana-box ${i < manaCurrent ? 'filled' : ''}`;
-            box.onclick = () => toggleMana(i);
-            manaContainer.appendChild(box);
-        }
-        document.getElementById('mana-slot-count').innerText = `${manaCurrent} / ${maxMana} Mana`;
+    function renderManaBar() {
+        const pct = maxMana > 0 ? Math.min(100, Math.max(0, Math.round((manaCurrent / maxMana) * 100))) : 0;
+        document.getElementById('mana-bar-fill').style.width = pct + '%';
+        document.getElementById('mana-text-count').innerText = `${manaCurrent} / ${maxMana} Mana (${pct}%)`;
+    }
+
+    function adjustMana(direction) {
+        const amt = parseInt(document.getElementById('mana-adjust-amt').value) || 1;
+        manaCurrent = Math.min(maxMana, Math.max(0, manaCurrent + (amt * direction)));
+        renderManaBar();
+        saveDataSilently();
     }
 
     function toggleHp(index) {
         hpCurrentSlots = (index + 1 === hpCurrentSlots) ? index : index + 1;
-        renderTrackers();
-        saveDataSilently();
-    }
-
-    function toggleMana(index) {
-        manaCurrent = (index + 1 === manaCurrent) ? index : index + 1;
         renderTrackers();
         saveDataSilently();
     }
@@ -791,7 +847,6 @@
                             <option value="cha">CHA</option>
                         </select>
                     </div>
-                    <!-- Highly Visible Hit Badge -->
                     <div class="hit-badge-box">
                         <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Total Hit Bonus</span>
                         <span class="hit-badge-val" id="atk-total-hit-${id}">+1</span>
@@ -884,7 +939,6 @@
         document.getElementById(`atk-total-hit-${id}`).innerText = '+' + totalHit;
         document.getElementById(`atk-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`;
 
-        // Build Combined Multi-Dice Damage String
         const diceEntries = document.querySelectorAll(`#dice-pool-${id} .dice-entry`);
         let diceParts = [];
 
@@ -971,7 +1025,10 @@
 
         const data = {
             name: document.getElementById('char-name').value,
+            number: document.getElementById('char-number').value,
+            race: document.getElementById('char-race').value,
             class: document.getElementById('char-class').value,
+            level: document.getElementById('char-level').value,
             floor: document.getElementById('char-floor').value,
             avatarUrl: document.getElementById('avatar-url').value,
             
@@ -999,7 +1056,10 @@
         if (saved) {
             const data = JSON.parse(saved);
             document.getElementById('char-name').value = data.name || '';
+            document.getElementById('char-number').value = data.number || '';
+            document.getElementById('char-race').value = data.race || '';
             document.getElementById('char-class').value = data.class || '';
+            document.getElementById('char-level').value = data.level || '1';
             document.getElementById('char-floor').value = data.floor || '1';
             document.getElementById('avatar-url').value = data.avatarUrl || '';
             
@@ -1020,7 +1080,6 @@
 
             if (data.avatarUrl) updateAvatar();
 
-            // Load saved attacks
             document.getElementById('attacks-list').innerHTML = '';
             if (data.attacks && data.attacks.length > 0) {
                 data.attacks.forEach(atk => addAttack(atk));
@@ -1047,7 +1106,7 @@
         document.querySelectorAll('input, textarea').forEach(input => {
             if (input.id === 'hp-max-slots') {
                 input.value = 10;
-            } else if (input.id === 'char-floor') {
+            } else if (input.id === 'char-floor' || input.id === 'char-level' || input.id === 'mana-adjust-amt') {
                 input.value = 1;
             } else if (input.type === 'number') {
                 input.value = 0;
