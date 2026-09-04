@@ -120,7 +120,7 @@
       font-size: 0.85rem;
     }
 
-    input:focus, textarea:focus {
+    input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: var(--accent);
       box-shadow: 0 0 5px var(--accent);
@@ -153,6 +153,24 @@
       color: var(--accent);
       font-size: 0.75rem;
       text-transform: uppercase;
+    }
+
+    .split-cell {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .split-cell input, .split-cell select {
+      flex: 1;
+    }
+
+    .mod-readout {
+      width: 50px !important;
+      text-align: center;
+      background: #101622;
+      color: var(--accent);
+      font-weight: bold;
     }
 
     .pop-tracker {
@@ -343,9 +361,8 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th>Stat</th>
-            <th>Rank + Mod (To Hit)</th>
-            <th>Dice + Mod (Damage)</th>
+            <th>TO HIT (Rank + Stat Mod)</th>
+            <th>DAMAGE (Dice + Stat Mod)</th>
             <th>Effects</th>
             <th style="width: 40px;"></th>
           </tr>
@@ -416,6 +433,7 @@
         document.getElementById(`${s}-mod`).value = mod;
       });
       calcCombat();
+      updateAttackMods();
     }
 
     // Evade & DR Math
@@ -430,19 +448,64 @@
       document.getElementById('dr-total').value = armor + drBuffs;
     }
 
+    // Dynamic Attack Modifier Linking
+    function updateAttackMods() {
+      document.querySelectorAll('#attacks-table tbody tr').forEach(tr => {
+        const toHitSelect = tr.querySelector('.to-hit-stat');
+        const toHitReadout = tr.querySelector('.to-hit-mod-val');
+        if (toHitSelect && toHitReadout) {
+          const stat = toHitSelect.value;
+          toHitReadout.value = stat ? (document.getElementById(`${stat}-mod`).value || 0) : '';
+        }
+
+        const dmgSelect = tr.querySelector('.dmg-stat');
+        const dmgReadout = tr.querySelector('.dmg-mod-val');
+        if (dmgSelect && dmgReadout) {
+          const stat = dmgSelect.value;
+          dmgReadout.value = stat ? (document.getElementById(`${stat}-mod`).value || 0) : '';
+        }
+      });
+    }
+
     // Dynamic Row Helpers
     function addAttackRow(data = {}) {
       const tbody = document.querySelector('#attacks-table tbody');
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="text" value="${data.name || ''}" /></td>
-        <td><input type="text" value="${data.stat || ''}" /></td>
-        <td><input type="text" value="${data.toHit || ''}" /></td>
-        <td><input type="text" value="${data.dmg || ''}" /></td>
-        <td><input type="text" value="${data.fx || ''}" /></td>
+        <td><input type="text" class="atk-name" placeholder="Attack Name" value="${data.name || ''}" /></td>
+        <td>
+          <div class="split-cell">
+            <input type="text" class="to-hit-rank" placeholder="Rank" value="${data.toHitRank || ''}" />
+            <select class="to-hit-stat" onchange="updateAttackMods()">
+              <option value="">--Stat--</option>
+              <option value="str" ${data.toHitStat === 'str' ? 'selected' : ''}>STR</option>
+              <option value="int" ${data.toHitStat === 'int' ? 'selected' : ''}>INT</option>
+              <option value="con" ${data.toHitStat === 'con' ? 'selected' : ''}>CON</option>
+              <option value="dex" ${data.toHitStat === 'dex' ? 'selected' : ''}>DEX</option>
+              <option value="cha" ${data.toHitStat === 'cha' ? 'selected' : ''}>CHA</option>
+            </select>
+            <input type="text" class="mod-readout to-hit-mod-val" readonly placeholder="Mod" />
+          </div>
+        </td>
+        <td>
+          <div class="split-cell">
+            <input type="text" class="dmg-dice" placeholder="Dice (e.g. 1d6)" value="${data.dmgDice || ''}" />
+            <select class="dmg-stat" onchange="updateAttackMods()">
+              <option value="">--Stat--</option>
+              <option value="str" ${data.dmgStat === 'str' ? 'selected' : ''}>STR</option>
+              <option value="int" ${data.dmgStat === 'int' ? 'selected' : ''}>INT</option>
+              <option value="con" ${data.dmgStat === 'con' ? 'selected' : ''}>CON</option>
+              <option value="dex" ${data.dmgStat === 'dex' ? 'selected' : ''}>DEX</option>
+              <option value="cha" ${data.dmgStat === 'cha' ? 'selected' : ''}>CHA</option>
+            </select>
+            <input type="text" class="mod-readout dmg-mod-val" readonly placeholder="Mod" />
+          </div>
+        </td>
+        <td><input type="text" class="atk-fx" value="${data.fx || ''}" /></td>
         <td><button class="btn-danger" onclick="this.closest('tr').remove()">X</button></td>
       `;
       tbody.appendChild(tr);
+      updateAttackMods();
     }
 
     function addSkillRow(data = {}) {
@@ -482,8 +545,14 @@
 
       // Table Data
       data.attacks = Array.from(document.querySelectorAll('#attacks-table tbody tr')).map(tr => {
-        const inputs = tr.querySelectorAll('input');
-        return { name: inputs[0].value, stat: inputs[1].value, toHit: inputs[2].value, dmg: inputs[3].value, fx: inputs[4].value };
+        return {
+          name: tr.querySelector('.atk-name').value,
+          toHitRank: tr.querySelector('.to-hit-rank').value,
+          toHitStat: tr.querySelector('.to-hit-stat').value,
+          dmgDice: tr.querySelector('.dmg-dice').value,
+          dmgStat: tr.querySelector('.dmg-stat').value,
+          fx: tr.querySelector('.atk-fx').value
+        };
       });
 
       data.skills = Array.from(document.querySelectorAll('#skills-table tbody tr')).map(tr => {
@@ -513,9 +582,18 @@
         }
       });
 
-      if (data.attacks) data.attacks.forEach(a => addAttackRow(a));
-      if (data.skills) data.skills.forEach(s => addSkillRow(s));
-      if (data.inventory) data.inventory.forEach(i => addInventoryRow(i));
+      if (data.attacks) {
+        document.querySelector('#attacks-table tbody').innerHTML = '';
+        data.attacks.forEach(a => addAttackRow(a));
+      }
+      if (data.skills) {
+        document.querySelector('#skills-table tbody').innerHTML = '';
+        data.skills.forEach(s => addSkillRow(s));
+      }
+      if (data.inventory) {
+        document.querySelector('#inventory-table tbody').innerHTML = '';
+        data.inventory.forEach(i => addInventoryRow(i));
+      }
 
       calcMods();
     }
