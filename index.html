@@ -223,39 +223,39 @@
         <h2>Primary Attributes</h2>
         <div class="stat-row">
           <span>STAT</span>
-          <label style="text-align:center;">ENH</label>
           <label style="text-align:center;">UNENH</label>
+          <label style="text-align:center;">ENH</label>
           <label style="text-align:center;">MOD</label>
         </div>
         
         <div class="stat-row">
           <span>Strength</span>
+          <input type="number" id="str-unenh" oninput="calcMods()" />
           <input type="number" id="str-enh" oninput="calcMods()" />
-          <input type="number" id="str-unenh" />
           <input type="number" id="str-mod" readonly />
         </div>
         <div class="stat-row">
           <span>Intelligence</span>
+          <input type="number" id="int-unenh" oninput="calcMods()" />
           <input type="number" id="int-enh" oninput="calcMods()" />
-          <input type="number" id="int-unenh" />
           <input type="number" id="int-mod" readonly />
         </div>
         <div class="stat-row">
           <span>Constitution</span>
+          <input type="number" id="con-unenh" oninput="calcMods()" />
           <input type="number" id="con-enh" oninput="calcMods()" />
-          <input type="number" id="con-unenh" />
           <input type="number" id="con-mod" readonly />
         </div>
         <div class="stat-row">
           <span>Dexterity</span>
+          <input type="number" id="dex-unenh" oninput="calcMods()" />
           <input type="number" id="dex-enh" oninput="calcMods()" />
-          <input type="number" id="dex-unenh" />
           <input type="number" id="dex-mod" readonly />
         </div>
         <div class="stat-row">
           <span>Charisma</span>
+          <input type="number" id="cha-unenh" oninput="calcMods()" />
           <input type="number" id="cha-enh" oninput="calcMods()" />
-          <input type="number" id="cha-unenh" />
           <input type="number" id="cha-mod" readonly />
         </div>
       </div>
@@ -421,12 +421,29 @@
   </div>
 
   <script>
+    // Bracket-based Stat Modifier lookup
+    function getStatModifier(totalVal) {
+      if (totalVal <= 0) return 0;
+      if (totalVal <= 2) return 1;
+      if (totalVal <= 5) return 2;
+      if (totalVal <= 9) return 3;
+      if (totalVal <= 19) return 4;
+      if (totalVal <= 49) return 5;
+      if (totalVal <= 99) return 6;
+      if (totalVal <= 149) return 7;
+      if (totalVal <= 199) return 8;
+      if (totalVal <= 299) return 9;
+      return 10;
+    }
+
     // Attribute Modifier Math
     function calcMods() {
       const stats = ['str', 'int', 'con', 'dex', 'cha'];
       stats.forEach(s => {
+        const unenh = parseFloat(document.getElementById(`${s}-unenh`).value) || 0;
         const enh = parseFloat(document.getElementById(`${s}-enh`).value) || 0;
-        const mod = Math.floor((enh - 10) / 2);
+        const total = unenh + enh;
+        const mod = getStatModifier(total);
         document.getElementById(`${s}-mod`).value = mod;
       });
       calcCombat();
