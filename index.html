@@ -79,6 +79,12 @@
             align-items: center;
         }
 
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
         .avatar-box {
             width: 100%;
             height: 220px;
@@ -315,13 +321,8 @@
             position: relative;
         }
 
-        .skill-card {
-            border-left: 4px solid var(--skill-color);
-        }
-
-        .item-card {
-            border-left: 4px solid var(--item-color);
-        }
+        .skill-card { border-left: 4px solid var(--skill-color); }
+        .item-card { border-left: 4px solid var(--item-color); }
 
         .attack-row, .skill-row, .item-row {
             display: grid;
@@ -330,9 +331,7 @@
             margin-bottom: 10px;
         }
 
-        .item-row {
-            grid-template-columns: 1fr 2fr;
-        }
+        .item-row { grid-template-columns: 1fr 2fr; }
 
         @media (max-width: 750px) {
             .attack-row, .skill-row, .item-row { grid-template-columns: 1fr; }
@@ -419,9 +418,40 @@
             padding: 4px;
         }
 
-        .dice-entry select {
-            padding: 4px 6px;
+        .dice-entry select { padding: 4px 6px; }
+
+        /* Summary Collapsed View Styles */
+        .summary-box {
+            background: var(--input-bg);
+            border: 1px dashed var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
         }
+
+        .summary-tag {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .summary-tag .badge {
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .summary-tag.atk .badge { background: rgba(224, 79, 95, 0.2); color: var(--accent-color); }
+        .summary-tag.skl .badge { background: rgba(16, 185, 129, 0.2); color: var(--skill-color); }
 
         .btn-group {
             display: flex;
@@ -447,6 +477,13 @@
         button.btn-mana-add { background: #3b82f6; padding: 6px 12px; }
         button.btn-mana-sub { background: #ef4444; padding: 6px 12px; }
         button.btn-qty-btn { background: #374151; padding: 8px 12px; }
+        button.btn-toggle {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            font-size: 0.75rem;
+        }
         button.btn-small-add {
             background: #2563eb;
             font-size: 0.65rem;
@@ -743,8 +780,12 @@
         <div class="card">
             <h2>
                 <span>Attacks & Actions</span>
-                <button type="button" class="btn-add" onclick="addAttack()">+ Add Attack</button>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-attacks" onclick="toggleSection('attacks')">▼ Collapse</button>
+                    <button type="button" class="btn-add" onclick="addAttack()">+ Add Attack</button>
+                </div>
             </h2>
+            <div id="attacks-summary" class="summary-box" style="display: none;"></div>
             <div id="attacks-list"></div>
         </div>
 
@@ -752,8 +793,12 @@
         <div class="card">
             <h2 style="color: var(--skill-color);">
                 <span>Skills</span>
-                <button type="button" class="btn-add" style="background: var(--skill-color);" onclick="addSkill()">+ Add Skill</button>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-skills" onclick="toggleSection('skills')">▼ Collapse</button>
+                    <button type="button" class="btn-add" style="background: var(--skill-color);" onclick="addSkill()">+ Add Skill</button>
+                </div>
             </h2>
+            <div id="skills-summary" class="summary-box" style="display: none;"></div>
             <div id="skills-list"></div>
         </div>
 
@@ -761,8 +806,12 @@
         <div class="card">
             <h2 style="color: var(--item-color);">
                 <span>Inventory</span>
-                <button type="button" class="btn-add" style="background: var(--item-color);" onclick="addItem()">+ Add Item</button>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-items" onclick="toggleSection('items')">▼ Collapse</button>
+                    <button type="button" class="btn-add" style="background: var(--item-color);" onclick="addItem()">+ Add Item</button>
+                </div>
             </h2>
+            <div id="items-summary" class="summary-box" style="display: none;"></div>
             <div id="items-list"></div>
         </div>
     </div>
@@ -788,6 +837,12 @@
     let attackCounter = 0;
     let skillCounter = 0;
     let itemCounter = 0;
+
+    const collapsedState = {
+        attacks: false,
+        skills: false,
+        items: false
+    };
 
     const currentMods = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
 
@@ -838,9 +893,32 @@
 
         updateAllAttacks();
         updateAllSkills();
+        updateAllItems();
         renderTrackers();
         renderManaBar();
         saveDataSilently();
+    }
+
+    function toggleSection(sectionKey) {
+        collapsedState[sectionKey] = !collapsedState[sectionKey];
+        applySectionVisibility(sectionKey);
+        saveDataSilently();
+    }
+
+    function applySectionVisibility(sectionKey) {
+        const listEl = document.getElementById(`${sectionKey}-list`);
+        const summaryEl = document.getElementById(`${sectionKey}-summary`);
+        const btnEl = document.getElementById(`btn-toggle-${sectionKey}`);
+
+        if (collapsedState[sectionKey]) {
+            listEl.style.display = 'none';
+            summaryEl.style.display = 'flex';
+            btnEl.innerText = '► Expand';
+        } else {
+            listEl.style.display = 'block';
+            summaryEl.style.display = 'none';
+            btnEl.innerText = '▼ Collapse';
+        }
     }
 
     function renderTrackers() {
@@ -892,7 +970,7 @@
             <button type="button" class="btn-delete" onclick="deleteAttack(${id})">Delete</button>
             <div class="form-group" style="padding-right: 60px;">
                 <label>Attack / Action Name</label>
-                <input type="text" id="atk-name-${id}" placeholder="e.g. Iron Punch" oninput="saveDataSilently()">
+                <input type="text" id="atk-name-${id}" placeholder="e.g. Iron Punch" oninput="updateAllAttacks()">
             </div>
             
             <div class="attack-row">
@@ -957,6 +1035,10 @@
             }
         } else {
             addDieEntry(id, 1, 'd6');
+        }
+
+        if (collapsedState.attacks) {
+            toggleSection('attacks');
         }
 
         updateAttackCard(id);
@@ -1026,6 +1108,7 @@
         }
 
         document.getElementById(`atk-dmg-disp-${id}`).innerText = dmgFormula;
+        updateAttacksSummary();
         saveDataSilently();
     }
 
@@ -1035,11 +1118,39 @@
             const id = card.id.replace('attack-card-', '');
             updateAttackCard(id);
         });
+        updateAttacksSummary();
+    }
+
+    function updateAttacksSummary() {
+        const summaryBox = document.getElementById('attacks-summary');
+        const cards = document.querySelectorAll('.attack-card');
+        
+        if (cards.length === 0) {
+            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Attacks Recorded</span>';
+            return;
+        }
+
+        let tagsHtml = '';
+        cards.forEach(card => {
+            const id = card.id.replace('attack-card-', '');
+            const name = document.getElementById(`atk-name-${id}`).value || 'Unnamed Attack';
+            const hitVal = document.getElementById(`atk-total-hit-${id}`).innerText;
+            const rankVal = document.getElementById(`atk-rank-${id}`).value;
+
+            tagsHtml += `
+                <div class="summary-tag atk">
+                    <span>${name}</span>
+                    <span class="badge">Rank ${rankVal} | Hit ${hitVal}</span>
+                </div>
+            `;
+        });
+        summaryBox.innerHTML = tagsHtml;
     }
 
     function deleteAttack(id) {
         const card = document.getElementById(`attack-card-${id}`);
         if (card) card.remove();
+        updateAttacksSummary();
         saveDataSilently();
     }
 
@@ -1061,7 +1172,7 @@
             <button type="button" class="btn-delete" onclick="deleteSkill(${id})">Delete</button>
             <div class="form-group" style="padding-right: 60px;">
                 <label>Skill Name</label>
-                <input type="text" id="skl-name-${id}" placeholder="e.g. Pugilism, Endurance, Catcher" oninput="saveDataSilently()">
+                <input type="text" id="skl-name-${id}" placeholder="e.g. Pugilism, Endurance, Catcher" oninput="updateAllSkills()">
             </div>
             
             <div class="skill-row">
@@ -1125,6 +1236,10 @@
             document.getElementById(`skl-effect-${id}`).value = data.effect || '';
         }
 
+        if (collapsedState.skills) {
+            toggleSection('skills');
+        }
+
         updateSkillCard(id);
     }
 
@@ -1138,6 +1253,7 @@
         document.getElementById(`skl-total-bonus-${id}`).innerText = '+' + totalBonus;
         document.getElementById(`skl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`;
 
+        updateSkillsSummary();
         saveDataSilently();
     }
 
@@ -1147,11 +1263,39 @@
             const id = card.id.replace('skill-card-', '');
             updateSkillCard(id);
         });
+        updateSkillsSummary();
+    }
+
+    function updateSkillsSummary() {
+        const summaryBox = document.getElementById('skills-summary');
+        const cards = document.querySelectorAll('.skill-card');
+        
+        if (cards.length === 0) {
+            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Skills Recorded</span>';
+            return;
+        }
+
+        let tagsHtml = '';
+        cards.forEach(card => {
+            const id = card.id.replace('skill-card-', '');
+            const name = document.getElementById(`skl-name-${id}`).value || 'Unnamed Skill';
+            const bonusVal = document.getElementById(`skl-total-bonus-${id}`).innerText;
+            const rankVal = document.getElementById(`skl-rank-${id}`).value;
+
+            tagsHtml += `
+                <div class="summary-tag skl">
+                    <span>${name}</span>
+                    <span class="badge">Rank ${rankVal} | Mod ${bonusVal}</span>
+                </div>
+            `;
+        });
+        summaryBox.innerHTML = tagsHtml;
     }
 
     function deleteSkill(id) {
         const card = document.getElementById(`skill-card-${id}`);
         if (card) card.remove();
+        updateSkillsSummary();
         saveDataSilently();
     }
 
@@ -1168,7 +1312,7 @@
             <button type="button" class="btn-delete" onclick="deleteItem(${id})">Delete</button>
             <div class="form-group" style="padding-right: 60px;">
                 <label>Item Name</label>
-                <input type="text" id="item-name-${id}" placeholder="e.g. Health Potion, Reinforced Shield" oninput="saveDataSilently()">
+                <input type="text" id="item-name-${id}" placeholder="e.g. Health Potion, Reinforced Shield" oninput="updateAllItems()">
             </div>
 
             <div class="item-row">
@@ -1178,7 +1322,7 @@
                         <label>Count</label>
                         <div class="qty-controls">
                             <button type="button" class="btn-qty-btn" onclick="adjustItemQty(${id}, -1)">-</button>
-                            <input type="number" id="item-qty-${id}" value="1" min="0" oninput="saveDataSilently()">
+                            <input type="number" id="item-qty-${id}" value="1" min="0" oninput="updateAllItems()">
                             <button type="button" class="btn-qty-btn" onclick="adjustItemQty(${id}, 1)">+</button>
                         </div>
                     </div>
@@ -1199,7 +1343,11 @@
             document.getElementById(`item-notes-${id}`).value = data.notes || '';
         }
 
-        saveDataSilently();
+        if (collapsedState.items) {
+            toggleSection('items');
+        }
+
+        updateAllItems();
     }
 
     function adjustItemQty(id, direction) {
@@ -1207,13 +1355,40 @@
         let current = parseInt(qtyInput.value) || 0;
         current = Math.max(0, current + direction);
         qtyInput.value = current;
+        updateAllItems();
+    }
+
+    function updateAllItems() {
+        const summaryBox = document.getElementById('items-summary');
+        const cards = document.querySelectorAll('.item-card');
+        
+        if (cards.length === 0) {
+            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Inventory is Empty</span>';
+            saveDataSilently();
+            return;
+        }
+
+        let totalUnique = cards.length;
+        let totalCount = 0;
+
+        cards.forEach(card => {
+            const id = card.id.replace('item-card-', '');
+            const qty = parseInt(document.getElementById(`item-qty-${id}`).value) || 0;
+            totalCount += qty;
+        });
+
+        summaryBox.innerHTML = `
+            <div style="font-size: 0.9rem; font-weight: bold; color: var(--item-color);">
+                📦 ${totalUnique} Unique Item Types (${totalCount} Total Qty)
+            </div>
+        `;
         saveDataSilently();
     }
 
     function deleteItem(id) {
         const card = document.getElementById(`item-card-${id}`);
         if (card) card.remove();
-        saveDataSilently();
+        updateAllItems();
     }
 
     function updateAvatar() {
@@ -1308,7 +1483,8 @@
             manaCurrent: manaCurrent,
             attacks: attacks,
             skills: skills,
-            items: items
+            items: items,
+            collapsedState: collapsedState
         };
         localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
     }
@@ -1340,6 +1516,12 @@
             hpCurrentSlots = data.hpCurrent || 0;
             manaCurrent = data.manaCurrent || 0;
 
+            if (data.collapsedState) {
+                collapsedState.attacks = !!data.collapsedState.attacks;
+                collapsedState.skills = !!data.collapsedState.skills;
+                collapsedState.items = !!data.collapsedState.items;
+            }
+
             if (data.avatarUrl) updateAvatar();
 
             document.getElementById('attacks-list').innerHTML = '';
@@ -1357,6 +1539,11 @@
                 data.items.forEach(itm => addItem(itm));
             }
         }
+
+        applySectionVisibility('attacks');
+        applySectionVisibility('skills');
+        applySectionVisibility('items');
+
         calculateSheet();
     }
 
@@ -1376,6 +1563,14 @@
         document.getElementById('attacks-list').innerHTML = '';
         document.getElementById('skills-list').innerHTML = '';
         document.getElementById('items-list').innerHTML = '';
+
+        collapsedState.attacks = false;
+        collapsedState.skills = false;
+        collapsedState.items = false;
+
+        applySectionVisibility('attacks');
+        applySectionVisibility('skills');
+        applySectionVisibility('items');
         
         document.querySelectorAll('input, textarea').forEach(input => {
             if (input.id === 'hp-max-slots') {
