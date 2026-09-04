@@ -1,665 +1,550 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dungeon Crawler Carl RPG - Interactive Sheet</title>
-  <style>
-    :root {
-      --bg: #090a0f;
-      --panel-bg: #121824;
-      --border: #3ab7bf;
-      --text: #d1f7ff;
-      --accent: #00ffd5;
-      --accent-glow: rgba(0, 255, 213, 0.25);
-      --danger: #ff4757;
-      --font: 'Courier New', Courier, monospace;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crawler RPG - Character Sheet</title>
+    <style>
+        :root {
+            --bg-color: #0f111a;
+            --panel-bg: rgba(26, 30, 46, 0.85);
+            --panel-border: #2a314d;
+            --accent-color: #e04f5f;
+            --accent-glow: rgba(224, 79, 95, 0.4);
+            --mana-color: #3b82f6;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --input-bg: #121524;
+        }
 
-    * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      margin: 0;
-      padding: 15px;
-    }
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(224, 79, 95, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                linear-gradient(rgba(15, 17, 26, 0.85), rgba(15, 17, 26, 0.85)),
+                url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920');
+            background-size: cover;
+            background-attachment: fixed;
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+        }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
 
-    .header-box {
-      text-align: center;
-      border: 2px solid var(--border);
-      padding: 12px;
-      background: var(--panel-bg);
-      box-shadow: 0 0 15px var(--accent-glow);
-      margin-bottom: 15px;
-    }
+        @media (max-width: 850px) {
+            .container { grid-template-columns: 1fr; }
+        }
 
-    .header-box h1 {
-      margin: 0;
-      color: var(--accent);
-      font-size: 1.8rem;
-      letter-spacing: 2px;
-    }
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            margin-bottom: 20px;
+        }
 
-    .actions-bar {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
+        h2 {
+            color: var(--accent-color);
+            text-transform: uppercase;
+            font-size: 1.1rem;
+            letter-spacing: 1.5px;
+            border-bottom: 2px solid var(--panel-border);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    button {
-      background: transparent;
-      color: var(--accent);
-      border: 1px solid var(--accent);
-      padding: 6px 12px;
-      font-family: var(--font);
-      font-weight: bold;
-      cursor: pointer;
-      text-transform: uppercase;
-      transition: all 0.2s;
-    }
+        /* Profile Sidebar */
+        .avatar-box {
+            width: 100%;
+            height: 220px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid var(--panel-border);
+            margin-bottom: 15px;
+            position: relative;
+        }
 
-    button:hover {
-      background: var(--accent);
-      color: var(--bg);
-    }
+        .avatar-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
-    button.btn-danger {
-      color: var(--danger);
-      border-color: var(--danger);
-    }
+        .form-group {
+            margin-bottom: 12px;
+        }
 
-    button.btn-danger:hover {
-      background: var(--danger);
-      color: #fff;
-    }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
 
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        input, select, textarea {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            outline: none;
+            transition: border 0.3s;
+        }
 
-    .panel {
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      padding: 12px;
-      margin-bottom: 15px;
-      border-radius: 2px;
-    }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent-color);
+        }
 
-    h2 {
-      margin-top: 0;
-      color: var(--accent);
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 4px;
-      font-size: 1.1rem;
-      text-transform: uppercase;
-    }
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+        }
 
-    label {
-      display: block;
-      font-size: 0.75rem;
-      color: var(--border);
-      text-transform: uppercase;
-      margin-bottom: 3px;
-    }
+        .stat-card {
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
 
-    input, textarea, select {
-      width: 100%;
-      background: #05070a;
-      border: 1px solid var(--border);
-      color: #fff;
-      padding: 6px;
-      font-family: var(--font);
-      font-size: 0.85rem;
-    }
+        .stat-value {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
 
-    input:focus, textarea:focus, select:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 5px var(--accent);
-    }
+        .stat-value input {
+            width: 50px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
 
-    .stat-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: 6px;
-      align-items: center;
-      margin-bottom: 6px;
-    }
+        .modifier {
+            display: inline-block;
+            background: var(--accent-color);
+            color: #fff;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
 
-    .stat-row span { font-weight: bold; font-size: 0.9rem; }
+        /* Dynamic Health & Mana Bars */
+        .resource-group {
+            margin-bottom: 15px;
+        }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 10px;
-    }
+        .resource-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
 
-    th, td {
-      border: 1px solid var(--border);
-      padding: 6px;
-      text-align: left;
-    }
+        .tracker-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
 
-    th {
-      background: rgba(58, 183, 191, 0.15);
-      color: var(--accent);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-    }
+        .tracker-box {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            border: 1px solid var(--panel-border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
 
-    .stat-select-cell {
-      display: flex;
-      gap: 4px;
-    }
+        .hp-box { background: rgba(224, 79, 95, 0.2); }
+        .hp-box.filled { 
+            background: var(--accent-color); 
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
 
-    .mod-val-box {
-      width: 45px !important;
-      text-align: center;
-      background: #101622;
-      color: var(--accent);
-      font-weight: bold;
-    }
+        .mana-box { background: rgba(59, 130, 246, 0.2); }
+        .mana-box.filled { 
+            background: var(--mana-color); 
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+        }
 
-    .pop-tracker {
-      display: flex;
-      justify-content: space-between;
-      gap: 5px;
-      margin-top: 5px;
-    }
+        /* Action Buttons */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
 
-    .pop-tracker label {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      font-size: 0.7rem;
-    }
+        button {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
 
-    @media (max-width: 768px) {
-      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-    }
-  </style>
+        button:hover { opacity: 0.9; }
+        button.btn-reset { background: #475569; }
+
+        /* Equipment Grid */
+        .gear-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .gear-slot {
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .gear-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 1px solid var(--panel-border);
+        }
+    </style>
 </head>
 <body>
 
-  <div class="container">
-    <div class="header-box">
-      <h1>DUNGEON CRAWLER CARL RPG</h1>
-      <small style="color: var(--border);">SYSTEM INTERFACE // CRAWLER CHARACTER SHEET</small>
-    </div>
-
-    <div class="actions-bar">
-      <button id="save-btn">Save Progress</button>
-      <button id="reset-btn" class="btn-danger">Reset Sheet</button>
-    </div>
-
-    <!-- CRAWLER INFO -->
-    <div class="panel">
-      <h2>Crawler Details</h2>
-      <div class="grid-4" style="margin-bottom: 8px;">
-        <div><label>Name</label><input type="text" id="name" /></div>
-        <div><label>Crawler Number</label><input type="text" id="crawler-no" /></div>
-        <div><label>Race</label><input type="text" id="race" /></div>
-        <div><label>Class</label><input type="text" id="class" /></div>
-      </div>
-      <div class="grid-4">
-        <div><label>Level</label><input type="number" id="level" value="1" /></div>
-        <div><label>Floor</label><input type="number" id="floor" value="1" /></div>
-        <div><label>Gender / Pronouns</label><input type="text" id="gender" /></div>
-        <div><label>AI Favor</label><input type="text" id="ai-favor" /></div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <!-- STATS & MODIFIERS -->
-      <div class="panel">
-        <h2>Primary Attributes</h2>
-        <div class="stat-row">
-          <span>STAT</span>
-          <label style="text-align:center;">UNENH</label>
-          <label style="text-align:center;">ENH</label>
-          <label style="text-align:center;">MOD</label>
+<div class="container">
+    <!-- Left Column: Character Profile -->
+    <div class="sidebar">
+        <div class="card">
+            <h2>Crawler Profile</h2>
+            <div class="avatar-box">
+                <img id="avatar-img" src="https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=400" alt="Character Portrait">
+            </div>
+            <div class="form-group">
+                <label>Avatar Image URL</label>
+                <input type="text" id="avatar-url" onchange="updateAvatar()" placeholder="Paste image URL...">
+            </div>
+            <div class="form-group">
+                <label>Character Name</label>
+                <input type="text" id="char-name" value="Juggernaut Crawler">
+            </div>
+            <div class="form-group">
+                <label>Race & Class</label>
+                <input type="text" id="char-class" value="Human Brawler">
+            </div>
+            <div class="form-group">
+                <label>Current Floor</label>
+                <input type="number" id="char-floor" value="3">
+            </div>
         </div>
+
+        <div class="card">
+            <h2>Quick Actions</h2>
+            <div class="btn-group">
+                <button onclick="saveData()">Save Character</button>
+                <button class="btn-reset" onclick="resetData()">Reset</button>
+            </div>
+            <p id="save-status" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
+        </div>
+    </div>
+
+    <!-- Right Column: Stats, Resources, Gear -->
+    <div class="main-content">
+        <!-- Vitals & Trackers -->
+        <div class="card">
+            <h2>Vitals & Pool Trackers</h2>
+            
+            <div class="resource-group">
+                <div class="resource-header">
+                    <span>Health Capacity (<span id="hp-total-text">40</span> HP)</span>
+                    <span id="hp-slot-count">10 / 10 Slots</span>
+                </div>
+                <div class="tracker-grid" id="hp-tracker"></div>
+            </div>
+
+            <div class="resource-group">
+                <div class="resource-header">
+                    <span>Mana Pool</span>
+                    <span id="mana-slot-count">6 / 6 Mana</span>
+                </div>
+                <div class="tracker-grid" id="mana-tracker"></div>
+            </div>
+        </div>
+
+        <!-- Attributes -->
+        <div class="card">
+            <h2>Core Attributes</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <label>STR</label>
+                    <div class="stat-value">
+                        <input type="number" id="stat-str" value="15" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-str">+4</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <label>CON</label>
+                    <div class="stat-value">
+                        <input type="number" id="stat-con" value="18" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-con">+4</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <label>DEX</label>
+                    <div class="stat-value">
+                        <input type="number" id="stat-dex" value="10" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-dex">+4</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <label>INT</label>
+                    <div class="stat-value">
+                        <input type="number" id="stat-int" value="6" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-int">+3</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <label>CHA</label>
+                    <div class="stat-value">
+                        <input type="number" id="stat-cha" value="4" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-cha">+2</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Combat & Gear -->
+        <div class="card">
+            <h2>Equipped Gear & Loadout</h2>
+            <div class="gear-grid">
+                <div class="gear-slot">
+                    <img class="gear-icon" src="https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=100" alt="Chest">
+                    <div style="width: 100%;">
+                        <label>Torso</label>
+                        <input type="text" id="gear-torso" value="Reinforced Plate (+3 DR)">
+                    </div>
+                </div>
+                <div class="gear-slot">
+                    <img class="gear-icon" src="https://images.unsplash.com/photo-1595590424283-b8f17842773f?q=80&w=100" alt="Weapon">
+                    <div style="width: 100%;">
+                        <label>Main Hand</label>
+                        <input type="text" id="gear-main" value="Iron Warhammer (1d10 + STR)">
+                    </div>
+                </div>
+                <div class="gear-slot">
+                    <img class="gear-icon" src="https://images.unsplash.com/photo-1615672372407-432a76f2f293?q=80&w=100" alt="Shield">
+                    <div style="width: 100%;">
+                        <label>Off Hand</label>
+                        <input type="text" id="gear-off" value="Tower Shield (+2 Evade)">
+                    </div>
+                </div>
+                <div class="gear-slot">
+                    <img class="gear-icon" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=100" alt="Boots">
+                    <div style="width: 100%;">
+                        <label>Feet</label>
+                        <input type="text" id="gear-feet" value="Steel Boots (Ignore Rough Terrain)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills & Notes -->
+        <div class="card">
+            <h2>Skills, Passives & Notes</h2>
+            <div class="form-group">
+                <textarea id="char-notes" rows="4" placeholder="Enter skills, passives, and active debuffs...">- Pugilism (DEX): Unarmed proficiency + Iron Punch / Smush
+- Warhammer (STR): Bludgeoning vs Heavy Armor
+- Catcher (Passive): Intercept hits for adjacent allies
+- Endurance (CON): Resist physical fatigue & environmental hazards</textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // System Constants & State
+    let hpCurrentSlots = 10;
+    let maxHpSlots = 10;
+    let manaCurrent = 6;
+    let maxMana = 6;
+
+    // Rules Formula: Modifier calculation lookup / math
+    function getModifier(statValue) {
+        return Math.floor(statValue / 4) + 1; // Example scale fitting the prompt stats
+    }
+
+    function calculateSheet() {
+        const con = parseInt(document.getElementById('stat-con').value) || 0;
+        const int = parseInt(document.getElementById('stat-int').value) || 0;
+        const str = parseInt(document.getElementById('stat-str').value) || 0;
+        const dex = parseInt(document.getElementById('stat-dex').value) || 0;
+        const cha = parseInt(document.getElementById('stat-cha').value) || 0;
+
+        // Update Modifiers
+        const conMod = getModifier(con);
+        document.getElementById('mod-con').innerText = '+' + conMod;
+        document.getElementById('mod-str').innerText = '+' + getModifier(str);
+        document.getElementById('mod-dex').innerText = '+' + getModifier(dex);
+        document.getElementById('mod-int').innerText = '+' + getModifier(int);
+        document.getElementById('mod-cha').innerText = '+' + getModifier(cha);
+
+        // Calculate Derived Rules Math:
+        // CON Mod * Slots = Total HP Capacity
+        const totalHp = maxHpSlots * conMod;
+        document.getElementById('hp-total-text').innerText = totalHp;
         
-        <div class="stat-row">
-          <span>Strength</span>
-          <input type="number" id="str-unenh" oninput="calcMods()" />
-          <input type="number" id="str-enh" oninput="calcMods()" />
-          <input type="number" id="str-mod" readonly />
-        </div>
-        <div class="stat-row">
-          <span>Intelligence</span>
-          <input type="number" id="int-unenh" oninput="calcMods()" />
-          <input type="number" id="int-enh" oninput="calcMods()" />
-          <input type="number" id="int-mod" readonly />
-        </div>
-        <div class="stat-row">
-          <span>Constitution</span>
-          <input type="number" id="con-unenh" oninput="calcMods()" />
-          <input type="number" id="con-enh" oninput="calcMods()" />
-          <input type="number" id="con-mod" readonly />
-        </div>
-        <div class="stat-row">
-          <span>Dexterity</span>
-          <input type="number" id="dex-unenh" oninput="calcMods()" />
-          <input type="number" id="dex-enh" oninput="calcMods()" />
-          <input type="number" id="dex-mod" readonly />
-        </div>
-        <div class="stat-row">
-          <span>Charisma</span>
-          <input type="number" id="cha-unenh" oninput="calcMods()" />
-          <input type="number" id="cha-enh" oninput="calcMods()" />
-          <input type="number" id="cha-mod" readonly />
-        </div>
-      </div>
+        // INT sets Max Mana
+        maxMana = int;
 
-      <!-- COMBAT & VITALS -->
-      <div class="panel">
-        <h2>Combat & Defense Calculations</h2>
-        <div class="grid-2" style="margin-bottom: 10px;">
-          <div>
-            <label>Max Mana</label>
-            <input type="number" id="mana-max" />
-          </div>
-          <div>
-            <label>Current Mana</label>
-            <input type="number" id="mana-curr" />
-          </div>
-        </div>
-
-        <div style="border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 8px;">
-          <label><strong>EVADE:</strong> d20 + DEX Mod + Buffs = Total</label>
-          <div class="grid-3" style="margin-top: 4px;">
-            <input type="number" id="evade-dex" placeholder="DEX Mod" readonly />
-            <input type="number" id="evade-buffs" placeholder="Buffs" oninput="calcCombat()" />
-            <input type="number" id="evade-total" placeholder="Total" readonly />
-          </div>
-        </div>
-
-        <div style="border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 8px;">
-          <label><strong>DAMAGE RESISTANCE (DR):</strong> Armor + Buffs = Total</label>
-          <div class="grid-3" style="margin-top: 4px;">
-            <input type="number" id="dr-armor" placeholder="Armor" oninput="calcCombat()" />
-            <input type="number" id="dr-buffs" placeholder="Buffs" oninput="calcCombat()" />
-            <input type="number" id="dr-total" placeholder="Total" readonly />
-          </div>
-        </div>
-
-        <div class="grid-2" style="margin-top: 8px;">
-          <div><label>Move</label><input type="text" id="move" /></div>
-          <div><label>Step</label><input type="text" id="step" /></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BUFFS & DEBUFFS -->
-    <div class="grid-2">
-      <div class="panel">
-        <h2>External Buffs (Max 3)</h2>
-        <input type="text" id="buff-1" style="margin-bottom: 4px;" placeholder="1. Buff Name / Effect" />
-        <input type="text" id="buff-2" style="margin-bottom: 4px;" placeholder="2. Buff Name / Effect" />
-        <input type="text" id="buff-3" placeholder="3. Buff Name / Effect" />
-      </div>
-      <div class="panel">
-        <h2>Active Debuffs</h2>
-        <textarea id="debuffs" rows="3" placeholder="List active debuffs..."></textarea>
-      </div>
-    </div>
-
-    <!-- HOTLIST & GEAR -->
-    <div class="grid-2">
-      <div class="panel">
-        <h2>Hotlist Popularity</h2>
-        <div class="pop-tracker">
-          <label><input type="checkbox" id="pop-10">10%</label>
-          <label><input type="checkbox" id="pop-20">20%</label>
-          <label><input type="checkbox" id="pop-30">30%</label>
-          <label><input type="checkbox" id="pop-40">40%</label>
-          <label><input type="checkbox" id="pop-50">50%</label>
-        </div>
-        <div class="pop-tracker">
-          <label><input type="checkbox" id="pop-60">60%</label>
-          <label><input type="checkbox" id="pop-70">70%</label>
-          <label><input type="checkbox" id="pop-80">80%</label>
-          <label><input type="checkbox" id="pop-90">90%</label>
-          <label><input type="checkbox" id="pop-100">100%</label>
-        </div>
-      </div>
-      <div class="panel">
-        <h2>Equipment Slots / Tattoos / Patches</h2>
-        <div class="grid-2">
-          <div><label>Head</label><input type="text" id="gear-head" /></div>
-          <div><label>Torso</label><input type="text" id="gear-torso" /></div>
-          <div><label>Arms</label><input type="text" id="gear-arms" /></div>
-          <div><label>Hands / Holding</label><input type="text" id="gear-hands" /></div>
-          <div><label>Legs</label><input type="text" id="gear-legs" /></div>
-          <div><label>Feet</label><input type="text" id="gear-feet" /></div>
-        </div>
-        <div style="margin-top: 6px;">
-          <label>Accessories (Max 10)</label>
-          <textarea id="gear-acc" rows="2" placeholder="List equipped accessories..."></textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- ATTACKS -->
-    <div class="panel">
-      <h2>Attacks</h2>
-      <table id="attacks-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th style="width: 110px;">To Hit: Rank</th>
-            <th>To Hit: Stat Mod</th>
-            <th style="width: 110px;">Damage: Dice</th>
-            <th>Damage: Stat Mod</th>
-            <th>Effects</th>
-            <th style="width: 40px;"></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <button onclick="addAttackRow()">+ Add Attack</button>
-    </div>
-
-    <!-- SKILLS -->
-    <div class="panel">
-      <h2>Skills</h2>
-      <table id="skills-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th style="width: 100px;">Rank</th>
-            <th>Stat Mod</th>
-            <th>Check Type</th>
-            <th>Notes & Upgrades</th>
-            <th style="width: 40px;"></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <button onclick="addSkillRow()">+ Add Skill</button>
-    </div>
-
-    <!-- INVENTORY -->
-    <div class="panel">
-      <h2>Inventory</h2>
-      <table id="inventory-table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th style="width: 100px;">Quantity</th>
-            <th>Notes</th>
-            <th style="width: 40px;"></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <button onclick="addInventoryRow()">+ Add Item</button>
-    </div>
-
-    <!-- BACKGROUND & NOTES -->
-    <div class="panel">
-      <h2>Narrative & Log Notes</h2>
-      <div class="grid-3">
-        <div><label>Past Trauma</label><textarea id="trauma" rows="3"></textarea></div>
-        <div><label>Loose Ends</label><textarea id="loose-ends" rows="3"></textarea></div>
-        <div><label>Regrets</label><textarea id="regrets" rows="3"></textarea></div>
-      </div>
-      <div style="margin-top: 8px;">
-        <label>General System Notes</label>
-        <textarea id="notes" rows="4"></textarea>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Bracket-based Stat Modifier lookup
-    function getStatModifier(totalVal) {
-      if (totalVal <= 0) return 0;
-      if (totalVal <= 2) return 1;
-      if (totalVal <= 5) return 2;
-      if (totalVal <= 9) return 3;
-      if (totalVal <= 19) return 4;
-      if (totalVal <= 49) return 5;
-      if (totalVal <= 99) return 6;
-      if (totalVal <= 149) return 7;
-      if (totalVal <= 199) return 8;
-      if (totalVal <= 299) return 9;
-      return 10;
+        renderTrackers();
+        saveDataSilently();
     }
 
-    // Attribute Modifier Math
-    function calcMods() {
-      const stats = ['str', 'int', 'con', 'dex', 'cha'];
-      stats.forEach(s => {
-        const unenh = parseFloat(document.getElementById(`${s}-unenh`).value) || 0;
-        const enh = parseFloat(document.getElementById(`${s}-enh`).value) || 0;
-        const total = unenh + enh;
-        const mod = getStatModifier(total);
-        document.getElementById(`${s}-mod`).value = mod;
-      });
-      calcCombat();
-      updateAttackMods();
-      updateSkillMods();
-    }
-
-    // Evade & DR Math
-    function calcCombat() {
-      const dexMod = parseFloat(document.getElementById('dex-mod').value) || 0;
-      document.getElementById('evade-dex').value = dexMod;
-      const evadeBuffs = parseFloat(document.getElementById('evade-buffs').value) || 0;
-      document.getElementById('evade-total').value = dexMod + evadeBuffs;
-
-      const armor = parseFloat(document.getElementById('dr-armor').value) || 0;
-      const drBuffs = parseFloat(document.getElementById('dr-buffs').value) || 0;
-      document.getElementById('dr-total').value = armor + drBuffs;
-    }
-
-    // Dynamic Attack Modifier Linking
-    function updateAttackMods() {
-      document.querySelectorAll('#attacks-table tbody tr').forEach(tr => {
-        const toHitSelect = tr.querySelector('.to-hit-stat');
-        const toHitReadout = tr.querySelector('.to-hit-mod-val');
-        if (toHitSelect && toHitReadout) {
-          const stat = toHitSelect.value;
-          toHitReadout.value = stat ? (document.getElementById(`${stat}-mod`).value || 0) : '';
+    function renderTrackers() {
+        // HP Tracker Rendering
+        const hpContainer = document.getElementById('hp-tracker');
+        hpContainer.innerHTML = '';
+        for (let i = 0; i < maxHpSlots; i++) {
+            const box = document.createElement('div');
+            box.className = `tracker-box hp-box ${i < hpCurrentSlots ? 'filled' : ''}`;
+            box.onclick = () => toggleHp(i);
+            hpContainer.appendChild(box);
         }
+        document.getElementById('hp-slot-count').innerText = `${hpCurrentSlots} / ${maxHpSlots} Slots`;
 
-        const dmgSelect = tr.querySelector('.dmg-stat');
-        const dmgReadout = tr.querySelector('.dmg-mod-val');
-        if (dmgSelect && dmgReadout) {
-          const stat = dmgSelect.value;
-          dmgReadout.value = stat ? (document.getElementById(`${stat}-mod`).value || 0) : '';
+        // Mana Tracker Rendering
+        const manaContainer = document.getElementById('mana-tracker');
+        manaContainer.innerHTML = '';
+        for (let i = 0; i < maxMana; i++) {
+            const box = document.createElement('div');
+            box.className = `tracker-box mana-box ${i < manaCurrent ? 'filled' : ''}`;
+            box.onclick = () => toggleMana(i);
+            manaContainer.appendChild(box);
         }
-      });
+        document.getElementById('mana-slot-count').innerText = `${manaCurrent} / ${maxMana} Mana`;
     }
 
-    // Dynamic Skill Modifier Linking
-    function updateSkillMods() {
-      document.querySelectorAll('#skills-table tbody tr').forEach(tr => {
-        const skillSelect = tr.querySelector('.skill-stat');
-        const skillReadout = tr.querySelector('.skill-mod-val');
-        if (skillSelect && skillReadout) {
-          const stat = skillSelect.value;
-          skillReadout.value = stat ? (document.getElementById(`${stat}-mod`).value || 0) : '';
+    function toggleHp(index) {
+        hpCurrentSlots = (index + 1 === hpCurrentSlots) ? index : index + 1;
+        renderTrackers();
+        saveDataSilently();
+    }
+
+    function toggleMana(index) {
+        manaCurrent = (index + 1 === manaCurrent) ? index : index + 1;
+        renderTrackers();
+        saveDataSilently();
+    }
+
+    function updateAvatar() {
+        const url = document.getElementById('avatar-url').value;
+        if (url) {
+            document.getElementById('avatar-img').src = url;
         }
-      });
     }
 
-    // Dynamic Row Helpers
-    function addAttackRow(data = {}) {
-      const tbody = document.querySelector('#attacks-table tbody');
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="text" class="atk-name" placeholder="Attack Name" value="${data.name || ''}" /></td>
-        <td><input type="text" class="to-hit-rank" placeholder="Rank" value="${data.toHitRank || ''}" /></td>
-        <td>
-          <div class="stat-select-cell">
-            <select class="to-hit-stat" onchange="updateAttackMods()">
-              <option value="">--Stat--</option>
-              <option value="str" ${data.toHitStat === 'str' ? 'selected' : ''}>STR</option>
-              <option value="int" ${data.toHitStat === 'int' ? 'selected' : ''}>INT</option>
-              <option value="con" ${data.toHitStat === 'con' ? 'selected' : ''}>CON</option>
-              <option value="dex" ${data.toHitStat === 'dex' ? 'selected' : ''}>DEX</option>
-              <option value="cha" ${data.toHitStat === 'cha' ? 'selected' : ''}>CHA</option>
-            </select>
-            <input type="text" class="mod-val-box to-hit-mod-val" readonly placeholder="Mod" />
-          </div>
-        </td>
-        <td><input type="text" class="dmg-dice" placeholder="Dice (e.g. 1d6)" value="${data.dmgDice || ''}" /></td>
-        <td>
-          <div class="stat-select-cell">
-            <select class="dmg-stat" onchange="updateAttackMods()">
-              <option value="">--Stat--</option>
-              <option value="str" ${data.dmgStat === 'str' ? 'selected' : ''}>STR</option>
-              <option value="int" ${data.dmgStat === 'int' ? 'selected' : ''}>INT</option>
-              <option value="con" ${data.dmgStat === 'con' ? 'selected' : ''}>CON</option>
-              <option value="dex" ${data.dmgStat === 'dex' ? 'selected' : ''}>DEX</option>
-              <option value="cha" ${data.dmgStat === 'cha' ? 'selected' : ''}>CHA</option>
-            </select>
-            <input type="text" class="mod-val-box dmg-mod-val" readonly placeholder="Mod" />
-          </div>
-        </td>
-        <td><input type="text" class="atk-fx" value="${data.fx || ''}" /></td>
-        <td><button class="btn-danger" onclick="this.closest('tr').remove()">X</button></td>
-      `;
-      tbody.appendChild(tr);
-      updateAttackMods();
+    // LocalStorage Device Savings
+    function saveData() {
+        saveDataSilently();
+        const status = document.getElementById('save-status');
+        status.innerText = "Character Saved Locally!";
+        setTimeout(() => status.innerText = "", 2000);
     }
 
-    function addSkillRow(data = {}) {
-      const tbody = document.querySelector('#skills-table tbody');
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="text" class="skill-name" placeholder="Skill Name" value="${data.name || ''}" /></td>
-        <td><input type="text" class="skill-rank" placeholder="Rank" value="${data.rank || ''}" /></td>
-        <td>
-          <div class="stat-select-cell">
-            <select class="skill-stat" onchange="updateSkillMods()">
-              <option value="">--Stat--</option>
-              <option value="str" ${data.stat === 'str' ? 'selected' : ''}>STR</option>
-              <option value="int" ${data.stat === 'int' ? 'selected' : ''}>INT</option>
-              <option value="con" ${data.stat === 'con' ? 'selected' : ''}>CON</option>
-              <option value="dex" ${data.stat === 'dex' ? 'selected' : ''}>DEX</option>
-              <option value="cha" ${data.stat === 'cha' ? 'selected' : ''}>CHA</option>
-            </select>
-            <input type="text" class="mod-val-box skill-mod-val" readonly placeholder="Mod" />
-          </div>
-        </td>
-        <td><input type="text" class="skill-check" placeholder="e.g. Active" value="${data.check || ''}" /></td>
-        <td><input type="text" class="skill-notes" placeholder="Notes / Upgrades" value="${data.notes || ''}" /></td>
-        <td><button class="btn-danger" onclick="this.closest('tr').remove()">X</button></td>
-      `;
-      tbody.appendChild(tr);
-      updateSkillMods();
-    }
-
-    function addInventoryRow(data = {}) {
-      const tbody = document.querySelector('#inventory-table tbody');
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="text" class="inv-item" placeholder="Item Name" value="${data.item || ''}" /></td>
-        <td><input type="text" class="inv-qty" placeholder="Qty" value="${data.qty || ''}" /></td>
-        <td><input type="text" class="inv-notes" placeholder="Notes" value="${data.notes || ''}" /></td>
-        <td><button class="btn-danger" onclick="this.closest('tr').remove()">X</button></td>
-      `;
-      tbody.appendChild(tr);
-    }
-
-    // Persistence (Local Storage)
-    function saveSheet() {
-      const data = {};
-      document.querySelectorAll('input, textarea').forEach(el => {
-        if (el.id) {
-          data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
-        }
-      });
-
-      // Table Data
-      data.attacks = Array.from(document.querySelectorAll('#attacks-table tbody tr')).map(tr => {
-        return {
-          name: tr.querySelector('.atk-name').value,
-          toHitRank: tr.querySelector('.to-hit-rank').value,
-          toHitStat: tr.querySelector('.to-hit-stat').value,
-          dmgDice: tr.querySelector('.dmg-dice').value,
-          dmgStat: tr.querySelector('.dmg-stat').value,
-          fx: tr.querySelector('.atk-fx').value
+    function saveDataSilently() {
+        const data = {
+            name: document.getElementById('char-name').value,
+            class: document.getElementById('char-class').value,
+            floor: document.getElementById('char-floor').value,
+            avatar: document.getElementById('avatar-img').src,
+            avatarUrl: document.getElementById('avatar-url').value,
+            str: document.getElementById('stat-str').value,
+            con: document.getElementById('stat-con').value,
+            dex: document.getElementById('stat-dex').value,
+            int: document.getElementById('stat-int').value,
+            cha: document.getElementById('stat-cha').value,
+            hpCurrent: hpCurrentSlots,
+            manaCurrent: manaCurrent,
+            torso: document.getElementById('gear-torso').value,
+            main: document.getElementById('gear-main').value,
+            off: document.getElementById('gear-off').value,
+            feet: document.getElementById('gear-feet').value,
+            notes: document.getElementById('char-notes').value
         };
-      });
-
-      data.skills = Array.from(document.querySelectorAll('#skills-table tbody tr')).map(tr => {
-        return {
-          name: tr.querySelector('.skill-name').value,
-          rank: tr.querySelector('.skill-rank').value,
-          stat: tr.querySelector('.skill-stat').value,
-          check: tr.querySelector('.skill-check').value,
-          notes: tr.querySelector('.skill-notes').value
-        };
-      });
-
-      data.inventory = Array.from(document.querySelectorAll('#inventory-table tbody tr')).map(tr => {
-        return {
-          item: tr.querySelector('.inv-item').value,
-          qty: tr.querySelector('.inv-qty').value,
-          notes: tr.querySelector('.inv-notes').value
-        };
-      });
-
-      localStorage.setItem('dcc_rpg_sheet', JSON.stringify(data));
-      alert('System Notification: Character saved locally.');
+        localStorage.setItem('crawler_char_data', JSON.stringify(data));
     }
 
-    function loadSheet() {
-      const saved = localStorage.getItem('dcc_rpg_sheet');
-      if (!saved) return;
-      const data = JSON.parse(saved);
+    function loadData() {
+        const saved = localStorage.getItem('crawler_char_data');
+        if (saved) {
+            const data = JSON.parse(saved);
+            document.getElementById('char-name').value = data.name || '';
+            document.getElementById('char-class').value = data.class || '';
+            document.getElementById('char-floor').value = data.floor || '1';
+            if (data.avatar) document.getElementById('avatar-img').src = data.avatar;
+            document.getElementById('avatar-url').value = data.avatarUrl || '';
+            
+            document.getElementById('stat-str').value = data.str || 10;
+            document.getElementById('stat-con').value = data.con || 10;
+            document.getElementById('stat-dex').value = data.dex || 10;
+            document.getElementById('stat-int').value = data.int || 10;
+            document.getElementById('stat-cha').value = data.cha || 10;
 
-      Object.keys(data).forEach(key => {
-        const el = document.getElementById(key);
-        if (el) {
-          if (el.type === 'checkbox') el.checked = data[key];
-          else el.value = data[key];
+            hpCurrentSlots = data.hpCurrent !== undefined ? data.hpCurrent : 10;
+            manaCurrent = data.manaCurrent !== undefined ? data.manaCurrent : 6;
+
+            document.getElementById('gear-torso').value = data.torso || '';
+            document.getElementById('gear-main').value = data.main || '';
+            document.getElementById('gear-off').value = data.off || '';
+            document.getElementById('gear-feet').value = data.feet || '';
+            document.getElementById('char-notes').value = data.notes || '';
         }
-      });
-
-      if (data.attacks) {
-        document.querySelector('#attacks-table tbody').innerHTML = '';
-        data.attacks.forEach(a => addAttackRow(a));
-      }
-      if (data.skills) {
-        document.querySelector('#skills-table tbody').innerHTML = '';
-        data.skills.forEach(s => addSkillRow(s));
-      }
-      if (data.inventory) {
-        document.querySelector('#inventory-table tbody').innerHTML = '';
-        data.inventory.forEach(i => addInventoryRow(i));
-      }
-
-      calcMods();
+        calculateSheet();
     }
 
-    document.getElementById('save-btn').addEventListener('click', saveSheet);
-    document.getElementById('reset-btn').addEventListener('click', () => {
-      if (confirm('Reset character sheet? All unsaved data will be erased.')) {
-        localStorage.removeItem('dcc_rpg_sheet');
-        location.reload();
-      }
-    });
+    function resetData() {
+        if (confirm("Reset sheet back to default settings?")) {
+            localStorage.removeItem('crawler_char_data');
+            location.reload();
+        }
+    }
 
-    window.onload = () => {
-      loadSheet();
-      if (document.querySelectorAll('#attacks-table tbody tr').length === 0) addAttackRow();
-      if (document.querySelectorAll('#skills-table tbody tr').length === 0) addSkillRow();
-      if (document.querySelectorAll('#inventory-table tbody tr').length === 0) addInventoryRow();
-    };
-  </script>
+    // Initialize on load
+    window.onload = loadData;
+</script>
 </body>
 </html>
