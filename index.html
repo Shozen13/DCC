@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crawler RPG - Character Sheet</title>
+    <title>Crawler RPG - Blank Character Sheet</title>
     <style>
         :root {
             --bg-color: #0f111a;
@@ -73,15 +73,17 @@
             align-items: center;
         }
 
-        /* Profile Sidebar */
         .avatar-box {
             width: 100%;
             height: 220px;
             border-radius: 8px;
             overflow: hidden;
-            border: 2px solid var(--panel-border);
+            border: 2px dashed var(--panel-border);
             margin-bottom: 15px;
-            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--input-bg);
         }
 
         .avatar-box img {
@@ -117,7 +119,6 @@
             border-color: var(--accent-color);
         }
 
-        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -157,7 +158,6 @@
             font-size: 0.85rem;
         }
 
-        /* Dynamic Health & Mana Bars */
         .resource-group {
             margin-bottom: 15px;
         }
@@ -174,6 +174,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
+            min-height: 32px;
         }
 
         .tracker-box {
@@ -197,7 +198,6 @@
             box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
         }
 
-        /* Action Buttons */
         .btn-group {
             display: flex;
             gap: 10px;
@@ -218,7 +218,6 @@
         button:hover { opacity: 0.9; }
         button.btn-reset { background: #475569; }
 
-        /* Equipment Grid */
         .gear-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -234,64 +233,60 @@
             gap: 10px;
             align-items: center;
         }
-
-        .gear-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 4px;
-            object-fit: cover;
-            border: 1px solid var(--panel-border);
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- Left Column: Character Profile -->
+    <!-- Left Column: Profile -->
     <div class="sidebar">
         <div class="card">
             <h2>Crawler Profile</h2>
             <div class="avatar-box">
-                <img id="avatar-img" src="https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=400" alt="Character Portrait">
+                <img id="avatar-img" src="" alt="Portrait Preview" style="display: none;">
+                <span id="avatar-placeholder" style="color: var(--text-muted); font-size: 0.8rem;">No Image Loaded</span>
             </div>
             <div class="form-group">
                 <label>Avatar Image URL</label>
-                <input type="text" id="avatar-url" onchange="updateAvatar()" placeholder="Paste image URL...">
+                <input type="text" id="avatar-url" onchange="updateAvatar()" placeholder="Paste image link...">
             </div>
             <div class="form-group">
                 <label>Character Name</label>
-                <input type="text" id="char-name" value="Juggernaut Crawler">
+                <input type="text" id="char-name" placeholder="Character Name" oninput="saveDataSilently()">
             </div>
             <div class="form-group">
                 <label>Race & Class</label>
-                <input type="text" id="char-class" value="Human Brawler">
+                <input type="text" id="char-class" placeholder="e.g. Human Warrior" oninput="saveDataSilently()">
             </div>
             <div class="form-group">
                 <label>Current Floor</label>
-                <input type="number" id="char-floor" value="3">
+                <input type="number" id="char-floor" value="1" oninput="saveDataSilently()">
             </div>
         </div>
 
         <div class="card">
-            <h2>Quick Actions</h2>
+            <h2>Actions</h2>
             <div class="btn-group">
                 <button onclick="saveData()">Save Character</button>
-                <button class="btn-reset" onclick="resetData()">Reset</button>
+                <button class="btn-reset" onclick="resetData()">Clear Sheet</button>
             </div>
             <p id="save-status" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
         </div>
     </div>
 
-    <!-- Right Column: Stats, Resources, Gear -->
+    <!-- Right Column: Stats & Combat -->
     <div class="main-content">
-        <!-- Vitals & Trackers -->
+        <!-- Vitals -->
         <div class="card">
             <h2>Vitals & Pool Trackers</h2>
             
             <div class="resource-group">
                 <div class="resource-header">
-                    <span>Health Capacity (<span id="hp-total-text">40</span> HP)</span>
-                    <span id="hp-slot-count">10 / 10 Slots</span>
+                    <span>Health Capacity (<span id="hp-total-text">0</span> HP)</span>
+                    <span>
+                        Slots Max: <input type="number" id="hp-max-slots" value="10" min="0" style="width: 50px; padding: 2px 5px; display: inline-block;" onchange="calculateSheet()">
+                    </span>
+                    <span id="hp-slot-count">0 / 10 Slots</span>
                 </div>
                 <div class="tracker-grid" id="hp-tracker"></div>
             </div>
@@ -299,7 +294,7 @@
             <div class="resource-group">
                 <div class="resource-header">
                     <span>Mana Pool</span>
-                    <span id="mana-slot-count">6 / 6 Mana</span>
+                    <span id="mana-slot-count">0 / 0 Mana</span>
                 </div>
                 <div class="tracker-grid" id="mana-tracker"></div>
             </div>
@@ -312,99 +307,91 @@
                 <div class="stat-card">
                     <label>STR</label>
                     <div class="stat-value">
-                        <input type="number" id="stat-str" value="15" onchange="calculateSheet()">
-                        <span class="modifier" id="mod-str">+4</span>
+                        <input type="number" id="stat-str" value="0" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-str">+0</span>
                     </div>
                 </div>
                 <div class="stat-card">
                     <label>CON</label>
                     <div class="stat-value">
-                        <input type="number" id="stat-con" value="18" onchange="calculateSheet()">
-                        <span class="modifier" id="mod-con">+4</span>
+                        <input type="number" id="stat-con" value="0" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-con">+0</span>
                     </div>
                 </div>
                 <div class="stat-card">
                     <label>DEX</label>
                     <div class="stat-value">
-                        <input type="number" id="stat-dex" value="10" onchange="calculateSheet()">
-                        <span class="modifier" id="mod-dex">+4</span>
+                        <input type="number" id="stat-dex" value="0" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-dex">+0</span>
                     </div>
                 </div>
                 <div class="stat-card">
                     <label>INT</label>
                     <div class="stat-value">
-                        <input type="number" id="stat-int" value="6" onchange="calculateSheet()">
-                        <span class="modifier" id="mod-int">+3</span>
+                        <input type="number" id="stat-int" value="0" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-int">+0</span>
                     </div>
                 </div>
                 <div class="stat-card">
                     <label>CHA</label>
                     <div class="stat-value">
-                        <input type="number" id="stat-cha" value="4" onchange="calculateSheet()">
-                        <span class="modifier" id="mod-cha">+2</span>
+                        <input type="number" id="stat-cha" value="0" onchange="calculateSheet()">
+                        <span class="modifier" id="mod-cha">+0</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Combat & Gear -->
+        <!-- Gear -->
         <div class="card">
             <h2>Equipped Gear & Loadout</h2>
             <div class="gear-grid">
                 <div class="gear-slot">
-                    <img class="gear-icon" src="https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=100" alt="Chest">
                     <div style="width: 100%;">
                         <label>Torso</label>
-                        <input type="text" id="gear-torso" value="Reinforced Plate (+3 DR)">
+                        <input type="text" id="gear-torso" placeholder="Armor / Armor Rating" oninput="saveDataSilently()">
                     </div>
                 </div>
                 <div class="gear-slot">
-                    <img class="gear-icon" src="https://images.unsplash.com/photo-1595590424283-b8f17842773f?q=80&w=100" alt="Weapon">
                     <div style="width: 100%;">
                         <label>Main Hand</label>
-                        <input type="text" id="gear-main" value="Iron Warhammer (1d10 + STR)">
+                        <input type="text" id="gear-main" placeholder="Weapon & Damage" oninput="saveDataSilently()">
                     </div>
                 </div>
                 <div class="gear-slot">
-                    <img class="gear-icon" src="https://images.unsplash.com/photo-1615672372407-432a76f2f293?q=80&w=100" alt="Shield">
                     <div style="width: 100%;">
                         <label>Off Hand</label>
-                        <input type="text" id="gear-off" value="Tower Shield (+2 Evade)">
+                        <input type="text" id="gear-off" placeholder="Shield / Offhand item" oninput="saveDataSilently()">
                     </div>
                 </div>
                 <div class="gear-slot">
-                    <img class="gear-icon" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=100" alt="Boots">
                     <div style="width: 100%;">
                         <label>Feet</label>
-                        <input type="text" id="gear-feet" value="Steel Boots (Ignore Rough Terrain)">
+                        <input type="text" id="gear-feet" placeholder="Boots / Mobility gear" oninput="saveDataSilently()">
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Skills & Notes -->
+        <!-- Notes -->
         <div class="card">
             <h2>Skills, Passives & Notes</h2>
             <div class="form-group">
-                <textarea id="char-notes" rows="4" placeholder="Enter skills, passives, and active debuffs...">- Pugilism (DEX): Unarmed proficiency + Iron Punch / Smush
-- Warhammer (STR): Bludgeoning vs Heavy Armor
-- Catcher (Passive): Intercept hits for adjacent allies
-- Endurance (CON): Resist physical fatigue & environmental hazards</textarea>
+                <textarea id="char-notes" rows="5" placeholder="Record skills, active debuffs, inventory, or rule traits..." oninput="saveDataSilently()"></textarea>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // System Constants & State
-    let hpCurrentSlots = 10;
+    let hpCurrentSlots = 0;
     let maxHpSlots = 10;
-    let manaCurrent = 6;
-    let maxMana = 6;
+    let manaCurrent = 0;
+    let maxMana = 0;
 
-    // Rules Formula: Modifier calculation lookup / math
     function getModifier(statValue) {
-        return Math.floor(statValue / 4) + 1; // Example scale fitting the prompt stats
+        if (!statValue || statValue <= 0) return 0;
+        return Math.floor(statValue / 4) + 1;
     }
 
     function calculateSheet() {
@@ -414,7 +401,8 @@
         const dex = parseInt(document.getElementById('stat-dex').value) || 0;
         const cha = parseInt(document.getElementById('stat-cha').value) || 0;
 
-        // Update Modifiers
+        maxHpSlots = parseInt(document.getElementById('hp-max-slots').value) || 10;
+
         const conMod = getModifier(con);
         document.getElementById('mod-con').innerText = '+' + conMod;
         document.getElementById('mod-str').innerText = '+' + getModifier(str);
@@ -422,20 +410,19 @@
         document.getElementById('mod-int').innerText = '+' + getModifier(int);
         document.getElementById('mod-cha').innerText = '+' + getModifier(cha);
 
-        // Calculate Derived Rules Math:
-        // CON Mod * Slots = Total HP Capacity
         const totalHp = maxHpSlots * conMod;
         document.getElementById('hp-total-text').innerText = totalHp;
         
-        // INT sets Max Mana
         maxMana = int;
+
+        if (hpCurrentSlots > maxHpSlots) hpCurrentSlots = maxHpSlots;
+        if (manaCurrent > maxMana) manaCurrent = maxMana;
 
         renderTrackers();
         saveDataSilently();
     }
 
     function renderTrackers() {
-        // HP Tracker Rendering
         const hpContainer = document.getElementById('hp-tracker');
         hpContainer.innerHTML = '';
         for (let i = 0; i < maxHpSlots; i++) {
@@ -446,7 +433,6 @@
         }
         document.getElementById('hp-slot-count').innerText = `${hpCurrentSlots} / ${maxHpSlots} Slots`;
 
-        // Mana Tracker Rendering
         const manaContainer = document.getElementById('mana-tracker');
         manaContainer.innerHTML = '';
         for (let i = 0; i < maxMana; i++) {
@@ -472,16 +458,24 @@
 
     function updateAvatar() {
         const url = document.getElementById('avatar-url').value;
+        const img = document.getElementById('avatar-img');
+        const placeholder = document.getElementById('avatar-placeholder');
+        
         if (url) {
-            document.getElementById('avatar-img').src = url;
+            img.src = url;
+            img.style.display = 'block';
+            placeholder.style.display = 'none';
+        } else {
+            img.style.display = 'none';
+            placeholder.style.display = 'block';
         }
+        saveDataSilently();
     }
 
-    // LocalStorage Device Savings
     function saveData() {
         saveDataSilently();
         const status = document.getElementById('save-status');
-        status.innerText = "Character Saved Locally!";
+        status.innerText = "Character Saved!";
         setTimeout(() => status.innerText = "", 2000);
     }
 
@@ -490,13 +484,13 @@
             name: document.getElementById('char-name').value,
             class: document.getElementById('char-class').value,
             floor: document.getElementById('char-floor').value,
-            avatar: document.getElementById('avatar-img').src,
             avatarUrl: document.getElementById('avatar-url').value,
             str: document.getElementById('stat-str').value,
             con: document.getElementById('stat-con').value,
             dex: document.getElementById('stat-dex').value,
             int: document.getElementById('stat-int').value,
             cha: document.getElementById('stat-cha').value,
+            maxHpSlots: document.getElementById('hp-max-slots').value,
             hpCurrent: hpCurrentSlots,
             manaCurrent: manaCurrent,
             torso: document.getElementById('gear-torso').value,
@@ -505,45 +499,46 @@
             feet: document.getElementById('gear-feet').value,
             notes: document.getElementById('char-notes').value
         };
-        localStorage.setItem('crawler_char_data', JSON.stringify(data));
+        localStorage.setItem('crawler_blank_char_data', JSON.stringify(data));
     }
 
     function loadData() {
-        const saved = localStorage.getItem('crawler_char_data');
+        const saved = localStorage.getItem('crawler_blank_char_data');
         if (saved) {
             const data = JSON.parse(saved);
             document.getElementById('char-name').value = data.name || '';
             document.getElementById('char-class').value = data.class || '';
             document.getElementById('char-floor').value = data.floor || '1';
-            if (data.avatar) document.getElementById('avatar-img').src = data.avatar;
             document.getElementById('avatar-url').value = data.avatarUrl || '';
             
-            document.getElementById('stat-str').value = data.str || 10;
-            document.getElementById('stat-con').value = data.con || 10;
-            document.getElementById('stat-dex').value = data.dex || 10;
-            document.getElementById('stat-int').value = data.int || 10;
-            document.getElementById('stat-cha').value = data.cha || 10;
+            document.getElementById('stat-str').value = data.str || 0;
+            document.getElementById('stat-con').value = data.con || 0;
+            document.getElementById('stat-dex').value = data.dex || 0;
+            document.getElementById('stat-int').value = data.int || 0;
+            document.getElementById('stat-cha').value = data.cha || 0;
 
-            hpCurrentSlots = data.hpCurrent !== undefined ? data.hpCurrent : 10;
-            manaCurrent = data.manaCurrent !== undefined ? data.manaCurrent : 6;
+            document.getElementById('hp-max-slots').value = data.maxHpSlots !== undefined ? data.maxHpSlots : 10;
+            hpCurrentSlots = data.hpCurrent || 0;
+            manaCurrent = data.manaCurrent || 0;
 
             document.getElementById('gear-torso').value = data.torso || '';
             document.getElementById('gear-main').value = data.main || '';
             document.getElementById('gear-off').value = data.off || '';
             document.getElementById('gear-feet').value = data.feet || '';
             document.getElementById('char-notes').value = data.notes || '';
+
+            if (data.avatarUrl) updateAvatar();
         }
         calculateSheet();
     }
 
     function resetData() {
-        if (confirm("Reset sheet back to default settings?")) {
-            localStorage.removeItem('crawler_char_data');
+        if (confirm("Are you sure you want to completely clear this sheet?")) {
+            localStorage.removeItem('crawler_blank_char_data');
             location.reload();
         }
     }
 
-    // Initialize on load
     window.onload = loadData;
 </script>
 </body>
