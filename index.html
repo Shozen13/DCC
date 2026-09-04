@@ -280,12 +280,12 @@
 
         .attack-row {
             display: grid;
-            grid-template-columns: 2fr 2fr 2fr;
-            gap: 10px;
+            grid-template-columns: 2.2fr 2.5fr 2.3fr;
+            gap: 12px;
             margin-bottom: 10px;
         }
 
-        @media (max-width: 650px) {
+        @media (max-width: 750px) {
             .attack-row { grid-template-columns: 1fr; }
         }
 
@@ -293,7 +293,10 @@
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 6px;
-            padding: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .sub-group-title {
@@ -301,7 +304,45 @@
             color: var(--accent-color);
             text-transform: uppercase;
             font-weight: bold;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* High Visibility Hit Badge */
+        .hit-badge-box {
+            background: rgba(224, 79, 95, 0.15);
+            border: 1px solid var(--accent-color);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        .hit-badge-val {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* Dynamic Dice Entries */
+        .dice-entry {
+            display: flex;
+            gap: 6px;
+            align-items: center;
             margin-bottom: 6px;
+        }
+
+        .dice-entry input[type="number"] {
+            width: 55px;
+            text-align: center;
+            padding: 4px;
+        }
+
+        .dice-entry select {
+            padding: 4px 6px;
         }
 
         .btn-group {
@@ -325,6 +366,12 @@
         button:hover { opacity: 0.9; }
         button.btn-reset { background: #475569; }
         button.btn-add { background: #10b981; }
+        button.btn-small-add {
+            background: #2563eb;
+            font-size: 0.65rem;
+            padding: 3px 6px;
+            border-radius: 4px;
+        }
         button.btn-delete {
             background: #ef4444;
             padding: 4px 8px;
@@ -332,6 +379,14 @@
             position: absolute;
             top: 10px;
             right: 10px;
+        }
+        button.btn-remove-die {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            border-radius: 4px;
         }
 
         .modal-overlay {
@@ -711,7 +766,7 @@
         card.id = `attack-card-${id}`;
         card.innerHTML = `
             <button type="button" class="btn-delete" onclick="deleteAttack(${id})">Delete</button>
-            <div class="form-group">
+            <div class="form-group" style="padding-right: 60px;">
                 <label>Attack / Action Name</label>
                 <input type="text" id="atk-name-${id}" placeholder="e.g. Iron Punch" oninput="saveDataSilently()">
             </div>
@@ -729,45 +784,40 @@
                     <div class="form-group">
                         <label>Attribute</label>
                         <select id="atk-stat-${id}" onchange="updateAttackCard(${id})">
-                            <option value="str">Strength (STR)</option>
-                            <option value="con">Constitution (CON)</option>
-                            <option value="dex">Dexterity (DEX)</option>
-                            <option value="int">Intelligence (INT)</option>
-                            <option value="cha">Charisma (CHA)</option>
+                            <option value="str">STR</option>
+                            <option value="con">CON</option>
+                            <option value="dex">DEX</option>
+                            <option value="int">INT</option>
+                            <option value="cha">CHA</option>
                         </select>
                     </div>
-                    <div style="font-size: 0.8rem; text-align: right; margin-top: 4px;">
-                        Mod: <strong id="atk-mod-disp-${id}">+0</strong> | 
-                        Hit: <strong id="atk-total-hit-${id}" style="color: var(--accent-color);">+1</strong>
+                    <!-- Highly Visible Hit Badge -->
+                    <div class="hit-badge-box">
+                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Total Hit Bonus</span>
+                        <span class="hit-badge-val" id="atk-total-hit-${id}">+1</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="atk-mod-subtext-${id}">(Rank 1 + STR +0)</span>
                     </div>
                 </div>
 
-                <!-- Damage Group -->
+                <!-- Damage Pool Group -->
                 <div class="sub-group">
-                    <div class="sub-group-title">Damage</div>
-                    <div class="form-group">
-                        <label>Dice</label>
-                        <select id="atk-dice-${id}" onchange="updateAttackCard(${id})">
-                            <option value="None">None</option>
-                            <option value="1d2">1d2</option>
-                            <option value="1d4">1d4</option>
-                            <option value="1d6">1d6</option>
-                            <option value="1d8">1d8</option>
-                            <option value="1d10">1d10</option>
-                            <option value="1d12">1d12</option>
-                            <option value="1d20">1d20</option>
-                            <option value="2d6">2d6</option>
-                        </select>
+                    <div class="sub-group-title">
+                        <span>Damage Dice</span>
+                        <button type="button" class="btn-small-add" onclick="addDieEntry(${id})">+ Add Die</button>
                     </div>
-                    <div style="font-size: 0.8rem; margin-top: 28px;">
-                        Formula: <strong id="atk-dmg-disp-${id}">1d6 + 0</strong>
+                    
+                    <div id="dice-pool-${id}"></div>
+
+                    <div style="font-size: 0.85rem; margin-top: 10px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block; text-transform: uppercase;">Total Formula</span>
+                        <strong id="atk-dmg-disp-${id}" style="color: #60a5fa; font-size: 0.95rem;">+0</strong>
                     </div>
                 </div>
 
                 <!-- Effect Group -->
-                <div class="sub-group" style="grid-column: span 1;">
+                <div class="sub-group">
                     <div class="sub-group-title">Effect & Properties</div>
-                    <textarea id="atk-effect-${id}" rows="3" placeholder="Describe the effect at current rank..." oninput="saveDataSilently()"></textarea>
+                    <textarea id="atk-effect-${id}" rows="6" placeholder="Describe current rank effects, damage types, debuffs..." oninput="saveDataSilently()"></textarea>
                 </div>
             </div>
         `;
@@ -778,30 +828,85 @@
             document.getElementById(`atk-name-${id}`).value = data.name || '';
             document.getElementById(`atk-rank-${id}`).value = data.rank || 1;
             document.getElementById(`atk-stat-${id}`).value = data.stat || 'str';
-            document.getElementById(`atk-dice-${id}`).value = data.dice || '1d6';
             document.getElementById(`atk-effect-${id}`).value = data.effect || '';
+            
+            if (data.dicePool && data.dicePool.length > 0) {
+                data.dicePool.forEach(die => addDieEntry(id, die.count, die.type));
+            } else {
+                addDieEntry(id, 1, 'd6');
+            }
+        } else {
+            addDieEntry(id, 1, 'd6');
         }
 
         updateAttackCard(id);
     }
 
+    function addDieEntry(attackId, count = 1, type = 'd6') {
+        const pool = document.getElementById(`dice-pool-${attackId}`);
+        const dieId = Date.now() + Math.random().toString(36).substring(2, 5);
+        
+        const entry = document.createElement('div');
+        entry.className = 'dice-entry';
+        entry.id = `die-entry-${dieId}`;
+        entry.innerHTML = `
+            <input type="number" class="die-count" value="${count}" min="1" max="99" onchange="updateAttackCard(${attackId})">
+            <select class="die-type" onchange="updateAttackCard(${attackId})">
+                <option value="d2" ${type === 'd2' ? 'selected' : ''}>d2</option>
+                <option value="d4" ${type === 'd4' ? 'selected' : ''}>d4</option>
+                <option value="d6" ${type === 'd6' ? 'selected' : ''}>d6</option>
+                <option value="d8" ${type === 'd8' ? 'selected' : ''}>d8</option>
+                <option value="d10" ${type === 'd10' ? 'selected' : ''}>d10</option>
+                <option value="d12" ${type === 'd12' ? 'selected' : ''}>d12</option>
+                <option value="d20" ${type === 'd20' ? 'selected' : ''}>d20</option>
+                <option value="d100" ${type === 'd100' ? 'selected' : ''}>d100</option>
+            </select>
+            <button type="button" class="btn-remove-die" onclick="removeDieEntry('${dieId}', ${attackId})">✕</button>
+        `;
+
+        pool.appendChild(entry);
+        updateAttackCard(attackId);
+    }
+
+    function removeDieEntry(dieId, attackId) {
+        const entry = document.getElementById(`die-entry-${dieId}`);
+        if (entry) entry.remove();
+        updateAttackCard(attackId);
+    }
+
     function updateAttackCard(id) {
         const rank = parseInt(document.getElementById(`atk-rank-${id}`).value) || 1;
         const statKey = document.getElementById(`atk-stat-${id}`).value;
-        const dice = document.getElementById(`atk-dice-${id}`).value;
 
         const mod = currentMods[statKey] || 0;
         const totalHit = rank + mod;
 
-        document.getElementById(`atk-mod-disp-${id}`).innerText = '+' + mod;
         document.getElementById(`atk-total-hit-${id}`).innerText = '+' + totalHit;
+        document.getElementById(`atk-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`;
 
-        if (dice === 'None') {
-            document.getElementById(`atk-dmg-disp-${id}`).innerText = `+${mod}`;
+        // Build Combined Multi-Dice Damage String
+        const diceEntries = document.querySelectorAll(`#dice-pool-${id} .dice-entry`);
+        let diceParts = [];
+
+        diceEntries.forEach(entry => {
+            const count = parseInt(entry.querySelector('.die-count').value) || 0;
+            const type = entry.querySelector('.die-type').value;
+            if (count > 0) {
+                diceParts.push(`${count}${type}`);
+            }
+        });
+
+        let dmgFormula = "";
+        if (diceParts.length > 0) {
+            dmgFormula = diceParts.join(' + ');
+            if (mod !== 0) {
+                dmgFormula += mod >= 0 ? ` + ${mod}` : ` - ${Math.abs(mod)}`;
+            }
         } else {
-            document.getElementById(`atk-dmg-disp-${id}`).innerText = `${dice} + ${mod}`;
+            dmgFormula = mod >= 0 ? `+${mod}` : `${mod}`;
         }
 
+        document.getElementById(`atk-dmg-disp-${id}`).innerText = dmgFormula;
         saveDataSilently();
     }
 
@@ -846,12 +951,21 @@
         const attacks = [];
         document.querySelectorAll('.attack-card').forEach(card => {
             const id = card.id.replace('attack-card-', '');
+            
+            const dicePool = [];
+            document.querySelectorAll(`#dice-pool-${id} .dice-entry`).forEach(entry => {
+                dicePool.push({
+                    count: entry.querySelector('.die-count').value,
+                    type: entry.querySelector('.die-type').value
+                });
+            });
+
             attacks.push({
                 name: document.getElementById(`atk-name-${id}`).value,
                 rank: document.getElementById(`atk-rank-${id}`).value,
                 stat: document.getElementById(`atk-stat-${id}`).value,
-                dice: document.getElementById(`atk-dice-${id}`).value,
-                effect: document.getElementById(`atk-effect-${id}`).value
+                effect: document.getElementById(`atk-effect-${id}`).value,
+                dicePool: dicePool
             });
         });
 
