@@ -17,6 +17,8 @@
             --skill-glow: rgba(16, 185, 129, 0.4);
             --item-color: #f59e0b;
             --item-glow: rgba(245, 158, 11, 0.4);
+            --defense-color: #8b5cf6;
+            --defense-glow: rgba(139, 92, 246, 0.4);
             --text-main: #e2e8f0;
             --text-muted: #94a3b8;
             --input-bg: #121524;
@@ -311,6 +313,54 @@
             font-weight: bold;
         }
 
+        /* Defense Grid (Evade & Resistance) */
+        .defense-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--panel-border);
+        }
+
+        @media (max-width: 600px) {
+            .defense-grid { grid-template-columns: 1fr; }
+        }
+
+        .defense-box {
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .defense-title {
+            font-size: 0.8rem;
+            color: var(--defense-color);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .defense-badge {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid var(--defense-color);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .defense-badge-val {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: var(--defense-color);
+            text-shadow: 0 0 10px var(--defense-glow);
+        }
+
         /* Card Section Styling */
         .attack-card, .skill-card, .item-card {
             background: var(--input-bg);
@@ -420,7 +470,6 @@
 
         .dice-entry select { padding: 4px 6px; }
 
-        /* Summary Collapsed View Styles */
         .summary-box {
             background: var(--input-bg);
             border: 1px dashed var(--panel-border);
@@ -607,7 +656,7 @@
 
     <!-- Right Column: Stats & Vitals -->
     <div class="main-content">
-        <!-- Vitals -->
+        <!-- Vitals & Defenses -->
         <div class="card">
             <h2>Vitals & Pool Trackers</h2>
             
@@ -635,6 +684,43 @@
                     <button type="button" class="btn-mana-sub" onclick="adjustMana(-1)">- Sub</button>
                     <input type="number" id="mana-adjust-amt" value="1" min="1">
                     <button type="button" class="btn-mana-add" onclick="adjustMana(1)">+ Add</button>
+                </div>
+            </div>
+
+            <!-- Defenses: Evade & Damage Resistance Calculations -->
+            <div class="defense-grid">
+                <!-- Evade Calculation -->
+                <div class="defense-box">
+                    <div class="defense-title">Evade Check</div>
+                    <div class="form-group">
+                        <label>Evade Buffs / Modifiers</label>
+                        <input type="number" id="evade-buffs" value="0" placeholder="+0" oninput="calculateSheet()">
+                    </div>
+                    <div class="defense-badge">
+                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Evade Formula</span>
+                        <span class="defense-badge-val" id="evade-total-disp">d20 + 0</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="evade-subtext">(d20 + DEX +0 + Buffs +0)</span>
+                    </div>
+                </div>
+
+                <!-- Damage Resistance Calculation -->
+                <div class="defense-box">
+                    <div class="defense-title">Damage Resistance</div>
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label>Armor</label>
+                            <input type="number" id="armor-val" value="0" min="0" oninput="calculateSheet()">
+                        </div>
+                        <div class="form-group">
+                            <label>DR Buffs</label>
+                            <input type="number" id="dr-buffs" value="0" oninput="calculateSheet()">
+                        </div>
+                    </div>
+                    <div class="defense-badge">
+                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Total Resistance</span>
+                        <span class="defense-badge-val" id="dr-total-disp">0 DR</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="dr-subtext">(Armor 0 + Buffs 0)</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -881,8 +967,8 @@
         const int = calculateAttribute('int');
         const cha = calculateAttribute('cha');
 
+        // HP & Mana Calculations
         maxHpSlots = parseInt(document.getElementById('hp-max-slots').value) || 10;
-
         const totalHp = maxHpSlots * con.mod;
         document.getElementById('hp-total-text').innerText = totalHp;
         
@@ -890,6 +976,20 @@
 
         if (hpCurrentSlots > maxHpSlots) hpCurrentSlots = maxHpSlots;
         if (manaCurrent > maxMana) manaCurrent = maxMana;
+
+        // Evade Calculation: d20 + Dex Mod + Buffs
+        const evadeBuffs = parseInt(document.getElementById('evade-buffs').value) || 0;
+        const totalEvadeMod = dex.mod + evadeBuffs;
+        const evadeDispStr = totalEvadeMod >= 0 ? `d20 + ${totalEvadeMod}` : `d20 - ${Math.abs(totalEvadeMod)}`;
+        document.getElementById('evade-total-disp').innerText = evadeDispStr;
+        document.getElementById('evade-subtext').innerText = `(d20 + DEX +${dex.mod} + Buffs ${evadeBuffs >= 0 ? '+' + evadeBuffs : evadeBuffs})`;
+
+        // Damage Resistance Calculation: Armor + Buffs
+        const armorVal = parseInt(document.getElementById('armor-val').value) || 0;
+        const drBuffs = parseInt(document.getElementById('dr-buffs').value) || 0;
+        const totalDR = armorVal + drBuffs;
+        document.getElementById('dr-total-disp').innerText = `${totalDR} DR`;
+        document.getElementById('dr-subtext').innerText = `(Armor ${armorVal} + Buffs ${drBuffs >= 0 ? '+' + drBuffs : drBuffs})`;
 
         updateAllAttacks();
         updateAllSkills();
@@ -1481,6 +1581,11 @@
             maxHpSlots: document.getElementById('hp-max-slots').value,
             hpCurrent: hpCurrentSlots,
             manaCurrent: manaCurrent,
+            
+            evadeBuffs: document.getElementById('evade-buffs').value,
+            armorVal: document.getElementById('armor-val').value,
+            drBuffs: document.getElementById('dr-buffs').value,
+
             attacks: attacks,
             skills: skills,
             items: items,
@@ -1515,6 +1620,10 @@
             document.getElementById('hp-max-slots').value = data.maxHpSlots !== undefined ? data.maxHpSlots : 10;
             hpCurrentSlots = data.hpCurrent || 0;
             manaCurrent = data.manaCurrent || 0;
+
+            document.getElementById('evade-buffs').value = data.evadeBuffs || 0;
+            document.getElementById('armor-val').value = data.armorVal || 0;
+            document.getElementById('dr-buffs').value = data.drBuffs || 0;
 
             if (data.collapsedState) {
                 collapsedState.attacks = !!data.collapsedState.attacks;
