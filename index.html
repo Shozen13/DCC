@@ -105,7 +105,7 @@
             margin-bottom: 4px;
         }
 
-        input, select {
+        input, select, textarea {
             width: 100%;
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
@@ -116,7 +116,7 @@
             transition: border 0.3s;
         }
 
-        input:focus, select:focus {
+        input:focus, select:focus, textarea:focus {
             border-color: var(--accent-color);
         }
 
@@ -268,6 +268,42 @@
             box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
         }
 
+        /* Attacks Section Styling */
+        .attack-card {
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .attack-row {
+            display: grid;
+            grid-template-columns: 2fr 2fr 2fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 650px) {
+            .attack-row { grid-template-columns: 1fr; }
+        }
+
+        .sub-group {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .sub-group-title {
+            font-size: 0.75rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
         .btn-group {
             display: flex;
             gap: 10px;
@@ -288,6 +324,15 @@
 
         button:hover { opacity: 0.9; }
         button.btn-reset { background: #475569; }
+        button.btn-add { background: #10b981; }
+        button.btn-delete {
+            background: #ef4444;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
 
         .modal-overlay {
             display: none;
@@ -512,7 +557,6 @@
                 </div>
             </div>
 
-            <!-- Stat Modifier Reference Table -->
             <details class="modifier-ref">
                 <summary>Stat Modifier Reference Chart</summary>
                 <table class="mod-table">
@@ -534,14 +578,23 @@
                 </table>
             </details>
         </div>
+
+        <!-- Attacks Section -->
+        <div class="card">
+            <h2>
+                <span>Attacks & Actions</span>
+                <button type="button" class="btn-add" onclick="addAttack()">+ Add Attack</button>
+            </h2>
+            <div id="attacks-list"></div>
+        </div>
     </div>
 </div>
 
-<!-- Touch-Friendly Reset Confirmation Modal -->
+<!-- Reset Modal -->
 <div class="modal-overlay" id="resetModal">
     <div class="modal-card">
         <h3>Clear Character Sheet?</h3>
-        <p>This will erase all stats saved on this device. This action cannot be undone.</p>
+        <p>This will erase all stats and attacks saved on this device. This action cannot be undone.</p>
         <div class="modal-actions">
             <button type="button" onclick="confirmReset()">Yes, Clear</button>
             <button type="button" class="btn-reset" onclick="closeResetModal()">Cancel</button>
@@ -554,6 +607,9 @@
     let maxHpSlots = 10;
     let manaCurrent = 0;
     let maxMana = 0;
+    let attackCounter = 0;
+
+    const currentMods = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
 
     function getModifier(statValue) {
         if (!statValue || statValue < 1) return 0;
@@ -579,6 +635,7 @@
         const mod = getModifier(total);
         document.getElementById(`mod-${id}`).innerText = '+' + mod;
         
+        currentMods[id] = mod;
         return { total, mod };
     }
 
@@ -599,6 +656,7 @@
         if (hpCurrentSlots > maxHpSlots) hpCurrentSlots = maxHpSlots;
         if (manaCurrent > maxMana) manaCurrent = maxMana;
 
+        updateAllAttacks();
         renderTrackers();
         saveDataSilently();
     }
@@ -637,6 +695,130 @@
         saveDataSilently();
     }
 
+    /* Attack Management */
+    function addAttack(data = null) {
+        attackCounter++;
+        const id = attackCounter;
+        const container = document.getElementById('attacks-list');
+
+        let rankOptions = '';
+        for (let r = 1; r <= 20; r++) {
+            rankOptions += `<option value="${r}">Rank ${r}</option>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'attack-card';
+        card.id = `attack-card-${id}`;
+        card.innerHTML = `
+            <button type="button" class="btn-delete" onclick="deleteAttack(${id})">Delete</button>
+            <div class="form-group">
+                <label>Attack / Action Name</label>
+                <input type="text" id="atk-name-${id}" placeholder="e.g. Iron Punch" oninput="saveDataSilently()">
+            </div>
+            
+            <div class="attack-row">
+                <!-- To Hit Group -->
+                <div class="sub-group">
+                    <div class="sub-group-title">To Hit</div>
+                    <div class="form-group">
+                        <label>Rank</label>
+                        <select id="atk-rank-${id}" onchange="updateAttackCard(${id})">
+                            ${rankOptions}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Attribute</label>
+                        <select id="atk-stat-${id}" onchange="updateAttackCard(${id})">
+                            <option value="str">Strength (STR)</option>
+                            <option value="con">Constitution (CON)</option>
+                            <option value="dex">Dexterity (DEX)</option>
+                            <option value="int">Intelligence (INT)</option>
+                            <option value="cha">Charisma (CHA)</option>
+                        </select>
+                    </div>
+                    <div style="font-size: 0.8rem; text-align: right; margin-top: 4px;">
+                        Mod: <strong id="atk-mod-disp-${id}">+0</strong> | 
+                        Hit: <strong id="atk-total-hit-${id}" style="color: var(--accent-color);">+1</strong>
+                    </div>
+                </div>
+
+                <!-- Damage Group -->
+                <div class="sub-group">
+                    <div class="sub-group-title">Damage</div>
+                    <div class="form-group">
+                        <label>Dice</label>
+                        <select id="atk-dice-${id}" onchange="updateAttackCard(${id})">
+                            <option value="None">None</option>
+                            <option value="1d2">1d2</option>
+                            <option value="1d4">1d4</option>
+                            <option value="1d6">1d6</option>
+                            <option value="1d8">1d8</option>
+                            <option value="1d10">1d10</option>
+                            <option value="1d12">1d12</option>
+                            <option value="1d20">1d20</option>
+                            <option value="2d6">2d6</option>
+                        </select>
+                    </div>
+                    <div style="font-size: 0.8rem; margin-top: 28px;">
+                        Formula: <strong id="atk-dmg-disp-${id}">1d6 + 0</strong>
+                    </div>
+                </div>
+
+                <!-- Effect Group -->
+                <div class="sub-group" style="grid-column: span 1;">
+                    <div class="sub-group-title">Effect & Properties</div>
+                    <textarea id="atk-effect-${id}" rows="3" placeholder="Describe the effect at current rank..." oninput="saveDataSilently()"></textarea>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(card);
+
+        if (data) {
+            document.getElementById(`atk-name-${id}`).value = data.name || '';
+            document.getElementById(`atk-rank-${id}`).value = data.rank || 1;
+            document.getElementById(`atk-stat-${id}`).value = data.stat || 'str';
+            document.getElementById(`atk-dice-${id}`).value = data.dice || '1d6';
+            document.getElementById(`atk-effect-${id}`).value = data.effect || '';
+        }
+
+        updateAttackCard(id);
+    }
+
+    function updateAttackCard(id) {
+        const rank = parseInt(document.getElementById(`atk-rank-${id}`).value) || 1;
+        const statKey = document.getElementById(`atk-stat-${id}`).value;
+        const dice = document.getElementById(`atk-dice-${id}`).value;
+
+        const mod = currentMods[statKey] || 0;
+        const totalHit = rank + mod;
+
+        document.getElementById(`atk-mod-disp-${id}`).innerText = '+' + mod;
+        document.getElementById(`atk-total-hit-${id}`).innerText = '+' + totalHit;
+
+        if (dice === 'None') {
+            document.getElementById(`atk-dmg-disp-${id}`).innerText = `+${mod}`;
+        } else {
+            document.getElementById(`atk-dmg-disp-${id}`).innerText = `${dice} + ${mod}`;
+        }
+
+        saveDataSilently();
+    }
+
+    function updateAllAttacks() {
+        const cards = document.querySelectorAll('.attack-card');
+        cards.forEach(card => {
+            const id = card.id.replace('attack-card-', '');
+            updateAttackCard(id);
+        });
+    }
+
+    function deleteAttack(id) {
+        const card = document.getElementById(`attack-card-${id}`);
+        if (card) card.remove();
+        saveDataSilently();
+    }
+
     function updateAvatar() {
         const url = document.getElementById('avatar-url').value;
         const img = document.getElementById('avatar-img');
@@ -661,6 +843,18 @@
     }
 
     function saveDataSilently() {
+        const attacks = [];
+        document.querySelectorAll('.attack-card').forEach(card => {
+            const id = card.id.replace('attack-card-', '');
+            attacks.push({
+                name: document.getElementById(`atk-name-${id}`).value,
+                rank: document.getElementById(`atk-rank-${id}`).value,
+                stat: document.getElementById(`atk-stat-${id}`).value,
+                dice: document.getElementById(`atk-dice-${id}`).value,
+                effect: document.getElementById(`atk-effect-${id}`).value
+            });
+        });
+
         const data = {
             name: document.getElementById('char-name').value,
             class: document.getElementById('char-class').value,
@@ -680,7 +874,8 @@
 
             maxHpSlots: document.getElementById('hp-max-slots').value,
             hpCurrent: hpCurrentSlots,
-            manaCurrent: manaCurrent
+            manaCurrent: manaCurrent,
+            attacks: attacks
         };
         localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
     }
@@ -710,6 +905,12 @@
             manaCurrent = data.manaCurrent || 0;
 
             if (data.avatarUrl) updateAvatar();
+
+            // Load saved attacks
+            document.getElementById('attacks-list').innerHTML = '';
+            if (data.attacks && data.attacks.length > 0) {
+                data.attacks.forEach(atk => addAttack(atk));
+            }
         }
         calculateSheet();
     }
@@ -727,8 +928,9 @@
         
         hpCurrentSlots = 0;
         manaCurrent = 0;
+        document.getElementById('attacks-list').innerHTML = '';
         
-        document.querySelectorAll('input').forEach(input => {
+        document.querySelectorAll('input, textarea').forEach(input => {
             if (input.id === 'hp-max-slots') {
                 input.value = 10;
             } else if (input.id === 'char-floor') {
