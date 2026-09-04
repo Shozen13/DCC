@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crawler RPG - Blank Character Sheet</title>
+    <title>Crawler RPG - Character Sheet</title>
     <style>
         :root {
             --bg-color: #0f111a;
@@ -119,33 +119,69 @@
             border-color: var(--accent-color);
         }
 
+        /* Expanded Stats Layout for Triple Digits */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 14px;
         }
 
         .stat-card {
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
             border-radius: 8px;
-            padding: 10px;
-            text-align: center;
+            padding: 12px;
         }
 
-        .stat-value {
+        .stat-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            gap: 5px;
-            margin-top: 5px;
+            margin-bottom: 8px;
+            font-weight: bold;
         }
 
-        .stat-value input {
-            width: 50px;
+        .stat-rows {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .stat-row-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-row-item label {
+            font-size: 0.7rem;
+            margin-bottom: 3px;
+        }
+
+        .stat-row-item input {
             text-align: center;
-            font-size: 1.2rem;
-            font-weight: bold;
+            padding: 6px 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            min-width: 0; /* Prevents overflow inside grid cells */
+            -moz-appearance: textfield; /* Hides browser spinners for cleaner look */
+        }
+
+        /* Remove spin buttons in WebKit browsers for maximum width */
+        .stat-row-item input::-webkit-outer-spin-button,
+        .stat-row-item input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .stat-total-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
         }
 
         .modifier {
@@ -153,7 +189,7 @@
             background: var(--accent-color);
             color: #fff;
             font-weight: bold;
-            padding: 2px 8px;
+            padding: 2px 10px;
             border-radius: 12px;
             font-size: 0.85rem;
         }
@@ -284,7 +320,7 @@
                 <div class="resource-header">
                     <span>Health Capacity (<span id="hp-total-text">0</span> HP)</span>
                     <span>
-                        Slots Max: <input type="number" id="hp-max-slots" value="10" min="0" style="width: 50px; padding: 2px 5px; display: inline-block;" onchange="calculateSheet()">
+                        Slots Max: <input type="number" id="hp-max-slots" value="10" min="0" style="width: 60px; padding: 2px 5px; display: inline-block;" onchange="calculateSheet()">
                     </span>
                     <span id="hp-slot-count">0 / 10 Slots</span>
                 </div>
@@ -304,39 +340,113 @@
         <div class="card">
             <h2>Core Attributes</h2>
             <div class="stats-grid">
+                <!-- STR -->
                 <div class="stat-card">
-                    <label>STR</label>
-                    <div class="stat-value">
-                        <input type="number" id="stat-str" value="0" onchange="calculateSheet()">
+                    <div class="stat-header">
+                        <span>STR</span>
                         <span class="modifier" id="mod-str">+0</span>
                     </div>
+                    <div class="stat-rows">
+                        <div class="stat-row-item">
+                            <label>Base</label>
+                            <input type="number" id="stat-str-base" value="0" onchange="calculateSheet()">
+                        </div>
+                        <div class="stat-row-item">
+                            <label>Enhance</label>
+                            <input type="number" id="stat-str-enh" value="0" onchange="calculateSheet()">
+                        </div>
+                    </div>
+                    <div class="stat-total-bar">
+                        <span>Total STR:</span>
+                        <strong id="stat-str-total">0</strong>
+                    </div>
                 </div>
+
+                <!-- CON -->
                 <div class="stat-card">
-                    <label>CON</label>
-                    <div class="stat-value">
-                        <input type="number" id="stat-con" value="0" onchange="calculateSheet()">
+                    <div class="stat-header">
+                        <span>CON</span>
                         <span class="modifier" id="mod-con">+0</span>
                     </div>
+                    <div class="stat-rows">
+                        <div class="stat-row-item">
+                            <label>Base</label>
+                            <input type="number" id="stat-con-base" value="0" onchange="calculateSheet()">
+                        </div>
+                        <div class="stat-row-item">
+                            <label>Enhance</label>
+                            <input type="number" id="stat-con-enh" value="0" onchange="calculateSheet()">
+                        </div>
+                    </div>
+                    <div class="stat-total-bar">
+                        <span>Total CON:</span>
+                        <strong id="stat-con-total">0</strong>
+                    </div>
                 </div>
+
+                <!-- DEX -->
                 <div class="stat-card">
-                    <label>DEX</label>
-                    <div class="stat-value">
-                        <input type="number" id="stat-dex" value="0" onchange="calculateSheet()">
+                    <div class="stat-header">
+                        <span>DEX</span>
                         <span class="modifier" id="mod-dex">+0</span>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <label>INT</label>
-                    <div class="stat-value">
-                        <input type="number" id="stat-int" value="0" onchange="calculateSheet()">
-                        <span class="modifier" id="mod-int">+0</span>
+                    <div class="stat-rows">
+                        <div class="stat-row-item">
+                            <label>Base</label>
+                            <input type="number" id="stat-dex-base" value="0" onchange="calculateSheet()">
+                        </div>
+                        <div class="stat-row-item">
+                            <label>Enhance</label>
+                            <input type="number" id="stat-dex-enh" value="0" onchange="calculateSheet()">
+                        </div>
+                    </div>
+                    <div class="stat-total-bar">
+                        <span>Total DEX:</span>
+                        <strong id="stat-dex-total">0</strong>
                     </div>
                 </div>
+
+                <!-- INT -->
                 <div class="stat-card">
-                    <label>CHA</label>
-                    <div class="stat-value">
-                        <input type="number" id="stat-cha" value="0" onchange="calculateSheet()">
+                    <div class="stat-header">
+                        <span>INT</span>
+                        <span class="modifier" id="mod-int">+0</span>
+                    </div>
+                    <div class="stat-rows">
+                        <div class="stat-row-item">
+                            <label>Base</label>
+                            <input type="number" id="stat-int-base" value="0" onchange="calculateSheet()">
+                        </div>
+                        <div class="stat-row-item">
+                            <label>Enhance</label>
+                            <input type="number" id="stat-int-enh" value="0" onchange="calculateSheet()">
+                        </div>
+                    </div>
+                    <div class="stat-total-bar">
+                        <span>Total INT:</span>
+                        <strong id="stat-int-total">0</strong>
+                    </div>
+                </div>
+
+                <!-- CHA -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span>CHA</span>
                         <span class="modifier" id="mod-cha">+0</span>
+                    </div>
+                    <div class="stat-rows">
+                        <div class="stat-row-item">
+                            <label>Base</label>
+                            <input type="number" id="stat-cha-base" value="0" onchange="calculateSheet()">
+                        </div>
+                        <div class="stat-row-item">
+                            <label>Enhance</label>
+                            <input type="number" id="stat-cha-enh" value="0" onchange="calculateSheet()">
+                        </div>
+                    </div>
+                    <div class="stat-total-bar">
+                        <span>Total CHA:</span>
+                        <strong id="stat-cha-total">0</strong>
                     </div>
                 </div>
             </div>
@@ -394,26 +504,32 @@
         return Math.floor(statValue / 4) + 1;
     }
 
+    function calculateAttribute(id) {
+        const base = parseInt(document.getElementById(`stat-${id}-base`).value) || 0;
+        const enh = parseInt(document.getElementById(`stat-${id}-enh`).value) || 0;
+        const total = base + enh;
+        
+        document.getElementById(`stat-${id}-total`).innerText = total;
+        
+        const mod = getModifier(total);
+        document.getElementById(`mod-${id}`).innerText = '+' + mod;
+        
+        return { total, mod };
+    }
+
     function calculateSheet() {
-        const con = parseInt(document.getElementById('stat-con').value) || 0;
-        const int = parseInt(document.getElementById('stat-int').value) || 0;
-        const str = parseInt(document.getElementById('stat-str').value) || 0;
-        const dex = parseInt(document.getElementById('stat-dex').value) || 0;
-        const cha = parseInt(document.getElementById('stat-cha').value) || 0;
+        const str = calculateAttribute('str');
+        const con = calculateAttribute('con');
+        const dex = calculateAttribute('dex');
+        const int = calculateAttribute('int');
+        const cha = calculateAttribute('cha');
 
         maxHpSlots = parseInt(document.getElementById('hp-max-slots').value) || 10;
 
-        const conMod = getModifier(con);
-        document.getElementById('mod-con').innerText = '+' + conMod;
-        document.getElementById('mod-str').innerText = '+' + getModifier(str);
-        document.getElementById('mod-dex').innerText = '+' + getModifier(dex);
-        document.getElementById('mod-int').innerText = '+' + getModifier(int);
-        document.getElementById('mod-cha').innerText = '+' + getModifier(cha);
-
-        const totalHp = maxHpSlots * conMod;
+        const totalHp = maxHpSlots * con.mod;
         document.getElementById('hp-total-text').innerText = totalHp;
         
-        maxMana = int;
+        maxMana = int.total;
 
         if (hpCurrentSlots > maxHpSlots) hpCurrentSlots = maxHpSlots;
         if (manaCurrent > maxMana) manaCurrent = maxMana;
@@ -485,11 +601,18 @@
             class: document.getElementById('char-class').value,
             floor: document.getElementById('char-floor').value,
             avatarUrl: document.getElementById('avatar-url').value,
-            str: document.getElementById('stat-str').value,
-            con: document.getElementById('stat-con').value,
-            dex: document.getElementById('stat-dex').value,
-            int: document.getElementById('stat-int').value,
-            cha: document.getElementById('stat-cha').value,
+            
+            strBase: document.getElementById('stat-str-base').value,
+            strEnh: document.getElementById('stat-str-enh').value,
+            conBase: document.getElementById('stat-con-base').value,
+            conEnh: document.getElementById('stat-con-enh').value,
+            dexBase: document.getElementById('stat-dex-base').value,
+            dexEnh: document.getElementById('stat-dex-enh').value,
+            intBase: document.getElementById('stat-int-base').value,
+            intEnh: document.getElementById('stat-int-enh').value,
+            chaBase: document.getElementById('stat-cha-base').value,
+            chaEnh: document.getElementById('stat-cha-enh').value,
+
             maxHpSlots: document.getElementById('hp-max-slots').value,
             hpCurrent: hpCurrentSlots,
             manaCurrent: manaCurrent,
@@ -499,11 +622,11 @@
             feet: document.getElementById('gear-feet').value,
             notes: document.getElementById('char-notes').value
         };
-        localStorage.setItem('crawler_blank_char_data', JSON.stringify(data));
+        localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
     }
 
     function loadData() {
-        const saved = localStorage.getItem('crawler_blank_char_data');
+        const saved = localStorage.getItem('crawler_split_attrs_data');
         if (saved) {
             const data = JSON.parse(saved);
             document.getElementById('char-name').value = data.name || '';
@@ -511,11 +634,16 @@
             document.getElementById('char-floor').value = data.floor || '1';
             document.getElementById('avatar-url').value = data.avatarUrl || '';
             
-            document.getElementById('stat-str').value = data.str || 0;
-            document.getElementById('stat-con').value = data.con || 0;
-            document.getElementById('stat-dex').value = data.dex || 0;
-            document.getElementById('stat-int').value = data.int || 0;
-            document.getElementById('stat-cha').value = data.cha || 0;
+            document.getElementById('stat-str-base').value = data.strBase || 0;
+            document.getElementById('stat-str-enh').value = data.strEnh || 0;
+            document.getElementById('stat-con-base').value = data.conBase || 0;
+            document.getElementById('stat-con-enh').value = data.conEnh || 0;
+            document.getElementById('stat-dex-base').value = data.dexBase || 0;
+            document.getElementById('stat-dex-enh').value = data.dexEnh || 0;
+            document.getElementById('stat-int-base').value = data.intBase || 0;
+            document.getElementById('stat-int-enh').value = data.intEnh || 0;
+            document.getElementById('stat-cha-base').value = data.chaBase || 0;
+            document.getElementById('stat-cha-enh').value = data.chaEnh || 0;
 
             document.getElementById('hp-max-slots').value = data.maxHpSlots !== undefined ? data.maxHpSlots : 10;
             hpCurrentSlots = data.hpCurrent || 0;
@@ -534,7 +662,7 @@
 
     function resetData() {
         if (confirm("Are you sure you want to completely clear this sheet?")) {
-            localStorage.removeItem('crawler_blank_char_data');
+            localStorage.removeItem('crawler_split_attrs_data');
             location.reload();
         }
     }
