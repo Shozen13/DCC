@@ -19,6 +19,10 @@
             --item-glow: rgba(245, 158, 11, 0.4);
             --defense-color: #8b5cf6;
             --defense-glow: rgba(139, 92, 246, 0.4);
+            --debuff-color: #ef4444;
+            --debuff-glow: rgba(239, 68, 68, 0.4);
+            --buff-color: #06b6d4;
+            --buff-glow: rgba(6, 182, 212, 0.4);
             --text-main: #e2e8f0;
             --text-muted: #94a3b8;
             --input-bg: #121524;
@@ -79,6 +83,22 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .sub-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .header-actions {
@@ -360,6 +380,19 @@
             text-shadow: 0 0 10px var(--defense-glow);
         }
 
+        /* Generic Condition Card (Debuffs / Buffs) */
+        .condition-card {
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .debuff-card { border-left: 4px solid var(--debuff-color); }
+        .buff-card { border-left: 4px solid var(--buff-color); }
+
         .attack-card, .skill-card, .item-card {
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
@@ -499,6 +532,8 @@
 
         .summary-tag.atk .badge { background: rgba(224, 79, 95, 0.2); color: var(--accent-color); }
         .summary-tag.skl .badge { background: rgba(16, 185, 129, 0.2); color: var(--skill-color); }
+        .summary-tag.dbf .badge { background: rgba(239, 68, 68, 0.2); color: var(--debuff-color); }
+        .summary-tag.ebf .badge { background: rgba(6, 182, 212, 0.2); color: var(--buff-color); }
 
         .btn-group {
             display: flex;
@@ -519,6 +554,7 @@
         }
 
         button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
         button.btn-reset { background: #475569; }
         button.btn-add { background: #10b981; }
         button.btn-mana-add { background: #3b82f6; padding: 6px 12px; }
@@ -721,6 +757,28 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Debuffs Section -->
+            <div class="sub-section-header" style="color: var(--debuff-color); border-color: rgba(239, 68, 68, 0.3);">
+                <span>Debuffs & Status Effects</span>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-debuffs" onclick="toggleSection('debuffs')">▼ Collapse</button>
+                    <button type="button" class="btn-add" style="background: var(--debuff-color);" onclick="addDebuff()">+ Add Debuff</button>
+                </div>
+            </div>
+            <div id="debuffs-summary" class="summary-box" style="display: none;"></div>
+            <div id="debuffs-list"></div>
+
+            <!-- External Buffs Section -->
+            <div class="sub-section-header" style="color: var(--buff-color); border-color: rgba(6, 182, 212, 0.3);">
+                <span>External Buffs (<span id="buff-count-disp">0</span>/3 Max)</span>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-buffs" onclick="toggleSection('buffs')">▼ Collapse</button>
+                    <button type="button" class="btn-add" id="btn-add-buff" style="background: var(--buff-color);" onclick="addExternalBuff()">+ Add Buff</button>
+                </div>
+            </div>
+            <div id="buffs-summary" class="summary-box" style="display: none;"></div>
+            <div id="buffs-list"></div>
         </div>
 
         <!-- Attributes -->
@@ -922,11 +980,15 @@
     let attackCounter = 0;
     let skillCounter = 0;
     let itemCounter = 0;
+    let debuffCounter = 0;
+    let buffCounter = 0;
 
     const collapsedState = {
         attacks: false,
         skills: false,
-        items: false
+        items: false,
+        debuffs: false,
+        buffs: false
     };
 
     const currentMods = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
@@ -1005,6 +1067,8 @@
         updateAllAttacks();
         updateAllSkills();
         updateAllItems();
+        updateAllDebuffs();
+        updateAllBuffs();
         renderTrackers();
         renderManaBar();
         saveDataSilently();
@@ -1061,6 +1125,150 @@
         hpCurrentSlots = (index + 1 === hpCurrentSlots) ? index : index + 1;
         renderTrackers();
         saveDataSilently();
+    }
+
+    /* Debuffs Management */
+    function addDebuff(data = null) {
+        debuffCounter++;
+        const id = debuffCounter;
+        const container = document.getElementById('debuffs-list');
+
+        const card = document.createElement('div');
+        card.className = 'condition-card debuff-card';
+        card.id = `debuff-card-${id}`;
+        card.innerHTML = `
+            <button type="button" class="btn-delete" onclick="deleteDebuff(${id})">Delete</button>
+            <div class="form-group" style="padding-right: 60px;">
+                <label style="color: var(--debuff-color);">Debuff / Status Name</label>
+                <input type="text" id="debuff-name-${id}" placeholder="e.g. Bleed, Poisoned, Slowed" oninput="updateAllDebuffs()">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Notes / Effects</label>
+                <textarea id="debuff-notes-${id}" rows="2" placeholder="Describe negative effects, duration, tick damage..." oninput="saveDataSilently()"></textarea>
+            </div>
+        `;
+
+        container.appendChild(card);
+
+        if (data) {
+            document.getElementById(`debuff-name-${id}`).value = data.name || '';
+            document.getElementById(`debuff-notes-${id}`).value = data.notes || '';
+        }
+
+        if (collapsedState.debuffs) {
+            toggleSection('debuffs');
+        }
+
+        updateAllDebuffs();
+    }
+
+    function updateAllDebuffs() {
+        const summaryBox = document.getElementById('debuffs-summary');
+        const cards = document.querySelectorAll('.debuff-card');
+
+        if (cards.length === 0) {
+            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Active Debuffs</span>';
+            saveDataSilently();
+            return;
+        }
+
+        let tagsHtml = '';
+        cards.forEach(card => {
+            const id = card.id.replace('debuff-card-', '');
+            const name = document.getElementById(`debuff-name-${id}`).value || 'Unnamed Debuff';
+
+            tagsHtml += `
+                <div class="summary-tag dbf">
+                    <span>${name}</span>
+                    <span class="badge">Debuff</span>
+                </div>
+            `;
+        });
+        summaryBox.innerHTML = tagsHtml;
+        saveDataSilently();
+    }
+
+    function deleteDebuff(id) {
+        const card = document.getElementById(`debuff-card-${id}`);
+        if (card) card.remove();
+        updateAllDebuffs();
+    }
+
+    /* External Buffs Management (Max 3) */
+    function addExternalBuff(data = null) {
+        const cards = document.querySelectorAll('.buff-card');
+        if (cards.length >= 3) {
+            alert("Maximum of 3 External Buffs allowed!");
+            return;
+        }
+
+        buffCounter++;
+        const id = buffCounter;
+        const container = document.getElementById('buffs-list');
+
+        const card = document.createElement('div');
+        card.className = 'condition-card buff-card';
+        card.id = `buff-card-${id}`;
+        card.innerHTML = `
+            <button type="button" class="btn-delete" onclick="deleteBuff(${id})">Delete</button>
+            <div class="form-group" style="padding-right: 60px;">
+                <label style="color: var(--buff-color);">External Buff Name</label>
+                <input type="text" id="buff-name-${id}" placeholder="e.g. Haste, Hallowed Shield" oninput="updateAllBuffs()">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Notes / Effects</label>
+                <textarea id="buff-notes-${id}" rows="2" placeholder="Describe positive bonuses, source, or duration..." oninput="saveDataSilently()"></textarea>
+            </div>
+        `;
+
+        container.appendChild(card);
+
+        if (data) {
+            document.getElementById(`buff-name-${id}`).value = data.name || '';
+            document.getElementById(`buff-notes-${id}`).value = data.notes || '';
+        }
+
+        if (collapsedState.buffs) {
+            toggleSection('buffs');
+        }
+
+        updateAllBuffs();
+    }
+
+    function updateAllBuffs() {
+        const summaryBox = document.getElementById('buffs-summary');
+        const cards = document.querySelectorAll('.buff-card');
+        const count = cards.length;
+
+        document.getElementById('buff-count-disp').innerText = count;
+        document.getElementById('btn-add-buff').disabled = count >= 3;
+
+        if (count === 0) {
+            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Active External Buffs</span>';
+            saveDataSilently();
+            return;
+        }
+
+        let tagsHtml = '';
+        cards.forEach(card => {
+            const id = card.id.replace('buff-card-', '');
+            const name = document.getElementById(`buff-name-${id}`).value || 'Unnamed Buff';
+
+            tagsHtml += `
+                <div class="summary-tag ebf">
+                    <span>${name}</span>
+                    <span class="badge">Buff</span>
+                </div>
+            `;
+        });
+        summaryBox.innerHTML = tagsHtml;
+        saveDataSilently();
+    }
+
+    function deleteBuff(id) {
+        const card = document.getElementById(`buff-card-${id}`);
+        if (card) card.remove();
+        updateAllBuffs();
     }
 
     /* Attack Management */
@@ -1571,6 +1779,24 @@
             });
         });
 
+        const debuffs = [];
+        document.querySelectorAll('.debuff-card').forEach(card => {
+            const id = card.id.replace('debuff-card-', '');
+            debuffs.push({
+                name: document.getElementById(`debuff-name-${id}`).value,
+                notes: document.getElementById(`debuff-notes-${id}`).value
+            });
+        });
+
+        const buffs = [];
+        document.querySelectorAll('.buff-card').forEach(card => {
+            const id = card.id.replace('buff-card-', '');
+            buffs.push({
+                name: document.getElementById(`buff-name-${id}`).value,
+                notes: document.getElementById(`buff-notes-${id}`).value
+            });
+        });
+
         const data = {
             name: document.getElementById('char-name').value,
             number: document.getElementById('char-number').value,
@@ -1599,6 +1825,8 @@
             armorVal: document.getElementById('armor-val').value,
             drBuffs: document.getElementById('dr-buffs').value,
 
+            debuffs: debuffs,
+            buffs: buffs,
             attacks: attacks,
             skills: skills,
             items: items,
@@ -1642,9 +1870,21 @@
                 collapsedState.attacks = !!data.collapsedState.attacks;
                 collapsedState.skills = !!data.collapsedState.skills;
                 collapsedState.items = !!data.collapsedState.items;
+                collapsedState.debuffs = !!data.collapsedState.debuffs;
+                collapsedState.buffs = !!data.collapsedState.buffs;
             }
 
             if (data.avatarUrl) updateAvatar();
+
+            document.getElementById('debuffs-list').innerHTML = '';
+            if (data.debuffs && data.debuffs.length > 0) {
+                data.debuffs.forEach(dbf => addDebuff(dbf));
+            }
+
+            document.getElementById('buffs-list').innerHTML = '';
+            if (data.buffs && data.buffs.length > 0) {
+                data.buffs.forEach(bf => addExternalBuff(bf));
+            }
 
             document.getElementById('attacks-list').innerHTML = '';
             if (data.attacks && data.attacks.length > 0) {
@@ -1665,6 +1905,8 @@
         applySectionVisibility('attacks');
         applySectionVisibility('skills');
         applySectionVisibility('items');
+        applySectionVisibility('debuffs');
+        applySectionVisibility('buffs');
 
         calculateSheet();
         isInitialLoad = false;
@@ -1687,14 +1929,20 @@
         document.getElementById('attacks-list').innerHTML = '';
         document.getElementById('skills-list').innerHTML = '';
         document.getElementById('items-list').innerHTML = '';
+        document.getElementById('debuffs-list').innerHTML = '';
+        document.getElementById('buffs-list').innerHTML = '';
 
         collapsedState.attacks = false;
         collapsedState.skills = false;
         collapsedState.items = false;
+        collapsedState.debuffs = false;
+        collapsedState.buffs = false;
 
         applySectionVisibility('attacks');
         applySectionVisibility('skills');
         applySectionVisibility('items');
+        applySectionVisibility('debuffs');
+        applySectionVisibility('buffs');
         
         document.querySelectorAll('input, textarea').forEach(input => {
             if (input.id === 'hp-max-slots') {
