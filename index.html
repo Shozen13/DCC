@@ -13,6 +13,8 @@
             --accent-glow: rgba(224, 79, 95, 0.4);
             --mana-color: #3b82f6;
             --mana-glow: rgba(59, 130, 246, 0.4);
+            --skill-color: #10b981;
+            --skill-glow: rgba(16, 185, 129, 0.4);
             --text-main: #e2e8f0;
             --text-muted: #94a3b8;
             --input-bg: #121524;
@@ -269,7 +271,6 @@
             box-shadow: 0 0 8px var(--accent-glow);
         }
 
-        /* Mana Progress Bar & Control Layout */
         .mana-bar-container {
             width: 100%;
             height: 28px;
@@ -302,8 +303,8 @@
             font-weight: bold;
         }
 
-        /* Attacks Section Styling */
-        .attack-card {
+        /* Attacks & Skills Section Styling */
+        .attack-card, .skill-card {
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
             border-radius: 8px;
@@ -312,7 +313,11 @@
             position: relative;
         }
 
-        .attack-row {
+        .skill-card {
+            border-left: 4px solid var(--skill-color);
+        }
+
+        .attack-row, .skill-row {
             display: grid;
             grid-template-columns: 2.2fr 2.5fr 2.3fr;
             gap: 12px;
@@ -320,7 +325,7 @@
         }
 
         @media (max-width: 750px) {
-            .attack-row { grid-template-columns: 1fr; }
+            .attack-row, .skill-row { grid-template-columns: 1fr; }
         }
 
         .sub-group {
@@ -344,9 +349,22 @@
             align-items: center;
         }
 
+        .skill-title {
+            color: var(--skill-color);
+        }
+
         .hit-badge-box {
             background: rgba(224, 79, 95, 0.15);
             border: 1px solid var(--accent-color);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        .skill-badge-box {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--skill-color);
             border-radius: 6px;
             padding: 8px;
             text-align: center;
@@ -358,6 +376,13 @@
             font-weight: 900;
             color: var(--accent-color);
             text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .skill-badge-val {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--skill-color);
+            text-shadow: 0 0 10px var(--skill-glow);
         }
 
         .dice-entry {
@@ -700,6 +725,15 @@
             </h2>
             <div id="attacks-list"></div>
         </div>
+
+        <!-- Skills Section -->
+        <div class="card">
+            <h2 style="color: var(--skill-color);">
+                <span>Skills</span>
+                <button type="button" class="btn-add" style="background: var(--skill-color);" onclick="addSkill()">+ Add Skill</button>
+            </h2>
+            <div id="skills-list"></div>
+        </div>
     </div>
 </div>
 
@@ -707,7 +741,7 @@
 <div class="modal-overlay" id="resetModal">
     <div class="modal-card">
         <h3>Clear Character Sheet?</h3>
-        <p>This will erase all stats and attacks saved on this device. This action cannot be undone.</p>
+        <p>This will erase all stats, attacks, and skills saved on this device. This action cannot be undone.</p>
         <div class="modal-actions">
             <button type="button" onclick="confirmReset()">Yes, Clear</button>
             <button type="button" class="btn-reset" onclick="closeResetModal()">Cancel</button>
@@ -721,6 +755,7 @@
     let manaCurrent = 0;
     let maxMana = 0;
     let attackCounter = 0;
+    let skillCounter = 0;
 
     const currentMods = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
 
@@ -770,6 +805,7 @@
         if (manaCurrent > maxMana) manaCurrent = maxMana;
 
         updateAllAttacks();
+        updateAllSkills();
         renderTrackers();
         renderManaBar();
         saveDataSilently();
@@ -978,6 +1014,121 @@
         saveDataSilently();
     }
 
+    /* Skills Management */
+    function addSkill(data = null) {
+        skillCounter++;
+        const id = skillCounter;
+        const container = document.getElementById('skills-list');
+
+        let rankOptions = '';
+        for (let r = 1; r <= 20; r++) {
+            rankOptions += `<option value="${r}">Rank ${r}</option>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'skill-card';
+        card.id = `skill-card-${id}`;
+        card.innerHTML = `
+            <button type="button" class="btn-delete" onclick="deleteSkill(${id})">Delete</button>
+            <div class="form-group" style="padding-right: 60px;">
+                <label>Skill Name</label>
+                <input type="text" id="skl-name-${id}" placeholder="e.g. Pugilism, Endurance, Catcher" oninput="saveDataSilently()">
+            </div>
+            
+            <div class="skill-row">
+                <!-- Rank & Stat Group -->
+                <div class="sub-group">
+                    <div class="sub-group-title skill-title">Rank & Stat</div>
+                    <div class="form-group">
+                        <label>Rank</label>
+                        <select id="skl-rank-${id}" onchange="updateSkillCard(${id})">
+                            ${rankOptions}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Associated Stat</label>
+                        <select id="skl-stat-${id}" onchange="updateSkillCard(${id})">
+                            <option value="str">STR</option>
+                            <option value="con">CON</option>
+                            <option value="dex">DEX</option>
+                            <option value="int">INT</option>
+                            <option value="cha">CHA</option>
+                        </select>
+                    </div>
+                    <div class="skill-badge-box">
+                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Skill Bonus</span>
+                        <span class="skill-badge-val" id="skl-total-bonus-${id}">+1</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="skl-mod-subtext-${id}">(Rank 1 + STR +0)</span>
+                    </div>
+                </div>
+
+                <!-- Check Type Group -->
+                <div class="sub-group">
+                    <div class="sub-group-title skill-title">Check Type</div>
+                    <div class="form-group">
+                        <label>Check Category</label>
+                        <select id="skl-check-${id}" onchange="saveDataSilently()">
+                            <option value="Active Check">Active Check (d20 + Mod)</option>
+                            <option value="Contested Check">Contested Roll vs Enemy</option>
+                            <option value="Evade Check">Evade / Avoidance Check</option>
+                            <option value="Flat Threshold">Flat Threshold / DC Check</option>
+                            <option value="Passive Effect">Passive (Always Active)</option>
+                            <option value="Save Check">Save / Resistance Check</option>
+                        </select>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                        Determines the execution requirement or mechanic used during gameplay.
+                    </div>
+                </div>
+
+                <!-- Effect & Upgrades Group -->
+                <div class="sub-group">
+                    <div class="sub-group-title skill-title">Effect, Notes & Upgrades</div>
+                    <textarea id="skl-effect-${id}" rows="6" placeholder="Describe skill effect, damage scaling, passive perks, or upgrade milestones..." oninput="saveDataSilently()"></textarea>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(card);
+
+        if (data) {
+            document.getElementById(`skl-name-${id}`).value = data.name || '';
+            document.getElementById(`skl-rank-${id}`).value = data.rank || 1;
+            document.getElementById(`skl-stat-${id}`).value = data.stat || 'str';
+            document.getElementById(`skl-check-${id}`).value = data.checkType || 'Active Check';
+            document.getElementById(`skl-effect-${id}`).value = data.effect || '';
+        }
+
+        updateSkillCard(id);
+    }
+
+    function updateSkillCard(id) {
+        const rank = parseInt(document.getElementById(`skl-rank-${id}`).value) || 1;
+        const statKey = document.getElementById(`skl-stat-${id}`).value;
+
+        const mod = currentMods[statKey] || 0;
+        const totalBonus = rank + mod;
+
+        document.getElementById(`skl-total-bonus-${id}`).innerText = '+' + totalBonus;
+        document.getElementById(`skl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`;
+
+        saveDataSilently();
+    }
+
+    function updateAllSkills() {
+        const cards = document.querySelectorAll('.skill-card');
+        cards.forEach(card => {
+            const id = card.id.replace('skill-card-', '');
+            updateSkillCard(id);
+        });
+    }
+
+    function deleteSkill(id) {
+        const card = document.getElementById(`skill-card-${id}`);
+        if (card) card.remove();
+        saveDataSilently();
+    }
+
     function updateAvatar() {
         const url = document.getElementById('avatar-url').value;
         const img = document.getElementById('avatar-img');
@@ -1023,6 +1174,18 @@
             });
         });
 
+        const skills = [];
+        document.querySelectorAll('.skill-card').forEach(card => {
+            const id = card.id.replace('skill-card-', '');
+            skills.push({
+                name: document.getElementById(`skl-name-${id}`).value,
+                rank: document.getElementById(`skl-rank-${id}`).value,
+                stat: document.getElementById(`skl-stat-${id}`).value,
+                checkType: document.getElementById(`skl-check-${id}`).value,
+                effect: document.getElementById(`skl-effect-${id}`).value
+            });
+        });
+
         const data = {
             name: document.getElementById('char-name').value,
             number: document.getElementById('char-number').value,
@@ -1046,7 +1209,8 @@
             maxHpSlots: document.getElementById('hp-max-slots').value,
             hpCurrent: hpCurrentSlots,
             manaCurrent: manaCurrent,
-            attacks: attacks
+            attacks: attacks,
+            skills: skills
         };
         localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
     }
@@ -1084,6 +1248,11 @@
             if (data.attacks && data.attacks.length > 0) {
                 data.attacks.forEach(atk => addAttack(atk));
             }
+
+            document.getElementById('skills-list').innerHTML = '';
+            if (data.skills && data.skills.length > 0) {
+                data.skills.forEach(skl => addSkill(skl));
+            }
         }
         calculateSheet();
     }
@@ -1102,6 +1271,7 @@
         hpCurrentSlots = 0;
         manaCurrent = 0;
         document.getElementById('attacks-list').innerHTML = '';
+        document.getElementById('skills-list').innerHTML = '';
         
         document.querySelectorAll('input, textarea').forEach(input => {
             if (input.id === 'hp-max-slots') {
