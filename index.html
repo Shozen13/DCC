@@ -155,18 +155,13 @@
       text-transform: uppercase;
     }
 
-    .split-cell {
+    .stat-select-cell {
       display: flex;
       gap: 4px;
-      align-items: center;
     }
 
-    .split-cell input, .split-cell select {
-      flex: 1;
-    }
-
-    .mod-readout {
-      width: 50px !important;
+    .mod-val-box {
+      width: 45px !important;
       text-align: center;
       background: #101622;
       color: var(--accent);
@@ -361,8 +356,10 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th>TO HIT (Rank + Stat Mod)</th>
-            <th>DAMAGE (Dice + Stat Mod)</th>
+            <th style="width: 110px;">To Hit: Rank</th>
+            <th>To Hit: Stat Mod</th>
+            <th style="width: 110px;">Damage: Dice</th>
+            <th>Damage: Stat Mod</th>
             <th>Effects</th>
             <th style="width: 40px;"></th>
           </tr>
@@ -473,9 +470,9 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><input type="text" class="atk-name" placeholder="Attack Name" value="${data.name || ''}" /></td>
+        <td><input type="text" class="to-hit-rank" placeholder="Rank" value="${data.toHitRank || ''}" /></td>
         <td>
-          <div class="split-cell">
-            <input type="text" class="to-hit-rank" placeholder="Rank" value="${data.toHitRank || ''}" />
+          <div class="stat-select-cell">
             <select class="to-hit-stat" onchange="updateAttackMods()">
               <option value="">--Stat--</option>
               <option value="str" ${data.toHitStat === 'str' ? 'selected' : ''}>STR</option>
@@ -484,12 +481,12 @@
               <option value="dex" ${data.toHitStat === 'dex' ? 'selected' : ''}>DEX</option>
               <option value="cha" ${data.toHitStat === 'cha' ? 'selected' : ''}>CHA</option>
             </select>
-            <input type="text" class="mod-readout to-hit-mod-val" readonly placeholder="Mod" />
+            <input type="text" class="mod-val-box to-hit-mod-val" readonly placeholder="Mod" />
           </div>
         </td>
+        <td><input type="text" class="dmg-dice" placeholder="Dice (e.g. 1d6)" value="${data.dmgDice || ''}" /></td>
         <td>
-          <div class="split-cell">
-            <input type="text" class="dmg-dice" placeholder="Dice (e.g. 1d6)" value="${data.dmgDice || ''}" />
+          <div class="stat-select-cell">
             <select class="dmg-stat" onchange="updateAttackMods()">
               <option value="">--Stat--</option>
               <option value="str" ${data.dmgStat === 'str' ? 'selected' : ''}>STR</option>
@@ -498,7 +495,7 @@
               <option value="dex" ${data.dmgStat === 'dex' ? 'selected' : ''}>DEX</option>
               <option value="cha" ${data.dmgStat === 'cha' ? 'selected' : ''}>CHA</option>
             </select>
-            <input type="text" class="mod-readout dmg-mod-val" readonly placeholder="Mod" />
+            <input type="text" class="mod-val-box dmg-mod-val" readonly placeholder="Mod" />
           </div>
         </td>
         <td><input type="text" class="atk-fx" value="${data.fx || ''}" /></td>
