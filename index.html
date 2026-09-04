@@ -22,6 +22,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -119,7 +120,6 @@
             border-color: var(--accent-color);
         }
 
-        /* Stats Grid Layout */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -193,7 +193,6 @@
             font-size: 0.85rem;
         }
 
-        /* Modifier Reference Table */
         details.modifier-ref {
             margin-top: 15px;
             background: var(--input-bg);
@@ -279,11 +278,12 @@
             background: var(--accent-color);
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 10px 16px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
             transition: opacity 0.2s;
+            touch-action: manipulation;
         }
 
         button:hover { opacity: 0.9; }
@@ -303,6 +303,49 @@
             display: flex;
             gap: 10px;
             align-items: center;
+        }
+
+        /* iPad Friendly Reset Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-card {
+            background: #181c2e;
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 360px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .modal-card h3 {
+            color: var(--accent-color);
+            margin-bottom: 10px;
+        }
+
+        .modal-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
         }
     </style>
 </head>
@@ -338,8 +381,8 @@
         <div class="card">
             <h2>Actions</h2>
             <div class="btn-group">
-                <button onclick="saveData()">Save Character</button>
-                <button class="btn-reset" onclick="resetData()">Clear Sheet</button>
+                <button type="button" onclick="saveData()">Save Character</button>
+                <button type="button" class="btn-reset" onclick="openResetModal()">Clear Sheet</button>
             </div>
             <p id="save-status" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
         </div>
@@ -486,7 +529,7 @@
                 </div>
             </div>
 
-            <!-- Stat Modifier Lookup Reference Table -->
+            <!-- Stat Modifier Reference Table -->
             <details class="modifier-ref">
                 <summary>Stat Modifier Reference Chart</summary>
                 <table class="mod-table">
@@ -550,13 +593,24 @@
     </div>
 </div>
 
+<!-- Touch-Friendly Reset Confirmation Modal -->
+<div class="modal-overlay" id="resetModal">
+    <div class="modal-card">
+        <h3>Clear Character Sheet?</h3>
+        <p>This will erase all stats, gear, and notes saved on this device. This action cannot be undone.</p>
+        <div class="modal-actions">
+            <button type="button" onclick="confirmReset()">Yes, Clear</button>
+            <button type="button" class="btn-reset" onclick="closeResetModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <script>
     let hpCurrentSlots = 0;
     let maxHpSlots = 10;
     let manaCurrent = 0;
     let maxMana = 0;
 
-    // Updated Modifier Formula based on specific rule table
     function getModifier(statValue) {
         if (!statValue || statValue < 1) return 0;
         if (statValue <= 2) return 1;
@@ -727,11 +781,36 @@
         calculateSheet();
     }
 
-    function resetData() {
-        if (confirm("Are you sure you want to completely clear this sheet?")) {
-            localStorage.removeItem('crawler_split_attrs_data');
-            location.reload();
-        }
+    /* iPad-Friendly Reset Logic */
+    function openResetModal() {
+        document.getElementById('resetModal').style.display = 'flex';
+    }
+
+    function closeResetModal() {
+        document.getElementById('resetModal').style.display = 'none';
+    }
+
+    function confirmReset() {
+        localStorage.removeItem('crawler_split_attrs_data');
+        
+        // Reset state variables
+        hpCurrentSlots = 0;
+        manaCurrent = 0;
+        
+        // Clear form inputs manually without relying on full page reload
+        document.querySelectorAll('input, textarea').forEach(input => {
+            if (input.type === 'number') {
+                input.value = input.id === 'hp-max-slots' || input.id === 'char-floor' ? 10 : 0;
+            } else {
+                input.value = '';
+            }
+        });
+        
+        document.getElementById('avatar-img').style.display = 'none';
+        document.getElementById('avatar-placeholder').style.display = 'block';
+        
+        calculateSheet();
+        closeResetModal();
     }
 
     window.onload = loadData;
