@@ -376,8 +376,8 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th>Rank</th>
-            <th>Stat & Mod</th>
+            <th style="width: 100px;">Rank</th>
+            <th>Stat Mod</th>
             <th>Check Type</th>
             <th>Notes & Upgrades</th>
             <th style="width: 40px;"></th>
@@ -431,6 +431,7 @@
       });
       calcCombat();
       updateAttackMods();
+      updateSkillMods();
     }
 
     // Evade & DR Math
@@ -460,6 +461,18 @@
         if (dmgSelect && dmgReadout) {
           const stat = dmgSelect.value;
           dmgReadout.value = stat ? (document.getElementById(`${stat}-mod`).value || 0) : '';
+        }
+      });
+    }
+
+    // Dynamic Skill Modifier Linking
+    function updateSkillMods() {
+      document.querySelectorAll('#skills-table tbody tr').forEach(tr => {
+        const skillSelect = tr.querySelector('.skill-stat');
+        const skillReadout = tr.querySelector('.skill-mod-val');
+        if (skillSelect && skillReadout) {
+          const stat = skillSelect.value;
+          skillReadout.value = stat ? (document.getElementById(`${stat}-mod`).value || 0) : '';
         }
       });
     }
@@ -509,23 +522,36 @@
       const tbody = document.querySelector('#skills-table tbody');
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="text" value="${data.name || ''}" /></td>
-        <td><input type="text" value="${data.rank || ''}" /></td>
-        <td><input type="text" value="${data.statMod || ''}" /></td>
-        <td><input type="text" value="${data.check || ''}" /></td>
-        <td><input type="text" value="${data.notes || ''}" /></td>
+        <td><input type="text" class="skill-name" placeholder="Skill Name" value="${data.name || ''}" /></td>
+        <td><input type="text" class="skill-rank" placeholder="Rank" value="${data.rank || ''}" /></td>
+        <td>
+          <div class="stat-select-cell">
+            <select class="skill-stat" onchange="updateSkillMods()">
+              <option value="">--Stat--</option>
+              <option value="str" ${data.stat === 'str' ? 'selected' : ''}>STR</option>
+              <option value="int" ${data.stat === 'int' ? 'selected' : ''}>INT</option>
+              <option value="con" ${data.stat === 'con' ? 'selected' : ''}>CON</option>
+              <option value="dex" ${data.stat === 'dex' ? 'selected' : ''}>DEX</option>
+              <option value="cha" ${data.stat === 'cha' ? 'selected' : ''}>CHA</option>
+            </select>
+            <input type="text" class="mod-val-box skill-mod-val" readonly placeholder="Mod" />
+          </div>
+        </td>
+        <td><input type="text" class="skill-check" placeholder="e.g. Active" value="${data.check || ''}" /></td>
+        <td><input type="text" class="skill-notes" placeholder="Notes / Upgrades" value="${data.notes || ''}" /></td>
         <td><button class="btn-danger" onclick="this.closest('tr').remove()">X</button></td>
       `;
       tbody.appendChild(tr);
+      updateSkillMods();
     }
 
     function addInventoryRow(data = {}) {
       const tbody = document.querySelector('#inventory-table tbody');
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="text" value="${data.item || ''}" /></td>
-        <td><input type="text" value="${data.qty || ''}" /></td>
-        <td><input type="text" value="${data.notes || ''}" /></td>
+        <td><input type="text" class="inv-item" placeholder="Item Name" value="${data.item || ''}" /></td>
+        <td><input type="text" class="inv-qty" placeholder="Qty" value="${data.qty || ''}" /></td>
+        <td><input type="text" class="inv-notes" placeholder="Notes" value="${data.notes || ''}" /></td>
         <td><button class="btn-danger" onclick="this.closest('tr').remove()">X</button></td>
       `;
       tbody.appendChild(tr);
@@ -553,13 +579,21 @@
       });
 
       data.skills = Array.from(document.querySelectorAll('#skills-table tbody tr')).map(tr => {
-        const inputs = tr.querySelectorAll('input');
-        return { name: inputs[0].value, rank: inputs[1].value, statMod: inputs[2].value, check: inputs[3].value, notes: inputs[4].value };
+        return {
+          name: tr.querySelector('.skill-name').value,
+          rank: tr.querySelector('.skill-rank').value,
+          stat: tr.querySelector('.skill-stat').value,
+          check: tr.querySelector('.skill-check').value,
+          notes: tr.querySelector('.skill-notes').value
+        };
       });
 
       data.inventory = Array.from(document.querySelectorAll('#inventory-table tbody tr')).map(tr => {
-        const inputs = tr.querySelectorAll('input');
-        return { item: inputs[0].value, qty: inputs[1].value, notes: inputs[2].value };
+        return {
+          item: tr.querySelector('.inv-item').value,
+          qty: tr.querySelector('.inv-qty').value,
+          notes: tr.querySelector('.inv-notes').value
+        };
       });
 
       localStorage.setItem('dcc_rpg_sheet', JSON.stringify(data));
