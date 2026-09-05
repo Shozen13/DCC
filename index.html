@@ -684,12 +684,32 @@
             border: 1px solid var(--panel-border);
             border-radius: 6px;
             padding: 10px;
+            position: relative;
+        }
+
+        .gear-slot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
         }
 
         .gear-slot label {
             color: var(--gear-color);
             font-weight: bold;
-            margin-bottom: 6px;
+            margin-bottom: 0;
+        }
+
+        .gear-slot-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .gear-sub-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
         }
 
         .inventory-subhead {
@@ -1030,16 +1050,13 @@
             </h2>
             <div id="gear-summary" class="summary-box" style="display: none;"></div>
             <div id="gear-container">
-                <div class="gear-grid">
-                    <div class="gear-slot"><label>Head</label><select id="gear-head" class="gear-select" onchange="onGearChange()"></select></div>
-                    <div class="gear-slot"><label>Torso</label><select id="gear-torso" class="gear-select" onchange="onGearChange()"></select></div>
-                    <div class="gear-slot"><label>Arms</label><select id="gear-arms" class="gear-select" onchange="onGearChange()"></select></div>
-                    <div class="gear-slot"><label>Hands</label><select id="gear-hands" class="gear-select" onchange="onGearChange()"></select></div>
-                    <div class="gear-slot"><label>Legs</label><select id="gear-legs" class="gear-select" onchange="onGearChange()"></select></div>
-                    <div class="gear-slot"><label>Feet</label><select id="gear-feet" class="gear-select" onchange="onGearChange()"></select></div>
-                </div>
+                <div class="gear-grid" id="gear-body-slots-grid"></div>
+                
                 <div class="sub-section-header" style="color: var(--gear-color); border-color: rgba(236, 72, 153, 0.3); margin-top: 15px;">
-                    <span>Accessories (10 Slots Max)</span>
+                    <span>Accessories (<span id="acc-count-disp">0</span>/10 Max)</span>
+                    <div class="header-actions">
+                        <button type="button" class="btn-add" id="btn-add-accessory" style="background: var(--gear-color);" onclick="addAccessorySlot()">+ Add Accessory</button>
+                    </div>
                 </div>
                 <div class="gear-grid" id="gear-accessories-container"></div>
             </div>
@@ -1105,6 +1122,25 @@
     let itemCounter = 0;
     let debuffCounter = 0;
     let buffCounter = 0;
+    let accessoryCounter = 0;
+
+    const bodySlotCategories = [
+        { key: 'head', label: 'Head' },
+        { key: 'torso', label: 'Torso' },
+        { key: 'arms', label: 'Arms' },
+        { key: 'hands', label: 'Hands' },
+        { key: 'legs', label: 'Legs' },
+        { key: 'feet', label: 'Feet' }
+    ];
+
+    const bodySlotCounts = {
+        head: 1,
+        torso: 1,
+        arms: 1,
+        hands: 1,
+        legs: 1,
+        feet: 1
+    };
 
     const collapsedState = {
         attacks: false,
@@ -1603,18 +1639,105 @@
             hotlistContainer.appendChild(slot);
         }
 
-        // Initialize Accessories slots
-        const accContainer = document.getElementById('gear-accessories-container');
-        accContainer.innerHTML = '';
-        for (let i = 1; i <= 10; i++) {
+        // Render Body Slots Grid
+        renderBodySlots();
+    }
+
+    function renderBodySlots() {
+        const grid = document.getElementById('gear-body-slots-grid');
+        grid.innerHTML = '';
+
+        bodySlotCategories.forEach(cat => {
+            const count = bodySlotCounts[cat.key] || 1;
             const slot = document.createElement('div');
             slot.className = 'gear-slot';
+
+            let selectsHtml = '';
+            for (let i = 1; i <= count; i++) {
+                const selectId = `gear-${cat.key}-${i}`;
+                selectsHtml += `
+                    <div class="gear-sub-row">
+                        <select id="${selectId}" class="gear-select" onchange="onGearChange()"></select>
+                        ${i > 1 ? `<button type="button" class="btn-remove-die" onclick="removeBodySubSlot('${cat.key}', ${i})">✕</button>` : ''}
+                    </div>
+                `;
+            }
+
             slot.innerHTML = `
-                <label>Accessory ${i}</label>
-                <select id="gear-acc-${i}" class="gear-select" onchange="onGearChange()"></select>
+                <div class="gear-slot-header">
+                    <label>${cat.label}</label>
+                    <button type="button" class="btn-small-add" style="background: var(--gear-color);" onclick="addBodySubSlot('${cat.key}')">+ Slot / Patch</button>
+                </div>
+                <div class="gear-slot-list">
+                    ${selectsHtml}
+                </div>
             `;
-            accContainer.appendChild(slot);
+            grid.appendChild(slot);
+        });
+    }
+
+    function addBodySubSlot(key) {
+        bodySlotCounts[key] = (bodySlotCounts[key] || 1) + 1;
+        renderBodySlots();
+        updateGearDropdowns();
+        saveDataSilently();
+    }
+
+    function removeBodySubSlot(key, index) {
+        const selectId = `gear-${key}-${index}`;
+        const el = document.getElementById(selectId);
+        if (el) el.value = "";
+
+        if (bodySlotCounts[key] > 1) {
+            bodySlotCounts[key]--;
         }
+        renderBodySlots();
+        updateGearDropdowns();
+        saveDataSilently();
+    }
+
+    function addAccessorySlot(savedValue = null) {
+        const container = document.getElementById('gear-accessories-container');
+        const currentCount = container.children.length;
+        if (currentCount >= 10) {
+            alert("Maximum of 10 Accessory slots allowed!");
+            return;
+        }
+
+        accessoryCounter++;
+        const id = accessoryCounter;
+
+        const slot = document.createElement('div');
+        slot.className = 'gear-slot';
+        slot.id = `acc-slot-wrapper-${id}`;
+        slot.innerHTML = `
+            <div class="gear-slot-header">
+                <label>Accessory</label>
+                <button type="button" class="btn-remove-die" onclick="removeAccessorySlot(${id})">✕ Remove</button>
+            </div>
+            <select id="gear-acc-${id}" class="gear-select" onchange="onGearChange()"></select>
+        `;
+
+        container.appendChild(slot);
+
+        updateGearDropdowns();
+        if (savedValue) {
+            const select = document.getElementById(`gear-acc-${id}`);
+            if (select) select.value = savedValue;
+            updateGearDropdowns();
+        }
+        saveDataSilently();
+    }
+
+    function removeAccessorySlot(id) {
+        const select = document.getElementById(`gear-acc-${id}`);
+        if (select) select.value = "";
+
+        const wrapper = document.getElementById(`acc-slot-wrapper-${id}`);
+        if (wrapper) wrapper.remove();
+
+        updateGearDropdowns();
+        saveDataSilently();
     }
 
     function getAllItems() {
@@ -1681,6 +1804,11 @@
                 }
             });
         });
+
+        const accContainer = document.getElementById('gear-accessories-container');
+        const count = accContainer.children.length;
+        document.getElementById('acc-count-disp').innerText = count;
+        document.getElementById('btn-add-accessory').disabled = count >= 10;
 
         updateInventoryEquippedState();
         updateGearSummary();
@@ -1771,7 +1899,12 @@
             if (select.value) {
                 count++;
                 const text = select.options[select.selectedIndex].text;
-                const label = select.parentElement.querySelector('label').innerText;
+                let label = "Accessory";
+                const parentGroup = select.closest('.gear-slot');
+                if (parentGroup) {
+                    const labelEl = parentGroup.querySelector('label');
+                    if (labelEl) label = labelEl.innerText;
+                }
                 tagsHtml += `
                     <div class="summary-tag ger">
                         <span>${label}: ${text}</span>
@@ -2184,6 +2317,7 @@
             armorVal: document.getElementById('armor-val').value,
             drBuffs: document.getElementById('dr-buffs').value,
 
+            bodySlotCounts: bodySlotCounts,
             debuffs: debuffs,
             buffs: buffs,
             attacks: attacks,
@@ -2197,11 +2331,18 @@
     }
 
     function loadData() {
-        initHotlistAndGear();
-
         const saved = localStorage.getItem('crawler_split_attrs_data');
         if (saved) {
             const data = JSON.parse(saved);
+
+            if (data.bodySlotCounts) {
+                Object.keys(data.bodySlotCounts).forEach(k => {
+                    bodySlotCounts[k] = data.bodySlotCounts[k];
+                });
+            }
+
+            initHotlistAndGear();
+
             document.getElementById('char-name').value = data.name || '';
             document.getElementById('char-number').value = data.number || '';
             document.getElementById('char-race').value = data.race || '';
@@ -2266,8 +2407,17 @@
                 data.items.forEach(itm => addItem(itm));
             }
 
-            // Restore Hotlist & GearSelections
+            // Re-create accessory slots if saved
             if (data.gearState) {
+                Object.keys(data.gearState).forEach(id => {
+                    if (id.startsWith('gear-acc-')) {
+                        const val = data.gearState[id];
+                        if (!document.getElementById(id)) {
+                            addAccessorySlot(val);
+                        }
+                    }
+                });
+
                 Object.keys(data.gearState).forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = data.gearState[id];
@@ -2280,6 +2430,8 @@
                     if (el) el.value = data.hotlistState[id];
                 });
             }
+        } else {
+            initHotlistAndGear();
         }
 
         calculateSheet();
@@ -2309,11 +2461,18 @@
         hpCurrentSlots = 0;
         manaCurrent = 0;
         maxMana = 0;
+        accessoryCounter = 0;
+
+        bodySlotCategories.forEach(cat => {
+            bodySlotCounts[cat.key] = 1;
+        });
+
         document.getElementById('attacks-list').innerHTML = '';
         document.getElementById('skills-list').innerHTML = '';
         document.getElementById('items-list').innerHTML = '';
         document.getElementById('debuffs-list').innerHTML = '';
         document.getElementById('buffs-list').innerHTML = '';
+        document.getElementById('gear-accessories-container').innerHTML = '';
 
         collapsedState.attacks = false;
         collapsedState.hotlist = false;
