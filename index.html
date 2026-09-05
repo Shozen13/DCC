@@ -23,6 +23,10 @@
             --debuff-glow: rgba(239, 68, 68, 0.4);
             --buff-color: #06b6d4;
             --buff-glow: rgba(6, 182, 212, 0.4);
+            --gear-color: #ec4899;
+            --gear-glow: rgba(236, 72, 153, 0.4);
+            --hotlist-color: #f97316;
+            --hotlist-glow: rgba(249, 115, 22, 0.4);
             --text-main: #e2e8f0;
             --text-muted: #94a3b8;
             --input-bg: #121524;
@@ -414,6 +418,7 @@
 
         .skill-card { border-left: 4px solid var(--skill-color); }
         .item-card { border-left: 4px solid var(--item-color); }
+        .item-card.equipped-card { border-left: 4px solid var(--gear-color); background: rgba(236, 72, 153, 0.05); }
 
         .attack-row, .skill-row, .item-row {
             display: grid;
@@ -544,6 +549,8 @@
         .summary-tag.skl .badge { background: rgba(16, 185, 129, 0.2); color: var(--skill-color); }
         .summary-tag.dbf .badge { background: rgba(239, 68, 68, 0.2); color: var(--debuff-color); }
         .summary-tag.ebf .badge { background: rgba(6, 182, 212, 0.2); color: var(--buff-color); }
+        .summary-tag.htl .badge { background: rgba(249, 115, 22, 0.2); color: var(--hotlist-color); }
+        .summary-tag.ger .badge { background: rgba(236, 72, 153, 0.2); color: var(--gear-color); }
 
         .btn-group {
             display: flex;
@@ -640,6 +647,59 @@
             display: flex;
             gap: 12px;
             justify-content: center;
+        }
+
+        /* Hotlist & Gear Styles */
+        .hotlist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        .hotlist-slot {
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hotlist-slot span.slot-num {
+            font-weight: bold;
+            color: var(--hotlist-color);
+            font-size: 0.85rem;
+            min-width: 20px;
+        }
+
+        .gear-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .gear-slot {
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .gear-slot label {
+            color: var(--gear-color);
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .inventory-subhead {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 12px 0 8px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px dashed var(--panel-border);
         }
     </style>
 </head>
@@ -842,7 +902,7 @@
         </div>
     </div>
 
-    <!-- Right Column: Vitals, Actions, Skills & Inventory -->
+    <!-- Right Column: Vitals, Attacks, Hotlist, Gear, Skills & Inventory -->
     <div class="main-content">
         <!-- Vitals & Defenses -->
         <div class="card">
@@ -948,6 +1008,43 @@
             <div id="attacks-list"></div>
         </div>
 
+        <!-- Hotlist Section -->
+        <div class="card">
+            <h2 style="color: var(--hotlist-color);">
+                <span>Hotlist</span>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-hotlist" onclick="toggleSection('hotlist')">▼ Collapse</button>
+                </div>
+            </h2>
+            <div id="hotlist-summary" class="summary-box" style="display: none;"></div>
+            <div id="hotlist-container" class="hotlist-grid"></div>
+        </div>
+
+        <!-- Equipped Gear Section -->
+        <div class="card">
+            <h2 style="color: var(--gear-color);">
+                <span>Equipped Gear</span>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-gear" onclick="toggleSection('gear')">▼ Collapse</button>
+                </div>
+            </h2>
+            <div id="gear-summary" class="summary-box" style="display: none;"></div>
+            <div id="gear-container">
+                <div class="gear-grid">
+                    <div class="gear-slot"><label>Head</label><select id="gear-head" class="gear-select" onchange="onGearChange()"></select></div>
+                    <div class="gear-slot"><label>Torso</label><select id="gear-torso" class="gear-select" onchange="onGearChange()"></select></div>
+                    <div class="gear-slot"><label>Arms</label><select id="gear-arms" class="gear-select" onchange="onGearChange()"></select></div>
+                    <div class="gear-slot"><label>Hands</label><select id="gear-hands" class="gear-select" onchange="onGearChange()"></select></div>
+                    <div class="gear-slot"><label>Legs</label><select id="gear-legs" class="gear-select" onchange="onGearChange()"></select></div>
+                    <div class="gear-slot"><label>Feet</label><select id="gear-feet" class="gear-select" onchange="onGearChange()"></select></div>
+                </div>
+                <div class="sub-section-header" style="color: var(--gear-color); border-color: rgba(236, 72, 153, 0.3); margin-top: 15px;">
+                    <span>Accessories (10 Slots Max)</span>
+                </div>
+                <div class="gear-grid" id="gear-accessories-container"></div>
+            </div>
+        </div>
+
         <!-- Skills Section -->
         <div class="card">
             <h2 style="color: var(--skill-color);">
@@ -971,7 +1068,16 @@
                 </div>
             </h2>
             <div id="items-summary" class="summary-box" style="display: none;"></div>
-            <div id="items-list"></div>
+            <div id="items-container">
+                <div id="equipped-items-wrapper" style="display: none;">
+                    <div class="inventory-subhead" style="color: var(--gear-color);">🛡️ Equipped Items</div>
+                    <div id="equipped-items-list"></div>
+                </div>
+                <div id="regular-items-wrapper">
+                    <div class="inventory-subhead" id="regular-items-subhead" style="display: none;">🎒 Stored Inventory</div>
+                    <div id="items-list"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -980,7 +1086,7 @@
 <div class="modal-overlay" id="resetModal">
     <div class="modal-card">
         <h3>Clear Character Sheet?</h3>
-        <p>This will erase all stats, attacks, skills, and items saved on this device. This action cannot be undone.</p>
+        <p>This will erase all stats, attacks, skills, gear, and items saved on this device. This action cannot be undone.</p>
         <div class="modal-actions">
             <button type="button" onclick="confirmReset()">Yes, Clear</button>
             <button type="button" class="btn-reset" onclick="closeResetModal()">Cancel</button>
@@ -1002,6 +1108,8 @@
 
     const collapsedState = {
         attacks: false,
+        hotlist: false,
+        gear: false,
         skills: false,
         items: false,
         debuffs: false,
@@ -1098,18 +1206,20 @@
     }
 
     function applySectionVisibility(sectionKey) {
-        const listEl = document.getElementById(`${sectionKey}-list`);
+        const listEl = document.getElementById(`${sectionKey}-list`) || document.getElementById(`${sectionKey}-container`);
         const summaryEl = document.getElementById(`${sectionKey}-summary`);
         const btnEl = document.getElementById(`btn-toggle-${sectionKey}`);
 
         if (collapsedState[sectionKey]) {
-            listEl.style.display = 'none';
-            summaryEl.style.display = 'flex';
-            btnEl.innerText = '► Expand';
+            if (listEl) listEl.style.display = 'none';
+            if (summaryEl) summaryEl.style.display = 'flex';
+            if (btnEl) btnEl.innerText = '► Expand';
         } else {
-            listEl.style.display = 'block';
-            summaryEl.style.display = 'none';
-            btnEl.innerText = '▼ Collapse';
+            if (listEl) {
+                listEl.style.display = (sectionKey === 'hotlist' || sectionKey === 'gear') ? (sectionKey === 'hotlist' ? 'grid' : 'block') : 'block';
+            }
+            if (summaryEl) summaryEl.style.display = 'none';
+            if (btnEl) btnEl.innerText = '▼ Collapse';
         }
     }
 
@@ -1478,6 +1588,238 @@
         saveDataSilently();
     }
 
+    /* Hotlist & Gear Setup & Management */
+    function initHotlistAndGear() {
+        // Initialize Hotlist slots
+        const hotlistContainer = document.getElementById('hotlist-container');
+        hotlistContainer.innerHTML = '';
+        for (let i = 1; i <= 10; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'hotlist-slot';
+            slot.innerHTML = `
+                <span class="slot-num">#${i}</span>
+                <select id="hotlist-slot-${i}" class="hotlist-select" onchange="onHotlistChange()"></select>
+            `;
+            hotlistContainer.appendChild(slot);
+        }
+
+        // Initialize Accessories slots
+        const accContainer = document.getElementById('gear-accessories-container');
+        accContainer.innerHTML = '';
+        for (let i = 1; i <= 10; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'gear-slot';
+            slot.innerHTML = `
+                <label>Accessory ${i}</label>
+                <select id="gear-acc-${i}" class="gear-select" onchange="onGearChange()"></select>
+            `;
+            accContainer.appendChild(slot);
+        }
+    }
+
+    function getAllItems() {
+        const items = [];
+        document.querySelectorAll('.item-card').forEach(card => {
+            const id = card.id.replace('item-card-', '');
+            const nameInput = document.getElementById(`item-name-${id}`);
+            const name = nameInput ? nameInput.value.trim() : '';
+            if (name) {
+                items.push({ id: id, name: name });
+            }
+        });
+        return items;
+    }
+
+    function getAllSkills() {
+        const skills = [];
+        document.querySelectorAll('.skill-card').forEach(card => {
+            const id = card.id.replace('skill-card-', '');
+            const nameInput = document.getElementById(`skl-name-${id}`);
+            const name = nameInput ? nameInput.value.trim() : '';
+            if (name) {
+                skills.push({ id: id, name: name });
+            }
+        });
+        return skills;
+    }
+
+    function getCurrentlyEquippedItemIds() {
+        const equippedIds = [];
+        document.querySelectorAll('.gear-select').forEach(select => {
+            if (select.value) {
+                equippedIds.push(select.value);
+            }
+        });
+        return equippedIds;
+    }
+
+    function updateGearDropdowns() {
+        const items = getAllItems();
+        const gearSelects = document.querySelectorAll('.gear-select');
+
+        // Capture current values
+        const currentSelections = {};
+        gearSelects.forEach(select => {
+            currentSelections[select.id] = select.value;
+        });
+
+        // Collect all currently selected item IDs
+        const selectedIds = Object.values(currentSelections).filter(v => v !== "");
+
+        gearSelects.forEach(select => {
+            const myCurrent = currentSelections[select.id];
+            select.innerHTML = '<option value="">-- Empty --</option>';
+
+            items.forEach(item => {
+                // Show if it's currently selected in THIS dropdown OR not selected anywhere
+                if (item.id === myCurrent || !selectedIds.includes(item.id)) {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.innerText = item.name;
+                    if (item.id === myCurrent) opt.selected = true;
+                    select.appendChild(opt);
+                }
+            });
+        });
+
+        updateInventoryEquippedState();
+        updateGearSummary();
+    }
+
+    function updateHotlistDropdowns() {
+        const items = getAllItems();
+        const skills = getAllSkills();
+        const hotlistSelects = document.querySelectorAll('.hotlist-select');
+
+        hotlistSelects.forEach(select => {
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">-- Empty --</option>';
+
+            if (skills.length > 0) {
+                const group = document.createElement('optgroup');
+                group.label = "⚡ Skills";
+                skills.forEach(skl => {
+                    const opt = document.createElement('option');
+                    opt.value = `skl-${skl.id}`;
+                    opt.innerText = skl.name;
+                    if (`skl-${skl.id}` === currentVal) opt.selected = true;
+                    group.appendChild(opt);
+                });
+                select.appendChild(group);
+            }
+
+            if (items.length > 0) {
+                const group = document.createElement('optgroup');
+                group.label = "📦 Inventory Items";
+                items.forEach(itm => {
+                    const opt = document.createElement('option');
+                    opt.value = `itm-${itm.id}`;
+                    opt.innerText = itm.name;
+                    if (`itm-${itm.id}` === currentVal) opt.selected = true;
+                    group.appendChild(opt);
+                });
+                select.appendChild(group);
+            }
+        });
+
+        updateHotlistSummary();
+    }
+
+    function onGearChange() {
+        updateGearDropdowns();
+        saveDataSilently();
+    }
+
+    function onHotlistChange() {
+        updateHotlistSummary();
+        saveDataSilently();
+    }
+
+    function updateHotlistSummary() {
+        const summaryBox = document.getElementById('hotlist-summary');
+        const selects = document.querySelectorAll('.hotlist-select');
+        let count = 0;
+        let tagsHtml = '';
+
+        selects.forEach((select, idx) => {
+            if (select.value) {
+                count++;
+                const text = select.options[select.selectedIndex].text;
+                tagsHtml += `
+                    <div class="summary-tag htl">
+                        <span>#${idx + 1}: ${text}</span>
+                        <span class="badge">Hotlist</span>
+                    </div>
+                `;
+            }
+        });
+
+        if (count === 0) {
+            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Hotlist Items Assigned</span>';
+        } else {
+            summaryBox.innerHTML = tagsHtml;
+        }
+    }
+
+    function updateGearSummary() {
+        const summaryBox = document.getElementById('gear-summary');
+        const selects = document.querySelectorAll('.gear-select');
+        let count = 0;
+        let tagsHtml = '';
+
+        selects.forEach(select => {
+            if (select.value) {
+                count++;
+                const text = select.options[select.selectedIndex].text;
+                const label = select.parentElement.querySelector('label').innerText;
+                tagsHtml += `
+                    <div class="summary-tag ger">
+                        <span>${label}: ${text}</span>
+                        <span class="badge">Equipped</span>
+                    </div>
+                `;
+            }
+        });
+
+        if (count === 0) {
+            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Gear Equipped</span>';
+        } else {
+            summaryBox.innerHTML = tagsHtml;
+        }
+    }
+
+    function updateInventoryEquippedState() {
+        const equippedIds = getCurrentlyEquippedItemIds();
+        const equippedList = document.getElementById('equipped-items-list');
+        const regularList = document.getElementById('items-list');
+        const equippedWrapper = document.getElementById('equipped-items-wrapper');
+        const regularSubhead = document.getElementById('regular-items-subhead');
+
+        let equippedCount = 0;
+
+        document.querySelectorAll('.item-card').forEach(card => {
+            const id = card.id.replace('item-card-', '');
+            const isEquipped = equippedIds.includes(id);
+
+            if (isEquipped) {
+                card.classList.add('equipped-card');
+                equippedList.appendChild(card);
+                equippedCount++;
+            } else {
+                card.classList.remove('equipped-card');
+                regularList.appendChild(card);
+            }
+        });
+
+        if (equippedCount > 0) {
+            equippedWrapper.style.display = 'block';
+            regularSubhead.style.display = 'block';
+        } else {
+            equippedWrapper.style.display = 'none';
+            regularSubhead.style.display = 'none';
+        }
+    }
+
     /* Skills Management */
     function addSkill(data = null) {
         skillCounter++;
@@ -1574,6 +1916,7 @@
         document.getElementById(`skl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`;
 
         updateSkillsSummary();
+        updateHotlistDropdowns();
         saveDataSilently();
     }
 
@@ -1584,6 +1927,7 @@
             updateSkillCard(id);
         });
         updateSkillsSummary();
+        updateHotlistDropdowns();
     }
 
     function updateSkillsSummary() {
@@ -1616,6 +1960,7 @@
         const card = document.getElementById(`skill-card-${id}`);
         if (card) card.remove();
         updateSkillsSummary();
+        updateHotlistDropdowns();
         saveDataSilently();
     }
 
@@ -1680,6 +2025,8 @@
         
         if (cards.length === 0) {
             summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Inventory is Empty</span>';
+            updateGearDropdowns();
+            updateHotlistDropdowns();
             saveDataSilently();
             return;
         }
@@ -1698,6 +2045,9 @@
                 📦 ${totalUnique} Unique Item Types (${totalCount} Total Qty)
             </div>
         `;
+
+        updateGearDropdowns();
+        updateHotlistDropdowns();
         saveDataSilently();
     }
 
@@ -1758,6 +2108,7 @@
         document.querySelectorAll('.skill-card').forEach(card => {
             const id = card.id.replace('skill-card-', '');
             skills.push({
+                id: id,
                 name: document.getElementById(`skl-name-${id}`).value,
                 rank: document.getElementById(`skl-rank-${id}`).value,
                 stat: document.getElementById(`skl-stat-${id}`).value,
@@ -1770,6 +2121,7 @@
         document.querySelectorAll('.item-card').forEach(card => {
             const id = card.id.replace('item-card-', '');
             items.push({
+                id: id,
                 name: document.getElementById(`item-name-${id}`).value,
                 qty: document.getElementById(`item-qty-${id}`).value,
                 notes: document.getElementById(`item-notes-${id}`).value
@@ -1792,6 +2144,16 @@
                 name: document.getElementById(`buff-name-${id}`).value,
                 notes: document.getElementById(`buff-notes-${id}`).value
             });
+        });
+
+        const hotlistState = {};
+        document.querySelectorAll('.hotlist-select').forEach(select => {
+            hotlistState[select.id] = select.value;
+        });
+
+        const gearState = {};
+        document.querySelectorAll('.gear-select').forEach(select => {
+            gearState[select.id] = select.value;
         });
 
         const data = {
@@ -1827,12 +2189,16 @@
             attacks: attacks,
             skills: skills,
             items: items,
+            hotlistState: hotlistState,
+            gearState: gearState,
             collapsedState: collapsedState
         };
         localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
     }
 
     function loadData() {
+        initHotlistAndGear();
+
         const saved = localStorage.getItem('crawler_split_attrs_data');
         if (saved) {
             const data = JSON.parse(saved);
@@ -1865,6 +2231,8 @@
 
             if (data.collapsedState) {
                 collapsedState.attacks = !!data.collapsedState.attacks;
+                collapsedState.hotlist = !!data.collapsedState.hotlist;
+                collapsedState.gear = !!data.collapsedState.gear;
                 collapsedState.skills = !!data.collapsedState.skills;
                 collapsedState.items = !!data.collapsedState.items;
                 collapsedState.debuffs = !!data.collapsedState.debuffs;
@@ -1897,11 +2265,28 @@
             if (data.items && data.items.length > 0) {
                 data.items.forEach(itm => addItem(itm));
             }
+
+            // Restore Hotlist & GearSelections
+            if (data.gearState) {
+                Object.keys(data.gearState).forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = data.gearState[id];
+                });
+            }
+
+            if (data.hotlistState) {
+                Object.keys(data.hotlistState).forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = data.hotlistState[id];
+                });
+            }
         }
 
         calculateSheet();
 
         applySectionVisibility('attacks');
+        applySectionVisibility('hotlist');
+        applySectionVisibility('gear');
         applySectionVisibility('skills');
         applySectionVisibility('items');
         applySectionVisibility('debuffs');
@@ -1931,6 +2316,8 @@
         document.getElementById('buffs-list').innerHTML = '';
 
         collapsedState.attacks = false;
+        collapsedState.hotlist = false;
+        collapsedState.gear = false;
         collapsedState.skills = false;
         collapsedState.items = false;
         collapsedState.debuffs = false;
@@ -1951,9 +2338,12 @@
         document.getElementById('avatar-img').style.display = 'none';
         document.getElementById('avatar-placeholder').style.display = 'block';
         
+        initHotlistAndGear();
         calculateSheet();
 
         applySectionVisibility('attacks');
+        applySectionVisibility('hotlist');
+        applySectionVisibility('gear');
         applySectionVisibility('skills');
         applySectionVisibility('items');
         applySectionVisibility('debuffs');
