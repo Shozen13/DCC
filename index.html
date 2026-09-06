@@ -16,6 +16,8 @@
             --mana-glow: rgba(59, 130, 246, 0.4);
             --skill-color: #10b981;
             --skill-glow: rgba(16, 185, 129, 0.4);
+            --spell-color: #a855f7;
+            --spell-glow: rgba(168, 85, 247, 0.4);
             --item-color: #f59e0b;
             --item-glow: rgba(245, 158, 11, 0.4);
             --defense-color: #8b5cf6;
@@ -454,7 +456,7 @@
         .debuff-card { border-left: 4px solid var(--debuff-color); }
         .buff-card { border-left: 4px solid var(--buff-color); }
 
-        .attack-card, .skill-card, .item-card {
+        .attack-card, .skill-card, .spell-card, .item-card {
             background: var(--input-bg);
             border: 1px solid var(--panel-border);
             border-radius: 8px;
@@ -471,10 +473,17 @@
             background: rgba(16, 185, 129, 0.05);
         }
 
+        .spell-card { border-left: 4px solid var(--spell-color); }
+        .spell-card.spell-used {
+            border-left-color: #c084fc;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+            background: rgba(168, 85, 247, 0.05);
+        }
+
         .item-card { border-left: 4px solid var(--item-color); }
         .item-card.equipped-card { border-left: 4px solid var(--gear-color); background: rgba(236, 72, 153, 0.05); }
 
-        .attack-row, .skill-row, .item-row {
+        .attack-row, .skill-row, .spell-row, .item-row {
             display: grid;
             grid-template-columns: 2.2fr 2.5fr 2.3fr;
             gap: 12px;
@@ -484,7 +493,7 @@
         .item-row { grid-template-columns: 1fr 2fr; }
 
         @media (max-width: 750px) {
-            .attack-row, .skill-row, .item-row { grid-template-columns: 1fr; }
+            .attack-row, .skill-row, .spell-row, .item-row { grid-template-columns: 1fr; }
         }
 
         .sub-group {
@@ -509,9 +518,10 @@
         }
 
         .skill-title { color: var(--skill-color); }
+        .spell-title { color: var(--spell-color); }
         .item-title { color: var(--item-color); }
 
-        /* Skill Used Checkbox Toggle Styling */
+        /* Skill & Spell Toggle Box */
         .skill-use-toggle {
             display: flex;
             align-items: center;
@@ -541,6 +551,35 @@
             letter-spacing: 0.5px;
         }
 
+        .spell-use-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(168, 85, 247, 0.1);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 6px;
+            padding: 6px 10px;
+            margin-top: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .spell-use-toggle input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--spell-color);
+            cursor: pointer;
+        }
+
+        .spell-use-toggle label {
+            margin-bottom: 0;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--spell-color);
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
+
         .hit-badge-box {
             background: rgba(224, 79, 95, 0.15);
             border: 1px solid var(--accent-color);
@@ -559,6 +598,15 @@
             margin-top: 6px;
         }
 
+        .spell-badge-box {
+            background: rgba(168, 85, 247, 0.15);
+            border: 1px solid var(--spell-color);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            margin-top: 6px;
+        }
+
         .hit-badge-val {
             font-size: 1.4rem;
             font-weight: 900;
@@ -571,6 +619,13 @@
             font-weight: 900;
             color: var(--skill-color);
             text-shadow: 0 0 10px var(--skill-glow);
+        }
+
+        .spell-badge-val {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--spell-color);
+            text-shadow: 0 0 10px var(--spell-glow);
         }
 
         .qty-controls {
@@ -631,6 +686,7 @@
 
         .summary-tag.atk .badge { background: rgba(224, 79, 95, 0.2); color: var(--accent-color); }
         .summary-tag.skl .badge { background: rgba(16, 185, 129, 0.2); color: var(--skill-color); }
+        .summary-tag.spl .badge { background: rgba(168, 85, 247, 0.2); color: var(--spell-color); }
         .summary-tag.dbf .badge { background: rgba(239, 68, 68, 0.2); color: var(--debuff-color); }
         .summary-tag.ebf .badge { background: rgba(6, 182, 212, 0.2); color: var(--buff-color); }
         .summary-tag.htl .badge { background: rgba(249, 115, 22, 0.2); color: var(--hotlist-color); }
@@ -1012,7 +1068,7 @@
         </div>
     </div>
 
-    <!-- Right Column: Vitals, Attacks, Hotlist, Gear, Skills & Inventory -->
+    <!-- Right Column: Vitals, Attacks, Hotlist, Gear, Skills, Spells & Inventory -->
     <div class="main-content">
         <!-- Vitals & Defenses -->
         <div class="card">
@@ -1165,6 +1221,19 @@
             <div id="skills-list"></div>
         </div>
 
+        <!-- Spells Section -->
+        <div class="card">
+            <h2 style="color: var(--spell-color);">
+                <span>Spells</span>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-spells" onclick="toggleSection('spells')">▼ Collapse</button>
+                    <button type="button" class="btn-add" style="background: var(--spell-color);" onclick="addSpell()">+ Add Spell</button>
+                </div>
+            </h2>
+            <div id="spells-summary" class="summary-box" style="display: none;"></div>
+            <div id="spells-list"></div>
+        </div>
+
         <!-- Inventory Section -->
         <div class="card">
             <h2 style="color: var(--item-color);">
@@ -1193,7 +1262,7 @@
 <div class="modal-overlay" id="resetModal">
     <div class="modal-card">
         <h3>Clear Character Sheet?</h3>
-        <p>This will erase all stats, attacks, skills, gear, and items saved on this device. This action cannot be undone.</p>
+        <p>This will erase all stats, attacks, skills, spells, gear, and items saved on this device. This action cannot be undone.</p>
         <div class="modal-actions">
             <button type="button" onclick="confirmReset()">Yes, Clear</button>
             <button type="button" class="btn-reset" onclick="closeResetModal()">Cancel</button>
@@ -1229,6 +1298,7 @@
     let isInitialLoad = true;
     let attackCounter = 0;
     let skillCounter = 0;
+    let spellCounter = 0;
     let itemCounter = 0;
     let debuffCounter = 0;
     let buffCounter = 0;
@@ -1257,6 +1327,7 @@
         hotlist: false,
         gear: false,
         skills: false,
+        spells: false,
         items: false,
         debuffs: false,
         buffs: false
@@ -1337,6 +1408,7 @@
 
         updateAllAttacks();
         updateAllSkills();
+        updateAllSpells();
         updateAllItems();
         updateAllDebuffs();
         updateAllBuffs();
@@ -1876,6 +1948,19 @@
         return skills;
     }
 
+    function getAllSpells() {
+        const spells = [];
+        document.querySelectorAll('.spell-card').forEach(card => {
+            const id = card.id.replace('spell-card-', '');
+            const nameInput = document.getElementById(`spl-name-${id}`);
+            const name = nameInput ? nameInput.value.trim() : '';
+            if (name) {
+                spells.push({ id: id, name: name });
+            }
+        });
+        return spells;
+    }
+
     function getCurrentlyEquippedItemIds() {
         const equippedIds = [];
         document.querySelectorAll('.gear-select').forEach(select => {
@@ -1927,6 +2012,7 @@
     function updateHotlistDropdowns() {
         const items = getAllItems();
         const skills = getAllSkills();
+        const spells = getAllSpells();
         const hotlistSelects = document.querySelectorAll('.hotlist-select');
 
         hotlistSelects.forEach(select => {
@@ -1941,6 +2027,19 @@
                     opt.value = `skl-${skl.id}`;
                     opt.innerText = skl.name;
                     if (`skl-${skl.id}` === currentVal) opt.selected = true;
+                    group.appendChild(opt);
+                });
+                select.appendChild(group);
+            }
+
+            if (spells.length > 0) {
+                const group = document.createElement('optgroup');
+                group.label = "🔮 Spells";
+                spells.forEach(spl => {
+                    const opt = document.createElement('option');
+                    opt.value = `spl-${spl.id}`;
+                    opt.innerText = spl.name;
+                    if (`spl-${spl.id}` === currentVal) opt.selected = true;
                     group.appendChild(opt);
                 });
                 select.appendChild(group);
@@ -2242,6 +2341,181 @@
         saveDataSilently();
     }
 
+    /* Spells Management */
+    function addSpell(data = null) {
+        spellCounter++;
+        const id = spellCounter;
+        const container = document.getElementById('spells-list');
+
+        let rankOptions = '';
+        for (let r = 1; r <= 20; r++) {
+            rankOptions += `<option value="${r}">Rank ${r}</option>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'spell-card';
+        card.id = `spell-card-${id}`;
+        card.innerHTML = `
+            <button type="button" class="btn-delete" onclick="deleteSpell(${id})">Delete</button>
+            <div class="form-group" style="padding-right: 60px;">
+                <label>Spell Name</label>
+                <input type="text" id="spl-name-${id}" placeholder="e.g. Magic Missile, Fireball, Heal" oninput="updateAllSpells()">
+            </div>
+            
+            <div class="spell-row">
+                <div class="sub-group">
+                    <div class="sub-group-title spell-title">Rank & Stat</div>
+                    <div class="form-group">
+                        <label>Rank</label>
+                        <select id="spl-rank-${id}" onchange="updateSpellCard(${id})">
+                            ${rankOptions}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Associated Stat</label>
+                        <select id="spl-stat-${id}" onchange="updateSpellCard(${id})">
+                            <option value="int" selected>INT</option>
+                            <option value="cha">CHA</option>
+                            <option value="str">STR</option>
+                            <option value="con">CON</option>
+                            <option value="dex">DEX</option>
+                        </select>
+                    </div>
+                    <div class="spell-badge-box">
+                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Spell Bonus</span>
+                        <span class="spell-badge-val" id="spl-total-bonus-${id}">+1</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="spl-mod-subtext-${id}">(Rank 1 + INT +0)</span>
+                    </div>
+                </div>
+
+                <div class="sub-group">
+                    <div class="sub-group-title spell-title">Check Type</div>
+                    <div class="form-group">
+                        <label>Check Category</label>
+                        <select id="spl-check-${id}" onchange="saveDataSilently()">
+                            <option value="Active Check">Active Check (d20 + Mod)</option>
+                            <option value="Contested Check">Contested Roll vs Enemy</option>
+                            <option value="Evade Check">Evade / Avoidance Check</option>
+                            <option value="Flat Threshold">Flat Threshold / DC Check</option>
+                            <option value="Passive Effect">Passive (Always Active)</option>
+                            <option value="Save Check">Save / Resistance Check</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Spell Used Toggle Box -->
+                    <div class="spell-use-toggle" onclick="toggleSpellUsedVisual(${id})">
+                        <input type="checkbox" id="spl-used-${id}" onchange="onSpellUsedChange(${id})">
+                        <label for="spl-used-${id}">Used This Turn</label>
+                    </div>
+
+                    <div style="font-size: 0.75rem; color: var(--text-muted); padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; margin-top: 6px;">
+                        Determines the execution requirement or mechanic used during gameplay.
+                    </div>
+                </div>
+
+                <div class="sub-group">
+                    <div class="sub-group-title spell-title">Effect, Notes & Upgrades</div>
+                    <textarea id="spl-effect-${id}" rows="6" placeholder="Describe spell effect, mana cost, damage scaling, range, duration, or upgrade milestones..." oninput="saveDataSilently()"></textarea>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(card);
+
+        if (data) {
+            document.getElementById(`spl-name-${id}`).value = data.name || '';
+            document.getElementById(`spl-rank-${id}`).value = data.rank || 1;
+            document.getElementById(`spl-stat-${id}`).value = data.stat || 'int';
+            document.getElementById(`spl-check-${id}`).value = data.checkType || 'Active Check';
+            document.getElementById(`spl-effect-${id}`).value = data.effect || '';
+            const usedCheckbox = document.getElementById(`spl-used-${id}`);
+            if (usedCheckbox) {
+                usedCheckbox.checked = !!data.used;
+            }
+        }
+
+        updateSpellCard(id);
+    }
+
+    function toggleSpellUsedVisual(id) {
+        const checkbox = document.getElementById(`spl-used-${id}`);
+        const card = document.getElementById(`spell-card-${id}`);
+        if (!checkbox || !card) return;
+
+        if (checkbox.checked) {
+            card.classList.add('spell-used');
+        } else {
+            card.classList.remove('spell-used');
+        }
+    }
+
+    function onSpellUsedChange(id) {
+        toggleSpellUsedVisual(id);
+        updateSpellsSummary();
+        saveDataSilently();
+    }
+
+    function updateSpellCard(id) {
+        const rank = parseInt(document.getElementById(`spl-rank-${id}`).value) || 1;
+        const statKey = document.getElementById(`spl-stat-${id}`).value;
+
+        const mod = currentMods[statKey] || 0;
+        const totalBonus = rank + mod;
+
+        document.getElementById(`spl-total-bonus-${id}`).innerText = '+' + totalBonus;
+        document.getElementById(`spl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`;
+
+        toggleSpellUsedVisual(id);
+        updateSpellsSummary();
+        updateHotlistDropdowns();
+        saveDataSilently();
+    }
+
+    function updateAllSpells() {
+        const cards = document.querySelectorAll('.spell-card');
+        cards.forEach(card => {
+            const id = card.id.replace('spell-card-', '');
+            updateSpellCard(id);
+        });
+        updateSpellsSummary();
+        updateHotlistDropdowns();
+    }
+
+    function updateSpellsSummary() {
+        const summaryBox = document.getElementById('spells-summary');
+        const cards = document.querySelectorAll('.spell-card');
+        
+        if (cards.length === 0) {
+            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Spells Recorded</span>';
+            return;
+        }
+
+        let tagsHtml = '';
+        cards.forEach(card => {
+            const id = card.id.replace('spell-card-', '');
+            const name = document.getElementById(`spl-name-${id}`).value || 'Unnamed Spell';
+            const bonusVal = document.getElementById(`spl-total-bonus-${id}`).innerText;
+            const rankVal = document.getElementById(`spl-rank-${id}`).value;
+            const isUsed = document.getElementById(`spl-used-${id}`)?.checked;
+
+            tagsHtml += `
+                <div class="summary-tag spl" style="${isUsed ? 'border-color: var(--spell-color); background: rgba(168, 85, 247, 0.15);' : ''}">
+                    <span>${name}${isUsed ? ' (Used)' : ''}</span>
+                    <span class="badge">Rank ${rankVal} | Mod ${bonusVal}</span>
+                </div>
+            `;
+        });
+        summaryBox.innerHTML = tagsHtml;
+    }
+
+    function deleteSpell(id) {
+        const card = document.getElementById(`spell-card-${id}`);
+        if (card) card.remove();
+        updateSpellsSummary();
+        updateHotlistDropdowns();
+        saveDataSilently();
+    }
+
     /* Inventory Management */
     function addItem(data = null) {
         itemCounter++;
@@ -2397,6 +2671,20 @@
             });
         });
 
+        const spells = [];
+        document.querySelectorAll('.spell-card').forEach(card => {
+            const id = card.id.replace('spell-card-', '');
+            spells.push({
+                id: id,
+                name: document.getElementById(`spl-name-${id}`).value,
+                rank: document.getElementById(`spl-rank-${id}`).value,
+                stat: document.getElementById(`spl-stat-${id}`).value,
+                checkType: document.getElementById(`spl-check-${id}`).value,
+                effect: document.getElementById(`spl-effect-${id}`).value,
+                used: document.getElementById(`spl-used-${id}`)?.checked || false
+            });
+        });
+
         const items = [];
         document.querySelectorAll('.item-card').forEach(card => {
             const id = card.id.replace('item-card-', '');
@@ -2469,6 +2757,7 @@
             buffs: buffs,
             attacks: attacks,
             skills: skills,
+            spells: spells,
             items: items,
             hotlistState: hotlistState,
             gearState: gearState,
@@ -2522,6 +2811,7 @@
                 collapsedState.hotlist = !!data.collapsedState.hotlist;
                 collapsedState.gear = !!data.collapsedState.gear;
                 collapsedState.skills = !!data.collapsedState.skills;
+                collapsedState.spells = !!data.collapsedState.spells;
                 collapsedState.items = !!data.collapsedState.items;
                 collapsedState.debuffs = !!data.collapsedState.debuffs;
                 collapsedState.buffs = !!data.collapsedState.buffs;
@@ -2547,6 +2837,11 @@
             document.getElementById('skills-list').innerHTML = '';
             if (data.skills && data.skills.length > 0) {
                 data.skills.forEach(skl => addSkill(skl));
+            }
+
+            document.getElementById('spells-list').innerHTML = '';
+            if (data.spells && data.spells.length > 0) {
+                data.spells.forEach(spl => addSpell(spl));
             }
 
             document.getElementById('items-list').innerHTML = '';
@@ -2587,6 +2882,7 @@
         applySectionVisibility('hotlist');
         applySectionVisibility('gear');
         applySectionVisibility('skills');
+        applySectionVisibility('spells');
         applySectionVisibility('items');
         applySectionVisibility('debuffs');
         applySectionVisibility('buffs');
@@ -2616,6 +2912,7 @@
 
         document.getElementById('attacks-list').innerHTML = '';
         document.getElementById('skills-list').innerHTML = '';
+        document.getElementById('spells-list').innerHTML = '';
         document.getElementById('items-list').innerHTML = '';
         document.getElementById('debuffs-list').innerHTML = '';
         document.getElementById('buffs-list').innerHTML = '';
@@ -2625,6 +2922,7 @@
         collapsedState.hotlist = false;
         collapsedState.gear = false;
         collapsedState.skills = false;
+        collapsedState.spells = false;
         collapsedState.items = false;
         collapsedState.debuffs = false;
         collapsedState.buffs = false;
@@ -2651,6 +2949,7 @@
         applySectionVisibility('hotlist');
         applySectionVisibility('gear');
         applySectionVisibility('skills');
+        applySectionVisibility('spells');
         applySectionVisibility('items');
         applySectionVisibility('debuffs');
         applySectionVisibility('buffs');
