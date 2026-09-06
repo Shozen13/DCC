@@ -461,9 +461,16 @@
             padding: 14px;
             margin-bottom: 12px;
             position: relative;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .skill-card { border-left: 4px solid var(--skill-color); }
+        .skill-card.skill-used {
+            border-left-color: #34d399;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
         .item-card { border-left: 4px solid var(--item-color); }
         .item-card.equipped-card { border-left: 4px solid var(--gear-color); background: rgba(236, 72, 153, 0.05); }
 
@@ -503,6 +510,36 @@
 
         .skill-title { color: var(--skill-color); }
         .item-title { color: var(--item-color); }
+
+        /* Skill Used Checkbox Toggle Styling */
+        .skill-use-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 6px;
+            padding: 6px 10px;
+            margin-top: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .skill-use-toggle input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--skill-color);
+            cursor: pointer;
+        }
+
+        .skill-use-toggle label {
+            margin-bottom: 0;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--skill-color);
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
 
         .hit-badge-box {
             background: rgba(224, 79, 95, 0.15);
@@ -2090,7 +2127,14 @@
                             <option value="Save Check">Save / Resistance Check</option>
                         </select>
                     </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                    
+                    <!-- Skill Used Toggle Box -->
+                    <div class="skill-use-toggle" onclick="toggleSkillUsedVisual(${id})">
+                        <input type="checkbox" id="skl-used-${id}" onchange="onSkillUsedChange(${id})">
+                        <label for="skl-used-${id}">Used This Turn</label>
+                    </div>
+
+                    <div style="font-size: 0.75rem; color: var(--text-muted); padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; margin-top: 6px;">
                         Determines the execution requirement or mechanic used during gameplay.
                     </div>
                 </div>
@@ -2110,9 +2154,31 @@
             document.getElementById(`skl-stat-${id}`).value = data.stat || 'str';
             document.getElementById(`skl-check-${id}`).value = data.checkType || 'Active Check';
             document.getElementById(`skl-effect-${id}`).value = data.effect || '';
+            const usedCheckbox = document.getElementById(`skl-used-${id}`);
+            if (usedCheckbox) {
+                usedCheckbox.checked = !!data.used;
+            }
         }
 
         updateSkillCard(id);
+    }
+
+    function toggleSkillUsedVisual(id) {
+        const checkbox = document.getElementById(`skl-used-${id}`);
+        const card = document.getElementById(`skill-card-${id}`);
+        if (!checkbox || !card) return;
+
+        if (checkbox.checked) {
+            card.classList.add('skill-used');
+        } else {
+            card.classList.remove('skill-used');
+        }
+    }
+
+    function onSkillUsedChange(id) {
+        toggleSkillUsedVisual(id);
+        updateSkillsSummary();
+        saveDataSilently();
     }
 
     function updateSkillCard(id) {
@@ -2125,6 +2191,7 @@
         document.getElementById(`skl-total-bonus-${id}`).innerText = '+' + totalBonus;
         document.getElementById(`skl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`;
 
+        toggleSkillUsedVisual(id);
         updateSkillsSummary();
         updateHotlistDropdowns();
         saveDataSilently();
@@ -2155,10 +2222,11 @@
             const name = document.getElementById(`skl-name-${id}`).value || 'Unnamed Skill';
             const bonusVal = document.getElementById(`skl-total-bonus-${id}`).innerText;
             const rankVal = document.getElementById(`skl-rank-${id}`).value;
+            const isUsed = document.getElementById(`skl-used-${id}`)?.checked;
 
             tagsHtml += `
-                <div class="summary-tag skl">
-                    <span>${name}</span>
+                <div class="summary-tag skl" style="${isUsed ? 'border-color: var(--skill-color); background: rgba(16, 185, 129, 0.15);' : ''}">
+                    <span>${name}${isUsed ? ' (Used)' : ''}</span>
                     <span class="badge">Rank ${rankVal} | Mod ${bonusVal}</span>
                 </div>
             `;
@@ -2324,7 +2392,8 @@
                 rank: document.getElementById(`skl-rank-${id}`).value,
                 stat: document.getElementById(`skl-stat-${id}`).value,
                 checkType: document.getElementById(`skl-check-${id}`).value,
-                effect: document.getElementById(`skl-effect-${id}`).value
+                effect: document.getElementById(`skl-effect-${id}`).value,
+                used: document.getElementById(`skl-used-${id}`)?.checked || false
             });
         });
 
