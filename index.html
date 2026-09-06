@@ -43,27 +43,61 @@
 
         body {
             background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(224, 79, 95, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
-                linear-gradient(rgba(15, 17, 26, 0.85), rgba(15, 17, 26, 0.85)),
-                url('DCC%20GN%20Cover.jpg');
-            background-repeat: repeat-x;
-            background-size: auto 100vh;
-            background-position: center;
-            background-attachment: fixed;
             color: var(--text-main);
             padding: 20px;
             min-height: 100vh;
-            animation: scrollBg 20s linear infinite;
+            position: relative;
+            overflow-x: hidden;
         }
 
-        @keyframes scrollBg {
-            from {
-                background-position: 0 0, 0 0, 0 0, 0 center;
+        /* Background Image Slider Container */
+        .bg-slider {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -2;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .bg-track {
+            display: flex;
+            height: 100%;
+            width: max-content;
+            animation: scrollTrack 20s linear infinite;
+        }
+
+        .bg-track img {
+            height: 100vh;
+            width: auto;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        /* Dark Overlay Layer over the scrolling images for text readability */
+        .bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(224, 79, 95, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                linear-gradient(rgba(15, 17, 26, 0.85), rgba(15, 17, 26, 0.85));
+            pointer-events: none;
+        }
+
+        /* Infinite Scrolling Animation */
+        @keyframes scrollTrack {
+            0% {
+                transform: translateX(0);
             }
-            to {
-                background-position: 0 0, 0 0, 0 0, -2000px center;
+            100% {
+                transform: translateX(-50%);
             }
         }
 
@@ -738,6 +772,12 @@
 </head>
 <body>
 
+<!-- Scrolling Background Strip -->
+<div class="bg-slider">
+    <div class="bg-track" id="bgTrack"></div>
+</div>
+<div class="bg-overlay"></div>
+
 <div class="container">
     <!-- Left Column: Profile & Attributes -->
     <div class="sidebar">
@@ -1125,6 +1165,26 @@
 </div>
 
 <script>
+    // Background Image List
+    const bgImages = [
+        'DCC_GN_Cover.jpg',
+        'DCC_Cover.jpg',
+        'DCC_Cover_0.jpg'
+    ];
+
+    function setupBackgroundSlider() {
+        const track = document.getElementById('bgTrack');
+        if (!track) return;
+
+        // Duplicate the image set twice so the keyframe loop seamlessly repeats
+        const fullSet = [...bgImages, ...bgImages];
+        
+        track.innerHTML = fullSet.map(src => `<img src="${src}" alt="Background Cover">`).join('');
+    }
+
+    // Run background setup on load
+    window.addEventListener('DOMContentLoaded', setupBackgroundSlider);
+
     let hpCurrentSlots = 0;
     let maxHpSlots = 10;
     let manaCurrent = 0;
