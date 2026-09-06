@@ -2006,14 +2006,18 @@
         document.querySelectorAll('.item-card').forEach(card => {
             const id = card.id.replace('item-card-', '');
             const isEquipped = equippedIds.includes(id);
+            const targetContainer = isEquipped ? equippedList : regularList;
 
             if (isEquipped) {
                 card.classList.add('equipped-card');
-                equippedList.appendChild(card);
                 equippedCount++;
             } else {
                 card.classList.remove('equipped-card');
-                regularList.appendChild(card);
+            }
+
+            // Only move the DOM node if it actually changed categories
+            if (card.parentElement !== targetContainer) {
+                targetContainer.appendChild(card);
             }
         });
 
@@ -2242,7 +2246,8 @@
 
         cards.forEach(card => {
             const id = card.id.replace('item-card-', '');
-            const qty = parseInt(document.getElementById(`item-qty-${id}`).value) || 0;
+            const qtyInput = document.getElementById(`item-qty-${id}`);
+            const qty = qtyInput ? (parseInt(qtyInput.value) || 0) : 0;
             totalCount += qty;
         });
 
