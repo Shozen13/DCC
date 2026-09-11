@@ -3075,6 +3075,34 @@
     }
 
     window.onload = loadData;
+    
+    function openAuthModal() {
+    document.getElementById('authModal').style.display = 'flex';
+}
+
+function closeAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+}
+
+function switchAuthTab(tab) {
+    const loginTab = document.getElementById('auth-tab-login');
+    const dashTab = document.getElementById('auth-tab-dashboard');
+    const btnLogin = document.getElementById('tab-btn-login');
+    const btnDash = document.getElementById('tab-btn-dash');
+
+    if (tab === 'login') {
+        loginTab.style.display = 'block';
+        dashTab.style.display = 'none';
+        btnLogin.style.borderColor = 'var(--accent-color)';
+        btnDash.style.borderColor = 'var(--panel-border)';
+    } else {
+        loginTab.style.display = 'none';
+        dashTab.style.display = 'block';
+        btnDash.style.borderColor = 'var(--accent-color)';
+        btnLogin.style.borderColor = 'var(--panel-border)';
+    }
+}
+    
     // Current active session tracking
 let activeCharacterId = null;
 
