@@ -930,9 +930,10 @@
         
         <!-- Tab Controls -->
         <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px;">
-            <button type="button" id="tab-btn-login" class="btn-toggle" style="flex: 1;" onclick="switchAuthTab('login')">Login / Register</button>
+            <button type="button" id="tab-btn-login" class="btn-toggle" style="flex: 1; border-color: var(--accent-color);" onclick="switchAuthTab('login')">Login / Register</button>
             <button type="button" id="tab-btn-dash" class="btn-toggle" style="flex: 1;" onclick="switchAuthTab('dashboard')">Campaign Hub</button>
         </div>
+        
 
         <!-- View 1: Login & Role Form -->
         <div id="auth-tab-login">
@@ -3103,15 +3104,15 @@ function switchAuthTab(tab) {
     const btnDash = document.getElementById('tab-btn-dash');
 
     if (tab === 'login') {
-        loginTab.style.display = 'block';
-        dashTab.style.display = 'none';
-        btnLogin.style.borderColor = 'var(--accent-color)';
-        btnDash.style.borderColor = 'var(--panel-border)';
+        if (loginTab) loginTab.style.display = 'block';
+        if (dashTab) dashTab.style.display = 'none';
+        if (btnLogin) btnLogin.style.borderColor = 'var(--accent-color)';
+        if (btnDash) btnDash.style.borderColor = 'var(--panel-border)';
     } else {
-        loginTab.style.display = 'none';
-        dashTab.style.display = 'block';
-        btnDash.style.borderColor = 'var(--accent-color)';
-        btnLogin.style.borderColor = 'var(--panel-border)';
+        if (loginTab) loginTab.style.display = 'none';
+        if (dashTab) dashTab.style.display = 'block';
+        if (btnDash) btnDash.style.borderColor = 'var(--accent-color)';
+        if (btnLogin) btnLogin.style.borderColor = 'var(--panel-border)';
     }
 }
     
