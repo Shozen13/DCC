@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -42,7 +41,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            -webkit-tap-highlight-color: transparent;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
         }
 
         body {
@@ -54,7 +53,6 @@
             overflow-x: hidden;
         }
 
-        /* Background Image Slider Container */
         .bg-slider {
             position: fixed;
             top: 0;
@@ -80,7 +78,6 @@
             flex-shrink: 0;
         }
 
-        /* Dark Overlay Layer over the scrolling images for text readability */
         .bg-overlay {
             position: fixed;
             top: 0;
@@ -352,6 +349,7 @@
             border: 1px solid var(--panel-border);
             cursor: pointer;
             transition: all 0.2s;
+            touch-action: manipulation;
         }
 
         .hp-box { background: rgba(224, 79, 95, 0.2); }
@@ -674,6 +672,7 @@
         button.btn-mana-add { background: #3b82f6; padding: 6px 12px; }
         button.btn-mana-sub { background: #ef4444; padding: 6px 12px; }
         button.btn-qty-btn { background: #374151; padding: 8px 12px; }
+        button.btn-delete { background: #ef4444; font-size: 0.7rem; padding: 4px 8px; position: absolute; top: 10px; right: 10px; }
         button.btn-toggle {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid var(--panel-border);
@@ -682,7 +681,6 @@
             font-size: 0.75rem;
         }
 
-        /* Fixed Mobile Tap Overlay Engine */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -696,6 +694,12 @@
             z-index: 999999;
             align-items: center;
             justify-content: center;
+            pointer-events: none;
+        }
+
+        .modal-overlay.active-modal {
+            display: flex !important;
+            pointer-events: auto !important;
         }
 
         .modal-card {
@@ -843,13 +847,11 @@
 </head>
 <body>
 
-<!-- Background Layers -->
 <div class="bg-slider">
     <div class="bg-track" id="bgTrack"></div>
 </div>
 <div class="bg-overlay"></div>
 
-<!-- Top Bar -->
 <div id="top-nav-bar" class="preview-nav" style="display: none;">
     <div style="display: flex; align-items: center; gap: 12px;">
         <strong style="color: var(--accent-color); letter-spacing: 1px; font-size: 0.95rem;">DUNGEON CRAWLER RPG</strong>
@@ -863,7 +865,6 @@
 </div>
 
 <div class="container">
-    <!-- DM Control Panel -->
     <div id="dm-roster-panel" class="card" style="grid-column: 1 / -1; display: none; border-color: var(--spell-color);">
         <h2 style="color: var(--spell-color); margin-bottom: 12px;">
             <span>👑 Connected Crawlers (<span id="dm-player-count">0</span> Active)</span>
@@ -874,7 +875,6 @@
         </div>
     </div>
     
-    <!-- Left Column -->
     <div class="sidebar">
         <div class="logo-container">
             <img src="https://133870449.cdn6.editmysite.com/uploads/1/3/3/8/133870449/ZGK5MHHRZUJXLDLAINVFJ7F4.png?width=2400&optimize=medium" alt="Dungeon Crawler Carl Roleplaying Game">
@@ -996,7 +996,6 @@
         </div>
     </div>
 
-    <!-- Right Column -->
     <div class="main-content">
         <div class="card">
             <h2>Vitals & Pool Trackers</h2>
@@ -1163,8 +1162,7 @@
     </div>
 </div>
 
-<!-- Modal Dialogs -->
-<div class="modal-overlay" id="authModal" style="display: flex;">
+<div class="modal-overlay active-modal" id="authModal">
     <div class="modal-card">
         <h3 id="auth-modal-title" style="text-align: center; margin-bottom: 15px;">Access Portal</h3>
         
@@ -2673,8 +2671,13 @@
         isInitialLoad = false;
     }
 
-    function openResetModal() { document.getElementById('resetModal').style.display = 'flex'; }
-    function closeResetModal() { document.getElementById('resetModal').style.display = 'none'; }
+    function openResetModal() { 
+        document.getElementById('resetModal').classList.add('active-modal'); 
+    }
+    
+    function closeResetModal() { 
+        document.getElementById('resetModal').classList.remove('active-modal'); 
+    }
 
     function confirmReset() {
         localStorage.removeItem('crawler_split_attrs_data');
@@ -2728,11 +2731,11 @@
     }
 
     function openAuthModal() {
-        document.getElementById('authModal').style.display = 'flex';
+        document.getElementById('authModal').classList.add('active-modal');
     }
 
     function closeAuthModal() {
-        document.getElementById('authModal').style.display = 'none';
+        document.getElementById('authModal').classList.remove('active-modal');
     }
 
     function switchAuthTab(tab) {
@@ -2769,7 +2772,7 @@
             return;
         }
 
-        let { data: { user, session }, error } = await supabase.auth.signInWithPassword({
+        let { data: { user }, error } = await supabase.auth.signInWithPassword({
             email: email,
             password: password
         });
@@ -2837,8 +2840,8 @@
         }
 
         currentCampaign = data[0];
-        document.getElementById('nav-campaign-name').innerText = `${currentCampaign.title} [${generatedCode}]`;
-        alert(`Campaign Created! Share this code with your Crawlers: ${generatedCode}`);
+        document.getElementById('nav-campaign-name').innerText = currentCampaign.title + ' [' + generatedCode + ']';
+        alert("Campaign Created! Share this code with your Crawlers: " + generatedCode);
         
         await loadDMRosterView();
         closeAuthModal();
@@ -2863,7 +2866,7 @@
         }
 
         currentCampaign = campaignData;
-        document.getElementById('nav-campaign-name').innerText = `${currentCampaign.title} [${code}]`;
+        document.getElementById('nav-campaign-name').innerText = currentCampaign.title + ' [' + code + ']';
 
         if (activeCharacterId) {
             await supabase
@@ -2912,7 +2915,7 @@
                 event: '*',
                 schema: 'public',
                 table: 'characters',
-                filter: `campaign_id=eq.${currentCampaign.id}`
+                filter: 'campaign_id=eq.' + currentCampaign.id
             }, () => {
                 fetchCampaignRoster();
             })
@@ -2983,19 +2986,25 @@
         }).join('');
     }
 
-    // Explicit Event Binding after DOM loads
     window.addEventListener('DOMContentLoaded', () => {
         setupBackgroundSlider();
         loadData();
 
-        // Attach touch and click listeners to modal elements
-        document.getElementById('tab-btn-login').addEventListener('click', (e) => { e.preventDefault(); switchAuthTab('login'); });
-        document.getElementById('tab-btn-dash').addEventListener('click', (e) => { e.preventDefault(); switchAuthTab('dashboard'); });
-        document.getElementById('btn-handle-login').addEventListener('click', (e) => { e.preventDefault(); handleAuthLogin(); });
-        document.getElementById('btn-join-camp').addEventListener('click', (e) => { e.preventDefault(); handleJoinCampaign(); });
-        document.getElementById('btn-create-camp').addEventListener('click', (e) => { e.preventDefault(); handleCreateCampaign(); });
-        document.getElementById('btn-close-auth').addEventListener('click', (e) => { e.preventDefault(); closeAuthModal(); });
-        document.getElementById('btn-open-auth').addEventListener('click', (e) => { e.preventDefault(); openAuthModal(); });
+        const loginTabBtn = document.getElementById('tab-btn-login');
+        const dashTabBtn = document.getElementById('tab-btn-dash');
+        const handleLoginBtn = document.getElementById('btn-handle-login');
+        const joinCampBtn = document.getElementById('btn-join-camp');
+        const createCampBtn = document.getElementById('btn-create-camp');
+        const closeAuthBtn = document.getElementById('btn-close-auth');
+        const openAuthBtn = document.getElementById('btn-open-auth');
+
+        if(loginTabBtn) loginTabBtn.onclick = (e) => { e.preventDefault(); switchAuthTab('login'); };
+        if(dashTabBtn) dashTabBtn.onclick = (e) => { e.preventDefault(); switchAuthTab('dashboard'); };
+        if(handleLoginBtn) handleLoginBtn.onclick = (e) => { e.preventDefault(); handleAuthLogin(); };
+        if(joinCampBtn) joinCampBtn.onclick = (e) => { e.preventDefault(); handleJoinCampaign(); };
+        if(createCampBtn) createCampBtn.onclick = (e) => { e.preventDefault(); handleCreateCampaign(); };
+        if(closeAuthBtn) closeAuthBtn.onclick = (e) => { e.preventDefault(); closeAuthModal(); };
+        if(openAuthBtn) openAuthBtn.onclick = (e) => { e.preventDefault(); openAuthModal(); };
     });
 </script>
 </body>
