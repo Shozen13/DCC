@@ -861,6 +861,41 @@
             padding-bottom: 4px;
             border-bottom: 1px dashed var(--panel-border);
         }
+        
+                /* Top Nav & Dashboard Portal Styles */
+        .preview-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(26, 30, 46, 0.95);
+            border: 1px solid var(--panel-border);
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .preview-badge-dm {
+            background: rgba(168, 85, 247, 0.2);
+            color: var(--spell-color);
+            border: 1px solid var(--spell-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        
+        .preview-badge-crawler {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--skill-color);
+            border: 1px solid var(--skill-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 <body>
@@ -870,6 +905,79 @@
     <div class="bg-track" id="bgTrack"></div>
 </div>
 <div class="bg-overlay"></div>
+
+<!-- Top Navigation Header -->
+<div id="top-nav-bar" class="preview-nav" style="display: none;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <strong style="color: var(--accent-color); letter-spacing: 1px; font-size: 0.95rem;">DUNGEON CRAWLER RPG</strong>
+        <span id="nav-user-role" class="preview-badge-dm">CRAWLER</span>
+    </div>
+    <div style="display: flex; gap: 15px; align-items: center; font-size: 0.85rem;">
+        <span>User: <strong id="nav-user-email" style="color: #60a5fa;">Not Logged In</strong></span>
+        <span>Campaign: <strong id="nav-campaign-name" style="color: var(--hotlist-color);">None Active</strong></span>
+        <button type="button" class="btn-reset" style="font-size: 0.75rem; padding: 6px 12px;" onclick="openAuthModal()">Switch / Login</button>
+    </div>
+</div>
+
+<!-- Auth & Campaign Dashboard Modal Overlay -->
+<div class="modal-overlay" id="authModal" style="display: flex;">
+    <div class="modal-card" style="max-width: 480px; text-align: left;">
+        <h3 id="auth-modal-title" style="text-align: center; margin-bottom: 15px;">Access Portal</h3>
+        
+        <!-- Tab Controls -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px;">
+            <button type="button" id="tab-btn-login" class="btn-toggle" style="flex: 1;" onclick="switchAuthTab('login')">Login / Register</button>
+            <button type="button" id="tab-btn-dash" class="btn-toggle" style="flex: 1;" onclick="switchAuthTab('dashboard')">Campaign Hub</button>
+        </div>
+
+        <!-- View 1: Login & Role Form -->
+        <div id="auth-tab-login">
+            <div class="form-group">
+                <label>User Role</label>
+                <select id="auth-role-select">
+                    <option value="crawler">🎒 Crawler (Player)</option>
+                    <option value="dm">👑 Dungeon Master</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="auth-email" placeholder="crawler@dungeon.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="auth-password" placeholder="••••••••">
+            </div>
+            <div class="btn-group" style="margin-top: 15px;">
+                <button type="button" style="width: 100%;" onclick="handleAuthLogin()">Enter Portal</button>
+            </div>
+        </div>
+
+        <!-- View 2: Campaign Dashboard -->
+        <div id="auth-tab-dashboard" style="display: none;">
+            <!-- Player Section -->
+            <div id="dash-crawler-section">
+                <h4 style="color: var(--skill-color); margin-bottom: 8px;">🎒 Join a Campaign</h4>
+                <div class="form-group">
+                    <label>6-Digit Campaign Code</label>
+                    <input type="text" id="dash-join-code" placeholder="e.g. X9K2P4" style="text-transform: uppercase;">
+                </div>
+                <button type="button" style="background: var(--skill-color); width: 100%; margin-bottom: 15px;" onclick="handleJoinCampaign()">Join Campaign</button>
+            </div>
+
+            <!-- DM Section -->
+            <div id="dash-dm-section" style="display: none;">
+                <h4 style="color: var(--spell-color); margin-bottom: 8px;">👑 Create Campaign</h4>
+                <div class="form-group">
+                    <label>Campaign Title</label>
+                    <input type="text" id="dash-campaign-title" placeholder="e.g. Floor 3: Overworld">
+                </div>
+                <button type="button" style="background: var(--spell-color); width: 100%; margin-bottom: 15px;" onclick="handleCreateCampaign()">Create Campaign</button>
+            </div>
+
+            <button type="button" class="btn-reset" style="width: 100%;" onclick="closeAuthModal()">Continue Offline / Solo</button>
+        </div>
+    </div>
+</div>
 
 <div class="container">
     <!-- Left Column: Profile & Attributes -->
@@ -2958,6 +3066,88 @@
     }
 
     window.onload = loadData;
+    
+            // Auth & Campaign State Management
+        let currentUser = null;
+        let currentCampaign = null;
+        
+        function openAuthModal() {
+            document.getElementById('authModal').style.display = 'flex';
+        }
+        
+        function closeAuthModal() {
+            document.getElementById('authModal').style.display = 'none';
+        }
+        
+        function switchAuthTab(tab) {
+            const loginTab = document.getElementById('auth-tab-login');
+            const dashTab = document.getElementById('auth-tab-dashboard');
+            const btnLogin = document.getElementById('tab-btn-login');
+            const btnDash = document.getElementById('tab-btn-dash');
+        
+            if (tab === 'login') {
+                loginTab.style.display = 'block';
+                dashTab.style.display = 'none';
+                btnLogin.style.borderColor = 'var(--accent-color)';
+                btnDash.style.borderColor = 'var(--panel-border)';
+            } else {
+                loginTab.style.display = 'none';
+                dashTab.style.display = 'block';
+                btnDash.style.borderColor = 'var(--accent-color)';
+                btnLogin.style.borderColor = 'var(--panel-border)';
+            }
+        }
+        
+        function handleAuthLogin() {
+            const role = document.getElementById('auth-role-select').value;
+            const email = document.getElementById('auth-email').value || 'crawler@dungeon.com';
+        
+            currentUser = { email, role };
+        
+            // Update Top Navigation Bar
+            document.getElementById('nav-user-email').innerText = email;
+            const roleBadge = document.getElementById('nav-user-role');
+            
+            if (role === 'dm') {
+                roleBadge.innerText = 'DUNGEON MASTER';
+                roleBadge.className = 'preview-badge-dm';
+                document.getElementById('dash-dm-section').style.display = 'block';
+                document.getElementById('dash-crawler-section').style.display = 'none';
+            } else {
+                roleBadge.innerText = 'CRAWLER';
+                roleBadge.className = 'preview-badge-crawler';
+                document.getElementById('dash-dm-section').style.display = 'none';
+                document.getElementById('dash-crawler-section').style.display = 'block';
+            }
+        
+            document.getElementById('top-nav-bar').style.display = 'flex';
+            switchAuthTab('dashboard');
+        }
+        
+        function handleJoinCampaign() {
+            const code = document.getElementById('dash-join-code').value.toUpperCase();
+            if (!code) {
+                alert("Please enter a campaign code.");
+                return;
+            }
+            currentCampaign = { code: code, name: `Campaign (${code})` };
+            document.getElementById('nav-campaign-name').innerText = currentCampaign.name;
+            closeAuthModal();
+        }
+        
+        function handleCreateCampaign() {
+            const title = document.getElementById('dash-campaign-title').value;
+            if (!title) {
+                alert("Please enter a campaign title.");
+                return;
+            }
+            const generatedCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            currentCampaign = { code: generatedCode, name: `${title} [${generatedCode}]` };
+            document.getElementById('nav-campaign-name').innerText = currentCampaign.name;
+            alert(`Campaign Created! Share Code: ${generatedCode}`);
+            closeAuthModal();
+        }
+        
 </script>
 </body>
 </html>
