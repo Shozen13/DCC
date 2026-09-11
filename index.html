@@ -213,7 +213,7 @@
             border-radius: 6px;
             outline: none;
             transition: border 0.3s;
-            font-size: 16px; /* Prevents iOS auto-zoom */
+            font-size: 16px;
         }
 
         input:focus, select:focus, textarea:focus {
@@ -682,7 +682,7 @@
             font-size: 0.75rem;
         }
 
-        /* MODAL OVERLAY CRITICAL FIX FOR SAFARI / IPAD */
+        /* Fixed Mobile Tap Overlay Engine */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -693,10 +693,9 @@
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            z-index: 99999;
+            z-index: 999999;
             align-items: center;
             justify-content: center;
-            pointer-events: auto;
         }
 
         .modal-card {
@@ -709,8 +708,7 @@
             text-align: center;
             box-shadow: 0 10px 25px rgba(0,0,0,0.8);
             position: relative;
-            z-index: 100000;
-            pointer-events: auto;
+            z-index: 1000000;
         }
 
         .modal-card h3 {
@@ -836,17 +834,22 @@
             font-weight: bold;
             letter-spacing: 0.5px;
         }
+
+        .tab-active {
+            border-color: var(--accent-color) !important;
+            background: rgba(224, 79, 95, 0.15) !important;
+        }
     </style>
 </head>
 <body>
 
-<!-- Scrolling Background Strip -->
+<!-- Background Layers -->
 <div class="bg-slider">
     <div class="bg-track" id="bgTrack"></div>
 </div>
 <div class="bg-overlay"></div>
 
-<!-- Top Navigation Header -->
+<!-- Top Bar -->
 <div id="top-nav-bar" class="preview-nav" style="display: none;">
     <div style="display: flex; align-items: center; gap: 12px;">
         <strong style="color: var(--accent-color); letter-spacing: 1px; font-size: 0.95rem;">DUNGEON CRAWLER RPG</strong>
@@ -855,13 +858,12 @@
     <div style="display: flex; gap: 15px; align-items: center; font-size: 0.85rem;">
         <span>User: <strong id="nav-user-email" style="color: #60a5fa;">Not Logged In</strong></span>
         <span>Campaign: <strong id="nav-campaign-name" style="color: var(--hotlist-color);">None Active</strong></span>
-        <button type="button" class="btn-reset" style="font-size: 0.75rem; padding: 6px 12px;" onclick="openAuthModal()">Switch / Login</button>
+        <button type="button" class="btn-reset" style="font-size: 0.75rem; padding: 6px 12px;" id="btn-open-auth">Switch / Login</button>
     </div>
 </div>
 
 <div class="container">
-    
-    <!-- DM Live Campaign Control Panel -->
+    <!-- DM Control Panel -->
     <div id="dm-roster-panel" class="card" style="grid-column: 1 / -1; display: none; border-color: var(--spell-color);">
         <h2 style="color: var(--spell-color); margin-bottom: 12px;">
             <span>👑 Connected Crawlers (<span id="dm-player-count">0</span> Active)</span>
@@ -872,14 +874,12 @@
         </div>
     </div>
     
-    <!-- Left Column: Profile & Attributes -->
+    <!-- Left Column -->
     <div class="sidebar">
-        <!-- Logo Section -->
         <div class="logo-container">
             <img src="https://133870449.cdn6.editmysite.com/uploads/1/3/3/8/133870449/ZGK5MHHRZUJXLDLAINVFJ7F4.png?width=2400&optimize=medium" alt="Dungeon Crawler Carl Roleplaying Game">
         </div>
 
-        <!-- Crawler Profile Card -->
         <div class="card">
             <h2>Crawler Profile</h2>
             <div class="avatar-box">
@@ -920,118 +920,52 @@
             </div>
         </div>
 
-        <!-- Core Attributes Card -->
         <div class="card">
             <h2>Core Attributes</h2>
             <div class="stats-grid">
-                <!-- STR -->
                 <div class="stat-card">
-                    <div class="stat-header">
-                        <span>STR</span>
-                        <span class="modifier" id="mod-str">+0</span>
-                    </div>
+                    <div class="stat-header"><span>STR</span><span class="modifier" id="mod-str">+0</span></div>
                     <div class="stat-rows">
-                        <div class="stat-row-item">
-                            <label>Base</label>
-                            <input type="number" id="stat-str-base" value="0" onchange="calculateSheet()">
-                        </div>
-                        <div class="stat-row-item">
-                            <label>Enhance</label>
-                            <input type="number" id="stat-str-enh" value="0" onchange="calculateSheet()">
-                        </div>
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-str-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enhance</label><input type="number" id="stat-str-enh" value="0" onchange="calculateSheet()"></div>
                     </div>
-                    <div class="stat-total-bar">
-                        <span>Total STR:</span>
-                        <strong id="stat-str-total">0</strong>
-                    </div>
+                    <div class="stat-total-bar"><span>Total STR:</span><strong id="stat-str-total">0</strong></div>
                 </div>
 
-                <!-- CON -->
                 <div class="stat-card">
-                    <div class="stat-header">
-                        <span>CON</span>
-                        <span class="modifier" id="mod-con">+0</span>
-                    </div>
+                    <div class="stat-header"><span>CON</span><span class="modifier" id="mod-con">+0</span></div>
                     <div class="stat-rows">
-                        <div class="stat-row-item">
-                            <label>Base</label>
-                            <input type="number" id="stat-con-base" value="0" onchange="calculateSheet()">
-                        </div>
-                        <div class="stat-row-item">
-                            <label>Enhance</label>
-                            <input type="number" id="stat-con-enh" value="0" onchange="calculateSheet()">
-                        </div>
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-con-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enhance</label><input type="number" id="stat-con-enh" value="0" onchange="calculateSheet()"></div>
                     </div>
-                    <div class="stat-total-bar">
-                        <span>Total CON:</span>
-                        <strong id="stat-con-total">0</strong>
-                    </div>
+                    <div class="stat-total-bar"><span>Total CON:</span><strong id="stat-con-total">0</strong></div>
                 </div>
 
-                <!-- DEX -->
                 <div class="stat-card">
-                    <div class="stat-header">
-                        <span>DEX</span>
-                        <span class="modifier" id="mod-dex">+0</span>
-                    </div>
+                    <div class="stat-header"><span>DEX</span><span class="modifier" id="mod-dex">+0</span></div>
                     <div class="stat-rows">
-                        <div class="stat-row-item">
-                            <label>Base</label>
-                            <input type="number" id="stat-dex-base" value="0" onchange="calculateSheet()">
-                        </div>
-                        <div class="stat-row-item">
-                            <label>Enhance</label>
-                            <input type="number" id="stat-dex-enh" value="0" onchange="calculateSheet()">
-                        </div>
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-dex-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enhance</label><input type="number" id="stat-dex-enh" value="0" onchange="calculateSheet()"></div>
                     </div>
-                    <div class="stat-total-bar">
-                        <span>Total DEX:</span>
-                        <strong id="stat-dex-total">0</strong>
-                    </div>
+                    <div class="stat-total-bar"><span>Total DEX:</span><strong id="stat-dex-total">0</strong></div>
                 </div>
 
-                <!-- INT -->
                 <div class="stat-card">
-                    <div class="stat-header">
-                        <span>INT</span>
-                        <span class="modifier" id="mod-int">+0</span>
-                    </div>
+                    <div class="stat-header"><span>INT</span><span class="modifier" id="mod-int">+0</span></div>
                     <div class="stat-rows">
-                        <div class="stat-row-item">
-                            <label>Base</label>
-                            <input type="number" id="stat-int-base" value="0" onchange="calculateSheet()">
-                        </div>
-                        <div class="stat-row-item">
-                            <label>Enhance</label>
-                            <input type="number" id="stat-int-enh" value="0" onchange="calculateSheet()">
-                        </div>
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-int-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enhance</label><input type="number" id="stat-int-enh" value="0" onchange="calculateSheet()"></div>
                     </div>
-                    <div class="stat-total-bar">
-                        <span>Total INT:</span>
-                        <strong id="stat-int-total">0</strong>
-                    </div>
+                    <div class="stat-total-bar"><span>Total INT:</span><strong id="stat-int-total">0</strong></div>
                 </div>
 
-                <!-- CHA -->
                 <div class="stat-card">
-                    <div class="stat-header">
-                        <span>CHA</span>
-                        <span class="modifier" id="mod-cha">+0</span>
-                    </div>
+                    <div class="stat-header"><span>CHA</span><span class="modifier" id="mod-cha">+0</span></div>
                     <div class="stat-rows">
-                        <div class="stat-row-item">
-                            <label>Base</label>
-                            <input type="number" id="stat-cha-base" value="0" onchange="calculateSheet()">
-                        </div>
-                        <div class="stat-row-item">
-                            <label>Enhance</label>
-                            <input type="number" id="stat-cha-enh" value="0" onchange="calculateSheet()">
-                        </div>
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-cha-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enhance</label><input type="number" id="stat-cha-enh" value="0" onchange="calculateSheet()"></div>
                     </div>
-                    <div class="stat-total-bar">
-                        <span>Total CHA:</span>
-                        <strong id="stat-cha-total">0</strong>
-                    </div>
+                    <div class="stat-total-bar"><span>Total CHA:</span><strong id="stat-cha-total">0</strong></div>
                 </div>
             </div>
 
@@ -1039,12 +973,7 @@
                 <summary>Stat Modifier Reference Chart</summary>
                 <table class="mod-table">
                     <thead>
-                        <tr>
-                            <th>Stat Range</th>
-                            <th>Modifier</th>
-                            <th>Stat Range</th>
-                            <th>Modifier</th>
-                        </tr>
+                        <tr><th>Stat Range</th><th>Modifier</th><th>Stat Range</th><th>Modifier</th></tr>
                     </thead>
                     <tbody>
                         <tr><td>1 – 2</td><td>+1</td><td>50 – 99</td><td>+6</td></tr>
@@ -1057,7 +986,6 @@
             </details>
         </div>
 
-        <!-- Actions Card -->
         <div class="card">
             <h2>Actions</h2>
             <div class="btn-group">
@@ -1068,24 +996,19 @@
         </div>
     </div>
 
-    <!-- Right Column: Vitals, Attacks, Hotlist, Gear, Skills, Spells & Inventory -->
+    <!-- Right Column -->
     <div class="main-content">
-        <!-- Vitals & Defenses -->
         <div class="card">
             <h2>Vitals & Pool Trackers</h2>
-            
             <div class="resource-group">
                 <div class="resource-header">
                     <span>Health Capacity (<span id="hp-total-text">0</span> HP)</span>
-                    <span>
-                        Slots Max: <input type="number" id="hp-max-slots" value="10" min="0" style="width: 60px; padding: 2px 5px; display: inline-block;" onchange="calculateSheet()">
-                    </span>
+                    <span>Slots Max: <input type="number" id="hp-max-slots" value="10" min="0" style="width: 60px; padding: 2px 5px; display: inline-block;" onchange="calculateSheet()"></span>
                     <span id="hp-slot-count">0 / 10 Slots</span>
                 </div>
                 <div class="tracker-grid" id="hp-tracker"></div>
             </div>
 
-            <!-- Percentage Mana Bar Section -->
             <div class="resource-group">
                 <div class="resource-header">
                     <span style="color: #60a5fa;">Mana Pool</span>
@@ -1101,9 +1024,7 @@
                 </div>
             </div>
 
-            <!-- Defenses: Evade & Damage Resistance Calculations -->
             <div class="defense-grid">
-                <!-- Evade Calculation -->
                 <div class="defense-box">
                     <div class="defense-title">Evade Check</div>
                     <div class="form-group">
@@ -1117,18 +1038,11 @@
                     </div>
                 </div>
 
-                <!-- Damage Resistance Calculation -->
                 <div class="defense-box">
                     <div class="defense-title">Damage Resistance</div>
                     <div class="form-row-2">
-                        <div class="form-group">
-                            <label>Armor</label>
-                            <input type="number" id="armor-val" value="0" min="0" oninput="calculateSheet()">
-                        </div>
-                        <div class="form-group">
-                            <label>DR Buffs</label>
-                            <input type="number" id="dr-buffs" value="0" oninput="calculateSheet()">
-                        </div>
+                        <div class="form-group"><label>Armor</label><input type="number" id="armor-val" value="0" min="0" oninput="calculateSheet()"></div>
+                        <div class="form-group"><label>DR Buffs</label><input type="number" id="dr-buffs" value="0" oninput="calculateSheet()"></div>
                     </div>
                     <div class="defense-badge">
                         <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Total Resistance</span>
@@ -1138,7 +1052,6 @@
                 </div>
             </div>
 
-            <!-- Debuffs Section -->
             <div class="sub-section-header" style="color: var(--debuff-color); border-color: rgba(239, 68, 68, 0.3);">
                 <span>Debuffs & Status Effects</span>
                 <div class="header-actions">
@@ -1149,7 +1062,6 @@
             <div id="debuffs-summary" class="summary-box" style="display: none;"></div>
             <div id="debuffs-list"></div>
 
-            <!-- External Buffs Section -->
             <div class="sub-section-header" style="color: var(--buff-color); border-color: rgba(6, 182, 212, 0.3);">
                 <span>External Buffs (<span id="buff-count-disp">0</span>/3 Max)</span>
                 <div class="header-actions">
@@ -1161,7 +1073,6 @@
             <div id="buffs-list"></div>
         </div>
 
-        <!-- Attacks Section -->
         <div class="card">
             <h2>
                 <span>Attacks & Actions</span>
@@ -1174,7 +1085,6 @@
             <div id="attacks-list"></div>
         </div>
 
-        <!-- Hotlist Section -->
         <div class="card">
             <h2 style="color: var(--hotlist-color);">
                 <span>Hotlist</span>
@@ -1186,7 +1096,6 @@
             <div id="hotlist-container" class="hotlist-grid"></div>
         </div>
 
-        <!-- Equipped Gear Section -->
         <div class="card">
             <h2 style="color: var(--gear-color);">
                 <span>Equipped Gear</span>
@@ -1197,7 +1106,6 @@
             <div id="gear-summary" class="summary-box" style="display: none;"></div>
             <div id="gear-container">
                 <div class="gear-grid" id="gear-body-slots-grid"></div>
-                
                 <div class="sub-section-header" style="color: var(--gear-color); border-color: rgba(236, 72, 153, 0.3); margin-top: 15px;">
                     <span>Accessories (<span id="acc-count-disp">0</span>/10 Max)</span>
                     <div class="header-actions">
@@ -1208,7 +1116,6 @@
             </div>
         </div>
 
-        <!-- Skills Section -->
         <div class="card">
             <h2 style="color: var(--skill-color);">
                 <span>Skills</span>
@@ -1221,7 +1128,6 @@
             <div id="skills-list"></div>
         </div>
 
-        <!-- Spells Section -->
         <div class="card">
             <h2 style="color: var(--spell-color);">
                 <span>Spells</span>
@@ -1234,7 +1140,6 @@
             <div id="spells-list"></div>
         </div>
 
-        <!-- Inventory Section -->
         <div class="card">
             <h2 style="color: var(--item-color);">
                 <span>Inventory</span>
@@ -1258,18 +1163,16 @@
     </div>
 </div>
 
-<!-- Auth & Campaign Dashboard Modal Overlay (MOVED TO ROOT LEVEL) -->
+<!-- Modal Dialogs -->
 <div class="modal-overlay" id="authModal" style="display: flex;">
     <div class="modal-card">
         <h3 id="auth-modal-title" style="text-align: center; margin-bottom: 15px;">Access Portal</h3>
         
-        <!-- Tab Controls -->
         <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px;">
-            <button type="button" id="tab-btn-login" class="btn-toggle" style="flex: 1; border-color: var(--accent-color);" onclick="switchAuthTab('login')">Login / Register</button>
-            <button type="button" id="tab-btn-dash" class="btn-toggle" style="flex: 1;" onclick="switchAuthTab('dashboard')">Campaign Hub</button>
+            <button type="button" id="tab-btn-login" class="btn-toggle tab-active" style="flex: 1;">Login / Register</button>
+            <button type="button" id="tab-btn-dash" class="btn-toggle" style="flex: 1;">Campaign Hub</button>
         </div>
 
-        <!-- View 1: Login & Role Form -->
         <div id="auth-tab-login">
             <div class="form-group">
                 <label>User Role</label>
@@ -1287,38 +1190,34 @@
                 <input type="password" id="auth-password" placeholder="••••••••">
             </div>
             <div class="btn-group" style="margin-top: 15px;">
-                <button type="button" style="width: 100%;" onclick="handleAuthLogin()">Enter Portal</button>
+                <button type="button" id="btn-handle-login" style="width: 100%;">Enter Portal</button>
             </div>
         </div>
 
-        <!-- View 2: Campaign Dashboard -->
         <div id="auth-tab-dashboard" style="display: none;">
-            <!-- Player Section -->
             <div id="dash-crawler-section">
                 <h4 style="color: var(--skill-color); margin-bottom: 8px;">🎒 Join a Campaign</h4>
                 <div class="form-group">
                     <label>6-Digit Campaign Code</label>
                     <input type="text" id="dash-join-code" placeholder="e.g. X9K2P4" style="text-transform: uppercase;">
                 </div>
-                <button type="button" style="background: var(--skill-color); width: 100%; margin-bottom: 15px;" onclick="handleJoinCampaign()">Join Campaign</button>
+                <button type="button" id="btn-join-camp" style="background: var(--skill-color); width: 100%; margin-bottom: 15px;">Join Campaign</button>
             </div>
 
-            <!-- DM Section -->
             <div id="dash-dm-section" style="display: none;">
                 <h4 style="color: var(--spell-color); margin-bottom: 8px;">👑 Create Campaign</h4>
                 <div class="form-group">
                     <label>Campaign Title</label>
                     <input type="text" id="dash-campaign-title" placeholder="e.g. Floor 3: Overworld">
                 </div>
-                <button type="button" style="background: var(--spell-color); width: 100%; margin-bottom: 15px;" onclick="handleCreateCampaign()">Create Campaign</button>
+                <button type="button" id="btn-create-camp" style="background: var(--spell-color); width: 100%; margin-bottom: 15px;">Create Campaign</button>
             </div>
 
-            <button type="button" class="btn-reset" style="width: 100%;" onclick="closeAuthModal()">Continue Offline / Solo</button>
+            <button type="button" class="btn-reset" id="btn-close-auth" style="width: 100%;">Continue Offline / Solo</button>
         </div>
     </div>
 </div>
 
-<!-- Reset Modal -->
 <div class="modal-overlay" id="resetModal">
     <div class="modal-card">
         <h3>Clear Character Sheet?</h3>
@@ -1331,16 +1230,15 @@
 </div>
 
 <script>
-	const SUPABASE_URL = 'https://ghgtvryxqfwzznrxewaw.supabase.co';
-	const SUPABASE_ANON_KEY = 'sb_publishable_ikbKYyQYQtWQ84BFSAolaw_X1A3xDim';
-	const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_URL = 'https://ghgtvryxqfwzznrxewaw.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_ikbKYyQYQtWQ84BFSAolaw_X1A3xDim';
+    let supabase = null;
 
-    // Background Image List
-    const bgImages = [
-        'DCC_GN_Cover.jpg',
-        'DCC_Cover.jpg',
-        'DCC_Cover_0.jpg'
-    ];
+    if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    const bgImages = ['DCC_GN_Cover.jpg', 'DCC_Cover.jpg', 'DCC_Cover_0.jpg'];
 
     function setupBackgroundSlider() {
         const track = document.getElementById('bgTrack');
@@ -1348,8 +1246,6 @@
         const fullSet = [...bgImages, ...bgImages];
         track.innerHTML = fullSet.map(src => `<img src="${src}" alt="Background Cover">`).join('');
     }
-
-    window.addEventListener('DOMContentLoaded', setupBackgroundSlider);
 
     let hpCurrentSlots = 0;
     let maxHpSlots = 10;
@@ -1363,6 +1259,11 @@
     let debuffCounter = 0;
     let buffCounter = 0;
     let accessoryCounter = 0;
+
+    let currentUser = null;
+    let currentCampaign = null;
+    let activeCharacterId = null;
+    let realtimeChannel = null;
 
     const bodySlotCategories = [
         { key: 'head', label: 'Head' },
@@ -1400,12 +1301,9 @@
         const base = parseInt(document.getElementById(`stat-${id}-base`).value) || 0;
         const enh = parseInt(document.getElementById(`stat-${id}-enh`).value) || 0;
         const total = base + enh;
-        
         document.getElementById(`stat-${id}-total`).innerText = total;
-        
         const mod = getModifier(total);
         document.getElementById(`mod-${id}`).innerText = '+' + mod;
-        
         currentMods[id] = mod;
         return { total, mod };
     }
@@ -1519,7 +1417,6 @@
         debuffCounter++;
         const id = debuffCounter;
         const container = document.getElementById('debuffs-list');
-
         const card = document.createElement('div');
         card.className = 'condition-card debuff-card';
         card.id = `debuff-card-${id}`;
@@ -1534,7 +1431,6 @@
                 <textarea id="debuff-notes-${id}" rows="2" placeholder="Describe negative effects, duration, tick damage..." oninput="saveDataSilently()"></textarea>
             </div>
         `;
-
         container.appendChild(card);
         if (data) {
             document.getElementById(`debuff-name-${id}`).value = data.name || '';
@@ -1578,7 +1474,6 @@
         buffCounter++;
         const id = buffCounter;
         const container = document.getElementById('buffs-list');
-
         const card = document.createElement('div');
         card.className = 'condition-card buff-card';
         card.id = `buff-card-${id}`;
@@ -1593,7 +1488,6 @@
                 <textarea id="buff-notes-${id}" rows="2" placeholder="Describe positive bonuses, source, or duration..." oninput="saveDataSilently()"></textarea>
             </div>
         `;
-
         container.appendChild(card);
         if (data) {
             document.getElementById(`buff-name-${id}`).value = data.name || '';
@@ -1606,7 +1500,6 @@
         const summaryBox = document.getElementById('buffs-summary');
         const cards = document.querySelectorAll('.buff-card');
         const count = cards.length;
-
         document.getElementById('buff-count-disp').innerText = count;
         document.getElementById('btn-add-buff').disabled = count >= 3;
 
@@ -2532,7 +2425,7 @@
         if (isInitialLoad) return;
         const data = gatherSheetData();
 
-        if (currentUser) {
+        if (supabase && currentUser) {
             if (activeCharacterId) {
                 supabase.from('characters').update({ 
                     character_data: data,
@@ -2834,8 +2727,6 @@
         closeResetModal();
     }
 
-    window.onload = loadData;
-
     function openAuthModal() {
         document.getElementById('authModal').style.display = 'flex';
     }
@@ -2851,22 +2742,17 @@
         const btnDash = document.getElementById('tab-btn-dash');
 
         if (tab === 'login') {
-            if (loginTab) loginTab.style.display = 'block';
-            if (dashTab) dashTab.style.display = 'none';
-            if (btnLogin) btnLogin.style.borderColor = 'var(--accent-color)';
-            if (btnDash) btnDash.style.borderColor = 'var(--panel-border)';
+            loginTab.style.display = 'block';
+            dashTab.style.display = 'none';
+            btnLogin.classList.add('tab-active');
+            btnDash.classList.remove('tab-active');
         } else {
-            if (loginTab) loginTab.style.display = 'none';
-            if (dashTab) dashTab.style.display = 'block';
-            if (btnDash) btnDash.style.borderColor = 'var(--accent-color)';
-            if (btnLogin) btnLogin.style.borderColor = 'var(--panel-border)';
+            loginTab.style.display = 'none';
+            dashTab.style.display = 'block';
+            btnDash.classList.add('tab-active');
+            btnLogin.classList.remove('tab-active');
         }
     }
-    
-    let currentUser = null;
-    let currentCampaign = null;
-    let activeCharacterId = null;
-    let realtimeChannel = null;
 
     async function handleAuthLogin() {
         const email = document.getElementById('auth-email').value;
@@ -2875,6 +2761,11 @@
 
         if (!email || !password) {
             alert("Please enter both an email and password.");
+            return;
+        }
+
+        if (!supabase) {
+            alert("Database connection is initializing, please try again.");
             return;
         }
 
@@ -2985,7 +2876,7 @@
     }
 
     async function loadCharacterFromCloud() {
-        if (!currentUser) return;
+        if (!currentUser || !supabase) return;
 
         const { data: charRecords, error } = await supabase
             .from('characters')
@@ -3008,7 +2899,7 @@
     }
 
     async function loadDMRosterView() {
-        if (!currentCampaign || !currentUser) return;
+        if (!currentCampaign || !currentUser || !supabase) return;
 
         document.getElementById('dm-roster-panel').style.display = 'block';
         await fetchCampaignRoster();
@@ -3029,7 +2920,7 @@
     }
 
     async function fetchCampaignRoster() {
-        if (!currentCampaign) return;
+        if (!currentCampaign || !supabase) return;
 
         const { data: chars, error } = await supabase
             .from('characters')
@@ -3091,6 +2982,21 @@
             `;
         }).join('');
     }
+
+    // Explicit Event Binding after DOM loads
+    window.addEventListener('DOMContentLoaded', () => {
+        setupBackgroundSlider();
+        loadData();
+
+        // Attach touch and click listeners to modal elements
+        document.getElementById('tab-btn-login').addEventListener('click', (e) => { e.preventDefault(); switchAuthTab('login'); });
+        document.getElementById('tab-btn-dash').addEventListener('click', (e) => { e.preventDefault(); switchAuthTab('dashboard'); });
+        document.getElementById('btn-handle-login').addEventListener('click', (e) => { e.preventDefault(); handleAuthLogin(); });
+        document.getElementById('btn-join-camp').addEventListener('click', (e) => { e.preventDefault(); handleJoinCampaign(); });
+        document.getElementById('btn-create-camp').addEventListener('click', (e) => { e.preventDefault(); handleCreateCampaign(); });
+        document.getElementById('btn-close-auth').addEventListener('click', (e) => { e.preventDefault(); closeAuthModal(); });
+        document.getElementById('btn-open-auth').addEventListener('click', (e) => { e.preventDefault(); openAuthModal(); });
+    });
 </script>
 </body>
 </html>
