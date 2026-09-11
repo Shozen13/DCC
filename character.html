@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Crawler RPG - Character Sheet</title>
+    <link rel="icon" type="image/png" href="Zev_icon.png">
+    <style>
+        :root {
+            --bg-color: #0f111a;
+            --panel-bg: rgba(26, 30, 46, 0.85);
+            --panel-border: #2a314d;
+            --accent-color: #e04f5f;
+            --accent-glow: rgba(224, 79, 95, 0.4);
+            --mana-color: #3b82f6;
+            --mana-glow: rgba(59, 130, 246, 0.4);
+            --skill-color: #10b981;
+            --skill-glow: rgba(16, 185, 129, 0.4);
+            --spell-color: #a855f7;
+            --spell-glow: rgba(168, 85, 247, 0.4);
+            --item-color: #f59e0b;
+            --item-glow: rgba(245, 158, 11, 0.4);
+            --defense-color: #8b5cf6;
+            --defense-glow: rgba(139, 92, 246, 0.4);
+            --debuff-color: #ef4444;
+            --debuff-glow: rgba(239, 68, 68, 0.4);
+            --buff-color: #06b6d4;
+            --buff-glow: rgba(6, 182, 212, 0.4);
+            --gear-color: #ec4899;
+            --gear-glow: rgba(236, 72, 153, 0.4);
+            --hotlist-color: #f97316;
+            --hotlist-glow: rgba(249, 115, 22, 0.4);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --input-bg: #121524;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 850px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        .logo-container { text-align: center; margin-bottom: 15px; }
+        .logo-container img { max-width: 100%; height: auto; }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: var(--accent-color);
+            text-transform: uppercase;
+            font-size: 1.1rem;
+            letter-spacing: 1.5px;
+            border-bottom: 2px solid var(--panel-border);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .avatar-box {
+            width: 100%; height: 220px; border-radius: 8px;
+            border: 2px dashed var(--panel-border); margin-bottom: 15px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--input-bg);
+        }
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        .form-group { margin-bottom: 12px; }
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        label { display: block; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+
+        input, select, textarea {
+            width: 100%; background: var(--input-bg);
+            border: 1px solid var(--panel-border); color: #fff;
+            padding: 8px 12px; border-radius: 6px; outline: none; font-size: 16px;
+        }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+        .stat-card { background: var(--input-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; }
+        .stat-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; }
+        .stat-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .stat-row-item { display: flex; flex-direction: column; }
+        .stat-row-item input { text-align: center; padding: 6px 4px; font-weight: 600; }
+        .stat-total-bar { display: flex; justify-content: space-between; background: rgba(255, 255, 255, 0.05); padding: 6px 10px; border-radius: 4px; font-size: 0.85rem; }
+        .modifier { background: var(--accent-color); color: #fff; font-weight: bold; padding: 2px 10px; border-radius: 12px; font-size: 0.85rem; }
+
+        .resource-group { margin-bottom: 18px; }
+        .resource-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-weight: bold; font-size: 0.9rem; }
+        .tracker-grid { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; }
+        .tracker-box { width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--panel-border); cursor: pointer; touch-action: manipulation; }
+        .hp-box { background: rgba(224, 79, 95, 0.2); }
+        .hp-box.filled { background: var(--accent-color); }
+
+        .mana-bar-container { width: 100%; height: 28px; background: var(--input-bg); border: 1px solid var(--panel-border); border-radius: 6px; overflow: hidden; }
+        .mana-bar-fill { height: 100%; background: linear-gradient(90deg, #2563eb, var(--mana-color)); width: 0%; transition: width 0.3s ease; }
+        .mana-controls { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+        .mana-controls input { width: 70px; text-align: center; font-weight: bold; }
+
+        .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--panel-border); }
+        .defense-box { background: var(--input-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; }
+        .defense-badge { background: rgba(139, 92, 246, 0.15); border: 1px solid var(--defense-color); border-radius: 6px; padding: 8px; text-align: center; margin-top: 8px; }
+        .defense-badge-val { font-size: 1.3rem; font-weight: 900; color: var(--defense-color); }
+
+        .sub-section-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); border-radius: 6px; margin: 15px 0 10px 0; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+
+        .condition-card, .attack-card, .skill-card, .spell-card, .item-card { background: var(--input-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 14px; margin-bottom: 12px; position: relative; }
+        .debuff-card { border-left: 4px solid var(--debuff-color); }
+        .buff-card { border-left: 4px solid var(--buff-color); }
+        .skill-card { border-left: 4px solid var(--skill-color); }
+        .spell-card { border-left: 4px solid var(--spell-color); }
+        .item-card { border-left: 4px solid var(--item-color); }
+
+        .summary-box { background: var(--input-bg); border: 1px dashed var(--panel-border); border-radius: 8px; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .summary-tag { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--panel-border); border-radius: 6px; padding: 6px 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        button { background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; touch-action: manipulation; }
+        button.btn-reset { background: #475569; }
+        button.btn-add { background: #10b981; }
+        button.btn-mana-add { background: #3b82f6; padding: 6px 12px; }
+        button.btn-mana-sub { background: #ef4444; padding: 6px 12px; }
+        button.btn-delete { background: #ef4444; font-size: 0.7rem; padding: 4px 8px; position: absolute; top: 10px; right: 10px; }
+        button.btn-toggle { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--panel-border); color: var(--text-main); padding: 6px 12px; font-size: 0.75rem; }
+
+        .preview-nav { display: flex; justify-content: space-between; align-items: center; background: rgba(26, 30, 46, 0.95); border: 1px solid var(--panel-border); padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="preview-nav">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <strong style="color: var(--accent-color); letter-spacing: 1px; font-size: 0.95rem;">DUNGEON CRAWLER RPG</strong>
+        <span id="nav-role" style="background: rgba(16, 185, 129, 0.2); color: var(--skill-color); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">CRAWLER</span>
+    </div>
+    <div style="display: flex; gap: 15px; align-items: center; font-size: 0.85rem;">
+        <span>User: <strong id="nav-email" style="color: #60a5fa;">Offline / Solo</strong></span>
+        <span>Campaign: <strong id="nav-camp" style="color: var(--hotlist-color);">None Active</strong></span>
+        <button type="button" class="btn-reset" style="font-size: 0.75rem; padding: 6px 12px;" onclick="window.location.href='index.html'">Portal / Switch</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="sidebar">
+        <div class="logo-container">
+            <img src="https://133870449.cdn6.editmysite.com/uploads/1/3/3/8/133870449/ZGK5MHHRZUJXLDLAINVFJ7F4.png?width=2400&optimize=medium" alt="Dungeon Crawler Carl RPG">
+        </div>
+
+        <div class="card">
+            <h2>Crawler Profile</h2>
+            <div class="avatar-box">
+                <img id="avatar-img" src="" alt="Portrait" style="display: none;">
+                <span id="avatar-placeholder" style="color: var(--text-muted); font-size: 0.8rem;">No Image Loaded</span>
+            </div>
+            <div class="form-group">
+                <label>Avatar Image URL</label>
+                <input type="text" id="avatar-url" onchange="updateAvatar()" placeholder="Paste image link...">
+            </div>
+            <div class="form-group">
+                <label>Crawler</label>
+                <input type="text" id="char-name" placeholder="Crawler Name" oninput="saveDataSilently()">
+            </div>
+            <div class="form-group">
+                <label>Crawler Number</label>
+                <input type="text" id="char-number" placeholder="e.g. #08492" oninput="saveDataSilently()">
+            </div>
+            <div class="form-row-2">
+                <div class="form-group"><label>Race</label><input type="text" id="char-race" placeholder="Race" oninput="saveDataSilently()"></div>
+                <div class="form-group"><label>Class</label><input type="text" id="char-class" placeholder="Class" oninput="saveDataSilently()"></div>
+            </div>
+            <div class="form-row-2">
+                <div class="form-group"><label>Level</label><input type="number" id="char-level" value="1" min="1" oninput="saveDataSilently()"></div>
+                <div class="form-group"><label>Floor</label><input type="number" id="char-floor" value="1" min="1" oninput="saveDataSilently()"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Core Attributes</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header"><span>STR</span><span class="modifier" id="mod-str">+0</span></div>
+                    <div class="stat-rows">
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-str-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enh</label><input type="number" id="stat-str-enh" value="0" onchange="calculateSheet()"></div>
+                    </div>
+                    <div class="stat-total-bar"><span>Total STR:</span><strong id="stat-str-total">0</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header"><span>CON</span><span class="modifier" id="mod-con">+0</span></div>
+                    <div class="stat-rows">
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-con-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enh</label><input type="number" id="stat-con-enh" value="0" onchange="calculateSheet()"></div>
+                    </div>
+                    <div class="stat-total-bar"><span>Total CON:</span><strong id="stat-con-total">0</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header"><span>DEX</span><span class="modifier" id="mod-dex">+0</span></div>
+                    <div class="stat-rows">
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-dex-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enh</label><input type="number" id="stat-dex-enh" value="0" onchange="calculateSheet()"></div>
+                    </div>
+                    <div class="stat-total-bar"><span>Total DEX:</span><strong id="stat-dex-total">0</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header"><span>INT</span><span class="modifier" id="mod-int">+0</span></div>
+                    <div class="stat-rows">
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-int-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enh</label><input type="number" id="stat-int-enh" value="0" onchange="calculateSheet()"></div>
+                    </div>
+                    <div class="stat-total-bar"><span>Total INT:</span><strong id="stat-int-total">0</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header"><span>CHA</span><span class="modifier" id="mod-cha">+0</span></div>
+                    <div class="stat-rows">
+                        <div class="stat-row-item"><label>Base</label><input type="number" id="stat-cha-base" value="0" onchange="calculateSheet()"></div>
+                        <div class="stat-row-item"><label>Enh</label><input type="number" id="stat-cha-enh" value="0" onchange="calculateSheet()"></div>
+                    </div>
+                    <div class="stat-total-bar"><span>Total CHA:</span><strong id="stat-cha-total">0</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Actions</h2>
+            <div class="btn-group">
+                <button type="button" onclick="saveData()">Save Character</button>
+                <button type="button" class="btn-reset" onclick="confirmReset()">Clear Sheet</button>
+            </div>
+            <p id="save-status" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="card">
+            <h2>Vitals & Pool Trackers</h2>
+            <div class="resource-group">
+                <div class="resource-header">
+                    <span>Health Capacity (<span id="hp-total-text">0</span> HP)</span>
+                    <span>Slots Max: <input type="number" id="hp-max-slots" value="10" min="0" style="width: 60px; padding: 2px 5px; display: inline-block;" onchange="calculateSheet()"></span>
+                    <span id="hp-slot-count">0 / 10 Slots</span>
+                </div>
+                <div class="tracker-grid" id="hp-tracker"></div>
+            </div>
+
+            <div class="resource-group">
+                <div class="resource-header">
+                    <span style="color: #60a5fa;">Mana Pool</span>
+                    <span id="mana-text-count" style="color: #60a5fa;">0 / 0 Mana (0%)</span>
+                </div>
+                <div class="mana-bar-container">
+                    <div class="mana-bar-fill" id="mana-bar-fill"></div>
+                </div>
+                <div class="mana-controls">
+                    <button type="button" class="btn-mana-sub" onclick="adjustMana(-1)">- Sub</button>
+                    <input type="number" id="mana-adjust-amt" value="1" min="1">
+                    <button type="button" class="btn-mana-add" onclick="adjustMana(1)">+ Add</button>
+                </div>
+            </div>
+
+            <div class="defense-grid">
+                <div class="defense-box">
+                    <div style="font-size: 0.8rem; color: var(--defense-color); font-weight: bold;">Evade Check</div>
+                    <div class="form-group"><label>Buffs / Modifiers</label><input type="number" id="evade-buffs" value="0" oninput="calculateSheet()"></div>
+                    <div class="defense-badge"><span class="defense-badge-val" id="evade-total-disp">d20 + 0</span></div>
+                </div>
+                <div class="defense-box">
+                    <div style="font-size: 0.8rem; color: var(--defense-color); font-weight: bold;">Damage Resistance</div>
+                    <div class="form-row-2">
+                        <div class="form-group"><label>Armor</label><input type="number" id="armor-val" value="0" oninput="calculateSheet()"></div>
+                        <div class="form-group"><label>DR Buffs</label><input type="number" id="dr-buffs" value="0" oninput="calculateSheet()"></div>
+                    </div>
+                    <div class="defense-badge"><span class="defense-badge-val" id="dr-total-disp">0 DR</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>
+                <span>Attacks & Actions</span>
+                <button type="button" class="btn-add" onclick="addAttack()">+ Add Attack</button>
+            </h2>
+            <div id="attacks-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let hpCurrentSlots = 0, maxHpSlots = 10, manaCurrent = 0, maxMana = 0, attackCounter = 0;
+    const currentMods = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+
+    function getModifier(val) {
+        if (!val || val < 1) return 0;
+        if (val <= 2) return 1; if (val <= 5) return 2; if (val <= 9) return 3;
+        if (val <= 19) return 4; if (val <= 49) return 5; if (val <= 99) return 6;
+        if (val <= 149) return 7; if (val <= 199) return 8; if (val <= 299) return 9;
+        return 10;
+    }
+
+    function calculateAttribute(id) {
+        const base = parseInt(document.getElementById(`stat-${id}-base`).value) || 0;
+        const enh = parseInt(document.getElementById(`stat-${id}-enh`).value) || 0;
+        const total = base + enh;
+        document.getElementById(`stat-${id}-total`).innerText = total;
+        const mod = getModifier(total);
+        document.getElementById(`mod-${id}`).innerText = '+' + mod;
+        currentMods[id] = mod;
+        return { total, mod };
+    }
+
+    function calculateSheet() {
+        const str = calculateAttribute('str'), con = calculateAttribute('con'), dex = calculateAttribute('dex'), int = calculateAttribute('int'), cha = calculateAttribute('cha');
+        maxHpSlots = parseInt(document.getElementById('hp-max-slots').value) || 10;
+        document.getElementById('hp-total-text').innerText = maxHpSlots * con.mod;
+        maxMana = int.total;
+        
+        const evadeBuffs = parseInt(document.getElementById('evade-buffs').value) || 0;
+        document.getElementById('evade-total-disp').innerText = `d20 + ${dex.mod + evadeBuffs}`;
+        const armorVal = parseInt(document.getElementById('armor-val').value) || 0;
+        const drBuffs = parseInt(document.getElementById('dr-buffs').value) || 0;
+        document.getElementById('dr-total-disp').innerText = `${armorVal + drBuffs} DR`;
+
+        renderTrackers();
+        renderManaBar();
+        saveDataSilently();
+    }
+
+    function renderTrackers() {
+        const hpContainer = document.getElementById('hp-tracker');
+        hpContainer.innerHTML = '';
+        for (let i = 0; i < maxHpSlots; i++) {
+            const box = document.createElement('div');
+            box.className = `tracker-box hp-box ${i < hpCurrentSlots ? 'filled' : ''}`;
+            box.onclick = () => { hpCurrentSlots = (i + 1 === hpCurrentSlots) ? i : i + 1; renderTrackers(); saveDataSilently(); };
+            hpContainer.appendChild(box);
+        }
+        document.getElementById('hp-slot-count').innerText = `${hpCurrentSlots} / ${maxHpSlots} Slots`;
+    }
+
+    function renderManaBar() {
+        const pct = maxMana > 0 ? Math.min(100, Math.max(0, Math.round((manaCurrent / maxMana) * 100))) : 0;
+        document.getElementById('mana-bar-fill').style.width = pct + '%';
+        document.getElementById('mana-text-count').innerText = `${manaCurrent} / ${maxMana} Mana (${pct}%)`;
+    }
+
+    function adjustMana(dir) {
+        const amt = parseInt(document.getElementById('mana-adjust-amt').value) || 1;
+        manaCurrent = Math.min(maxMana, Math.max(0, manaCurrent + (amt * dir)));
+        renderManaBar();
+        saveDataSilently();
+    }
+
+    function addAttack() {
+        attackCounter++;
+        const container = document.getElementById('attacks-list');
+        const card = document.createElement('div');
+        card.className = 'attack-card';
+        card.id = `atk-card-${attackCounter}`;
+        card.innerHTML = `
+            <button type="button" class="btn-delete" onclick="document.getElementById('atk-card-${attackCounter}').remove(); saveDataSilently();">Delete</button>
+            <div class="form-group" style="padding-right: 60px;">
+                <label>Attack Name</label>
+                <input type="text" placeholder="e.g. Iron Punch" oninput="saveDataSilently()">
+            </div>
+        `;
+        container.appendChild(card);
+        saveDataSilently();
+    }
+
+    function updateAvatar() {
+        const url = document.getElementById('avatar-url').value;
+        const img = document.getElementById('avatar-img');
+        const placeholder = document.getElementById('avatar-placeholder');
+        if (url) { img.src = url; img.style.display = 'block'; placeholder.style.display = 'none'; }
+        else { img.style.display = 'none'; placeholder.style.display = 'block'; }
+        saveDataSilently();
+    }
+
+    function saveDataSilently() {
+        const data = {
+            name: document.getElementById('char-name').value,
+            strBase: document.getElementById('stat-str-base').value,
+            strEnh: document.getElementById('stat-str-enh').value,
+            conBase: document.getElementById('stat-con-base').value,
+            conEnh: document.getElementById('stat-con-enh').value,
+            hpCurrent: hpCurrentSlots,
+            manaCurrent: manaCurrent
+        };
+        localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
+    }
+
+    function saveData() {
+        saveDataSilently();
+        document.getElementById('save-status').innerText = "Character Saved!";
+        setTimeout(() => document.getElementById('save-status').innerText = "", 2000);
+    }
+
+    function confirmReset() {
+        localStorage.removeItem('crawler_split_attrs_data');
+        location.reload();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const role = localStorage.getItem('dcc_user_role') || 'crawler';
+        const email = localStorage.getItem('dcc_user_email') || 'Offline / Solo';
+        const campaign = localStorage.getItem('dcc_campaign_title') || 'None Active';
+
+        document.getElementById('nav-role').innerText = role.toUpperCase();
+        document.getElementById('nav-email').innerText = email;
+        document.getElementById('nav-camp').innerText = campaign;
+
+        const saved = localStorage.getItem('crawler_split_attrs_data');
+        if (saved) {
+            const data = JSON.parse(saved);
+            document.getElementById('char-name').value = data.name || '';
+            document.getElementById('stat-str-base').value = data.strBase || 0;
+            document.getElementById('stat-str-enh').value = data.strEnh || 0;
+            document.getElementById('stat-con-base').value = data.conBase || 0;
+            document.getElementById('stat-con-enh').value = data.conEnh || 0;
+            hpCurrentSlots = data.hpCurrent || 0;
+            manaCurrent = data.manaCurrent || 0;
+        }
+
+        calculateSheet();
+    });
+</script>
+</body>
+</html>
