@@ -984,6 +984,18 @@
 </div>
 
 <div class="container">
+    
+    <!-- DM Live Campaign Control Panel (Hidden by default, shown for DMs with active campaign) -->
+<div id="dm-roster-panel" class="card" style="grid-column: 1 / -1; display: none; border-color: var(--spell-color);">
+    <h2 style="color: var(--spell-color); margin-bottom: 12px;">
+        <span>👑 Connected Crawlers (<span id="dm-player-count">0</span> Active)</span>
+        <button type="button" class="btn-toggle" onclick="fetchCampaignRoster()">🔄 Force Sync</button>
+    </h2>
+    <div id="dm-roster-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+        <span style="color: var(--text-muted); font-size: 0.85rem;">No players connected yet. Share your 6-digit campaign code!</span>
+    </div>
+</div>
+    
     <!-- Left Column: Profile & Attributes -->
     <div class="sidebar">
         <!-- Logo Section -->
@@ -3104,7 +3116,10 @@ function switchAuthTab(tab) {
 }
     
     // Current active session tracking
+let currentUser = null;
+let currentCampaign = null;
 let activeCharacterId = null;
+let realtimeChannel = null; // For live DM subscription updates
 
 // 1. SUPABASE AUTHENTICATION (Login / Sign Up)
 async function handleAuthLogin() {
@@ -3193,6 +3208,9 @@ async function handleCreateCampaign() {
     currentCampaign = data[0];
     document.getElementById('nav-campaign-name').innerText = `${currentCampaign.title} [${generatedCode}]`;
     alert(`Campaign Created! Share this code with your Crawlers: ${generatedCode}`);
+    
+    await loadDMRosterView();
+    
     closeAuthModal();
 }
 
@@ -3422,6 +3440,99 @@ async function loadCharacterFromCloud() {
         localStorage.setItem('crawler_split_attrs_data', JSON.stringify(record.character_data));
         loadData();
     }
+}
+
+// 6. DM ROSTER & REALTIME SYNC
+async function loadDMRosterView() {
+    if (!currentCampaign || !currentUser) return;
+
+    // Show DM panel container
+    document.getElementById('dm-roster-panel').style.display = 'block';
+
+    // Fetch initial player list
+    await fetchCampaignRoster();
+
+    // Subscribe to live database updates for this campaign
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+
+    realtimeChannel = supabase
+        .channel('public:characters')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'characters',
+            filter: `campaign_id=eq.${currentCampaign.id}`
+        }, (payload) => {
+            fetchCampaignRoster();
+        })
+        .subscribe();
+}
+
+async function fetchCampaignRoster() {
+    if (!currentCampaign) return;
+
+    const { data: chars, error } = await supabase
+        .from('characters')
+        .select('*')
+        .eq('campaign_id', currentCampaign.id);
+
+    if (error) {
+        console.error("DM Roster Fetch Error:", error.message);
+        return;
+    }
+
+    const grid = document.getElementById('dm-roster-grid');
+    document.getElementById('dm-player-count').innerText = chars ? chars.length : 0;
+
+    if (!chars || chars.length === 0) {
+        grid.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No players connected yet. Share your campaign code!</span>';
+        return;
+    }
+
+    grid.innerHTML = chars.map(record => {
+        const char = record.character_data || {};
+        const hpMax = (parseInt(char.maxHpSlots) || 10) * (getModifier(parseInt(char.conBase || 0) + parseInt(char.conEnh || 0)) || 1);
+        const hpCurrent = (char.hpCurrent || 0) * (getModifier(parseInt(char.conBase || 0) + parseInt(char.conEnh || 0)) || 1);
+        const manaMax = parseInt(char.intBase || 0) + parseInt(char.intEnh || 0);
+        const manaCurrent = char.manaCurrent || 0;
+
+        const debuffList = (char.debuffs || []).map(d => `<span style="background: rgba(239, 68, 68, 0.2); color: var(--debuff-color); border: 1px solid var(--debuff-color); padding: 1px 5px; border-radius: 4px; font-size: 0.7rem;">${d.name || 'Debuff'}</span>`).join(' ');
+
+        return `
+            <div style="background: var(--input-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <strong style="color: var(--accent-color); font-size: 0.95rem;">${char.name || 'Unnamed Crawler'}</strong>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">${char.race || 'Race'} | Lvl ${char.level || 1}</span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Floor ${char.floor || 1} • ${char.class || 'No Class'}</div>
+                
+                <!-- HP Bar -->
+                <div style="margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 2px;">
+                        <span>HP Capacity</span>
+                        <strong>${hpCurrent} / ${hpMax} HP</strong>
+                    </div>
+                    <div style="background: rgba(224, 79, 95, 0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                        <div style="background: var(--accent-color); width: ${hpMax > 0 ? Math.min(100, (hpCurrent / hpMax) * 100) : 0}%; height: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- Mana Bar -->
+                <div style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 2px;">
+                        <span style="color: #60a5fa;">Mana</span>
+                        <strong style="color: #60a5fa;">${manaCurrent} / ${manaMax}</strong>
+                    </div>
+                    <div style="background: rgba(59, 130, 246, 0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                        <div style="background: var(--mana-color); width: ${manaMax > 0 ? Math.min(100, (manaCurrent / manaMax) * 100) : 0}%; height: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- Debuffs -->
+                <div>${debuffList || '<span style="font-size: 0.7rem; color: var(--text-muted);">No Active Debuffs</span>'}</div>
+            </div>
+        `;
+    }).join('');
 }
     
 </script>
