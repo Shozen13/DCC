@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Crawler RPG - Access Portal</title>
-    <!-- Supabase Client Loaded Safely -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Inline Favicon to prevent browser 404 hangs -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎒</text></svg>">
+
     <style>
         :root {
             --bg-color: #0f111a;
@@ -75,6 +77,7 @@
             font-size: 0.85rem;
             font-weight: bold;
             cursor: pointer;
+            touch-action: manipulation;
         }
 
         .tab-btn.active {
@@ -117,6 +120,7 @@
             font-weight: bold;
             font-size: 0.95rem;
             margin-top: 10px;
+            touch-action: manipulation;
         }
 
         button.btn-secondary {
@@ -130,6 +134,7 @@
             font-weight: bold;
             font-size: 0.85rem;
             margin-top: 10px;
+            touch-action: manipulation;
         }
     </style>
 </head>
@@ -141,8 +146,8 @@
     </div>
 
     <div class="tab-nav">
-        <button type="button" class="tab-btn active" id="tab-login">Login / Register</button>
-        <button type="button" class="tab-btn" id="tab-campaign">Campaign Hub</button>
+        <button type="button" class="tab-btn active" onclick="setTab('login')">Login / Register</button>
+        <button type="button" class="tab-btn" onclick="setTab('campaign')">Campaign Hub</button>
     </div>
 
     <!-- Login Panel -->
@@ -162,7 +167,7 @@
             <label>Password</label>
             <input type="password" id="auth-password" placeholder="••••••••">
         </div>
-        <button type="button" class="btn-primary" id="btn-login">Enter Portal</button>
+        <button type="button" class="btn-primary" onclick="handleLogin()">Enter Portal</button>
     </div>
 
     <!-- Campaign Panel -->
@@ -173,7 +178,7 @@
                 <label>6-Digit Campaign Code</label>
                 <input type="text" id="join-code" placeholder="e.g. X9K2P4" style="text-transform: uppercase;">
             </div>
-            <button type="button" class="btn-primary" style="background: var(--skill-color);" id="btn-join">Join Campaign</button>
+            <button type="button" class="btn-primary" style="background: var(--skill-color);" onclick="handleJoin()">Join Campaign</button>
         </div>
 
         <div id="section-dm" style="display: none; margin-top: 15px;">
@@ -182,73 +187,66 @@
                 <label>Campaign Title</label>
                 <input type="text" id="create-title" placeholder="e.g. Floor 3: Overworld">
             </div>
-            <button type="button" class="btn-primary" style="background: var(--spell-color);" id="btn-create">Create Campaign</button>
+            <button type="button" class="btn-primary" style="background: var(--spell-color);" onclick="handleCreate()">Create Campaign</button>
         </div>
     </div>
 
-    <button type="button" class="btn-secondary" id="btn-solo">Play Solo / Offline Mode</button>
+    <button type="button" class="btn-secondary" onclick="playSolo()">Play Solo / Offline Mode</button>
 </div>
 
 <script>
-    // Tab switching logic (Pure JS - Works even if database or networking fails)
-    function setTab(tabName) {
-        const pLogin = document.getElementById('panel-login');
-        const pCamp = document.getElementById('panel-campaign');
-        const tLogin = document.getElementById('tab-login');
-        const tCamp = document.getElementById('tab-campaign');
+    // Pure inline handlers attached to global scope immediately
+    window.setTab = function(tabName) {
+        var pLogin = document.getElementById('panel-login');
+        var pCamp = document.getElementById('panel-campaign');
+        var tButtons = document.querySelectorAll('.tab-btn');
 
         if (tabName === 'login') {
             pLogin.style.display = 'block';
             pCamp.style.display = 'none';
-            tLogin.classList.add('active');
-            tCamp.classList.remove('active');
+            tButtons[0].classList.add('active');
+            tButtons[1].classList.remove('active');
         } else {
             pLogin.style.display = 'none';
             pCamp.style.display = 'block';
-            tCamp.classList.add('active');
-            tLogin.classList.remove('active');
+            tButtons[1].classList.add('active');
+            tButtons[0].classList.remove('active');
         }
-    }
+    };
 
-    // Direct event listener binding attached immediately on window load
-    window.onload = function() {
-        document.getElementById('tab-login').onclick = function() { setTab('login'); };
-        document.getElementById('tab-campaign').onclick = function() { setTab('campaign'); };
+    window.playSolo = function() {
+        localStorage.setItem('dcc_user_role', 'crawler');
+        localStorage.removeItem('dcc_campaign_id');
+        window.location.href = 'character.html';
+    };
 
-        document.getElementById('btn-solo').onclick = function() {
-            localStorage.setItem('dcc_user_role', 'crawler');
-            localStorage.removeItem('dcc_campaign_id');
-            window.location.href = 'character.html';
-        };
+    window.handleLogin = function() {
+        var email = document.getElementById('auth-email').value;
+        if (!email) {
+            alert("Please enter an email address.");
+            return;
+        }
+        alert("Logging in as " + email + "...");
+        window.setTab('campaign');
+    };
 
-        document.getElementById('btn-login').onclick = function() {
-            const email = document.getElementById('auth-email').value;
-            if (!email) {
-                alert("Please enter an email address.");
-                return;
-            }
-            alert("Logging in as " + email + "...");
-            setTab('campaign');
-        };
+    window.handleJoin = function() {
+        var code = document.getElementById('join-code').value;
+        if (!code) {
+            alert("Please enter a campaign code.");
+            return;
+        }
+        localStorage.setItem('dcc_campaign_code', code);
+        window.location.href = 'character.html';
+    };
 
-        document.getElementById('btn-join').onclick = function() {
-            const code = document.getElementById('join-code').value;
-            if (!code) {
-                alert("Please enter a campaign code.");
-                return;
-            }
-            localStorage.setItem('dcc_campaign_code', code);
-            window.location.href = 'character.html';
-        };
-
-        document.getElementById('btn-create').onclick = function() {
-            const title = document.getElementById('create-title').value;
-            if (!title) {
-                alert("Please enter a title.");
-                return;
-            }
-            window.location.href = 'character.html';
-        };
+    window.handleCreate = function() {
+        var title = document.getElementById('create-title').value;
+        if (!title) {
+            alert("Please enter a title.");
+            return;
+        }
+        window.location.href = 'character.html';
     };
 </script>
 </body>
