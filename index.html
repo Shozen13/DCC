@@ -2,11 +2,9 @@
 <html lang="en">
 <head>
     <!-- Supabase JS Client library -->
-    <script
-        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Crawler RPG - Character Sheet</title>
     <link rel="icon" type="image/png" href="Zev_icon.png">
     <style>
@@ -97,14 +95,9 @@
             pointer-events: none;
         }
 
-        /* Infinite Scrolling Animation */
         @keyframes scrollTrack {
-            0% {
-                transform: translateX(0);
-            }
-            100% {
-                transform: translateX(-50%);
-            }
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
         }
 
         .container {
@@ -134,6 +127,7 @@
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
@@ -194,9 +188,7 @@
             object-fit: cover;
         }
 
-        .form-group {
-            margin-bottom: 12px;
-        }
+        .form-group { margin-bottom: 12px; }
 
         .form-row-2 {
             display: grid;
@@ -221,6 +213,7 @@
             border-radius: 6px;
             outline: none;
             transition: border 0.3s;
+            font-size: 16px; /* Prevents iOS auto-zoom */
         }
 
         input:focus, select:focus, textarea:focus {
@@ -335,9 +328,7 @@
             color: var(--accent-color);
         }
 
-        .resource-group {
-            margin-bottom: 18px;
-        }
+        .resource-group { margin-bottom: 18px; }
 
         .resource-header {
             display: flex;
@@ -525,63 +516,26 @@
         .spell-title { color: var(--spell-color); }
         .item-title { color: var(--item-color); }
 
-        /* Skill & Spell Toggle Box */
-        .skill-use-toggle {
+        .skill-use-toggle, .spell-use-toggle {
             display: flex;
             align-items: center;
             gap: 8px;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
             border-radius: 6px;
             padding: 6px 10px;
             margin-top: 8px;
             cursor: pointer;
             user-select: none;
+            -webkit-user-select: none;
         }
 
-        .skill-use-toggle input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: var(--skill-color);
-            cursor: pointer;
-        }
-
-        .skill-use-toggle label {
-            margin-bottom: 0;
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: var(--skill-color);
-            cursor: pointer;
-            letter-spacing: 0.5px;
+        .skill-use-toggle {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
         .spell-use-toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
             background: rgba(168, 85, 247, 0.1);
             border: 1px solid rgba(168, 85, 247, 0.3);
-            border-radius: 6px;
-            padding: 6px 10px;
-            margin-top: 8px;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .spell-use-toggle input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: var(--spell-color);
-            cursor: pointer;
-        }
-
-        .spell-use-toggle label {
-            margin-bottom: 0;
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: var(--spell-color);
-            cursor: pointer;
-            letter-spacing: 0.5px;
         }
 
         .hit-badge-box {
@@ -657,8 +611,6 @@
             padding: 4px;
         }
 
-        .dice-entry select { padding: 4px 6px; }
-
         .summary-box {
             background: var(--input-bg);
             border: 1px dashed var(--panel-border);
@@ -712,6 +664,7 @@
             font-weight: bold;
             transition: opacity 0.2s;
             touch-action: manipulation;
+            -webkit-appearance: none;
         }
 
         button:hover { opacity: 0.9; }
@@ -728,41 +681,22 @@
             padding: 6px 12px;
             font-size: 0.75rem;
         }
-        button.btn-small-add {
-            background: #2563eb;
-            font-size: 0.65rem;
-            padding: 3px 6px;
-            border-radius: 4px;
-        }
-        button.btn-delete {
-            background: #ef4444;
-            padding: 4px 8px;
-            font-size: 0.75rem;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-        }
-        button.btn-remove-die {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            padding: 2px 6px;
-            font-size: 0.75rem;
-            border-radius: 4px;
-        }
 
+        /* MODAL OVERLAY CRITICAL FIX FOR SAFARI / IPAD */
         .modal-overlay {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 99999;
             align-items: center;
             justify-content: center;
+            pointer-events: auto;
         }
 
         .modal-card {
@@ -770,10 +704,13 @@
             border: 1px solid var(--panel-border);
             border-radius: 12px;
             padding: 24px;
-            max-width: 360px;
+            max-width: 440px;
             width: 90%;
             text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+            position: relative;
+            z-index: 100000;
+            pointer-events: auto;
         }
 
         .modal-card h3 {
@@ -793,7 +730,6 @@
             justify-content: center;
         }
 
-        /* Hotlist & Gear Styles */
         .hotlist-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -865,8 +801,7 @@
             padding-bottom: 4px;
             border-bottom: 1px dashed var(--panel-border);
         }
-        
-                /* Top Nav & Dashboard Portal Styles */
+
         .preview-nav {
             display: flex;
             justify-content: space-between;
@@ -877,6 +812,7 @@
             border-radius: 8px;
             margin-bottom: 20px;
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
         
         .preview-badge-dm {
@@ -923,79 +859,18 @@
     </div>
 </div>
 
-<!-- Auth & Campaign Dashboard Modal Overlay -->
-<div class="modal-overlay" id="authModal" style="display: flex;">
-    <div class="modal-card" style="max-width: 480px; text-align: left;">
-        <h3 id="auth-modal-title" style="text-align: center; margin-bottom: 15px;">Access Portal</h3>
-        
-        <!-- Tab Controls -->
-        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px;">
-            <button type="button" id="tab-btn-login" class="btn-toggle" style="flex: 1; border-color: var(--accent-color);" onclick="switchAuthTab('login')">Login / Register</button>
-            <button type="button" id="tab-btn-dash" class="btn-toggle" style="flex: 1;" onclick="switchAuthTab('dashboard')">Campaign Hub</button>
-        </div>
-        
-
-        <!-- View 1: Login & Role Form -->
-        <div id="auth-tab-login">
-            <div class="form-group">
-                <label>User Role</label>
-                <select id="auth-role-select">
-                    <option value="crawler">🎒 Crawler (Player)</option>
-                    <option value="dm">👑 Dungeon Master</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Email Address</label>
-                <input type="email" id="auth-email" placeholder="crawler@dungeon.com">
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="auth-password" placeholder="••••••••">
-            </div>
-            <div class="btn-group" style="margin-top: 15px;">
-                <button type="button" style="width: 100%;" onclick="handleAuthLogin()">Enter Portal</button>
-            </div>
-        </div>
-
-        <!-- View 2: Campaign Dashboard -->
-        <div id="auth-tab-dashboard" style="display: none;">
-            <!-- Player Section -->
-            <div id="dash-crawler-section">
-                <h4 style="color: var(--skill-color); margin-bottom: 8px;">🎒 Join a Campaign</h4>
-                <div class="form-group">
-                    <label>6-Digit Campaign Code</label>
-                    <input type="text" id="dash-join-code" placeholder="e.g. X9K2P4" style="text-transform: uppercase;">
-                </div>
-                <button type="button" style="background: var(--skill-color); width: 100%; margin-bottom: 15px;" onclick="handleJoinCampaign()">Join Campaign</button>
-            </div>
-
-            <!-- DM Section -->
-            <div id="dash-dm-section" style="display: none;">
-                <h4 style="color: var(--spell-color); margin-bottom: 8px;">👑 Create Campaign</h4>
-                <div class="form-group">
-                    <label>Campaign Title</label>
-                    <input type="text" id="dash-campaign-title" placeholder="e.g. Floor 3: Overworld">
-                </div>
-                <button type="button" style="background: var(--spell-color); width: 100%; margin-bottom: 15px;" onclick="handleCreateCampaign()">Create Campaign</button>
-            </div>
-
-            <button type="button" class="btn-reset" style="width: 100%;" onclick="closeAuthModal()">Continue Offline / Solo</button>
-        </div>
-    </div>
-</div>
-
 <div class="container">
     
-    <!-- DM Live Campaign Control Panel (Hidden by default, shown for DMs with active campaign) -->
-<div id="dm-roster-panel" class="card" style="grid-column: 1 / -1; display: none; border-color: var(--spell-color);">
-    <h2 style="color: var(--spell-color); margin-bottom: 12px;">
-        <span>👑 Connected Crawlers (<span id="dm-player-count">0</span> Active)</span>
-        <button type="button" class="btn-toggle" onclick="fetchCampaignRoster()">🔄 Force Sync</button>
-    </h2>
-    <div id="dm-roster-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
-        <span style="color: var(--text-muted); font-size: 0.85rem;">No players connected yet. Share your 6-digit campaign code!</span>
+    <!-- DM Live Campaign Control Panel -->
+    <div id="dm-roster-panel" class="card" style="grid-column: 1 / -1; display: none; border-color: var(--spell-color);">
+        <h2 style="color: var(--spell-color); margin-bottom: 12px;">
+            <span>👑 Connected Crawlers (<span id="dm-player-count">0</span> Active)</span>
+            <button type="button" class="btn-toggle" onclick="fetchCampaignRoster()">🔄 Force Sync</button>
+        </h2>
+        <div id="dm-roster-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+            <span style="color: var(--text-muted); font-size: 0.85rem;">No players connected yet. Share your 6-digit campaign code!</span>
+        </div>
     </div>
-</div>
     
     <!-- Left Column: Profile & Attributes -->
     <div class="sidebar">
@@ -1383,6 +1258,66 @@
     </div>
 </div>
 
+<!-- Auth & Campaign Dashboard Modal Overlay (MOVED TO ROOT LEVEL) -->
+<div class="modal-overlay" id="authModal" style="display: flex;">
+    <div class="modal-card">
+        <h3 id="auth-modal-title" style="text-align: center; margin-bottom: 15px;">Access Portal</h3>
+        
+        <!-- Tab Controls -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px;">
+            <button type="button" id="tab-btn-login" class="btn-toggle" style="flex: 1; border-color: var(--accent-color);" onclick="switchAuthTab('login')">Login / Register</button>
+            <button type="button" id="tab-btn-dash" class="btn-toggle" style="flex: 1;" onclick="switchAuthTab('dashboard')">Campaign Hub</button>
+        </div>
+
+        <!-- View 1: Login & Role Form -->
+        <div id="auth-tab-login">
+            <div class="form-group">
+                <label>User Role</label>
+                <select id="auth-role-select">
+                    <option value="crawler">🎒 Crawler (Player)</option>
+                    <option value="dm">👑 Dungeon Master</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="auth-email" placeholder="crawler@dungeon.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="auth-password" placeholder="••••••••">
+            </div>
+            <div class="btn-group" style="margin-top: 15px;">
+                <button type="button" style="width: 100%;" onclick="handleAuthLogin()">Enter Portal</button>
+            </div>
+        </div>
+
+        <!-- View 2: Campaign Dashboard -->
+        <div id="auth-tab-dashboard" style="display: none;">
+            <!-- Player Section -->
+            <div id="dash-crawler-section">
+                <h4 style="color: var(--skill-color); margin-bottom: 8px;">🎒 Join a Campaign</h4>
+                <div class="form-group">
+                    <label>6-Digit Campaign Code</label>
+                    <input type="text" id="dash-join-code" placeholder="e.g. X9K2P4" style="text-transform: uppercase;">
+                </div>
+                <button type="button" style="background: var(--skill-color); width: 100%; margin-bottom: 15px;" onclick="handleJoinCampaign()">Join Campaign</button>
+            </div>
+
+            <!-- DM Section -->
+            <div id="dash-dm-section" style="display: none;">
+                <h4 style="color: var(--spell-color); margin-bottom: 8px;">👑 Create Campaign</h4>
+                <div class="form-group">
+                    <label>Campaign Title</label>
+                    <input type="text" id="dash-campaign-title" placeholder="e.g. Floor 3: Overworld">
+                </div>
+                <button type="button" style="background: var(--spell-color); width: 100%; margin-bottom: 15px;" onclick="handleCreateCampaign()">Create Campaign</button>
+            </div>
+
+            <button type="button" class="btn-reset" style="width: 100%;" onclick="closeAuthModal()">Continue Offline / Solo</button>
+        </div>
+    </div>
+</div>
+
 <!-- Reset Modal -->
 <div class="modal-overlay" id="resetModal">
     <div class="modal-card">
@@ -1396,7 +1331,6 @@
 </div>
 
 <script>
-
 	const SUPABASE_URL = 'https://ghgtvryxqfwzznrxewaw.supabase.co';
 	const SUPABASE_ANON_KEY = 'sb_publishable_ikbKYyQYQtWQ84BFSAolaw_X1A3xDim';
 	const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1411,14 +1345,10 @@
     function setupBackgroundSlider() {
         const track = document.getElementById('bgTrack');
         if (!track) return;
-
-        // Duplicate the image set twice so the keyframe loop seamlessly repeats
         const fullSet = [...bgImages, ...bgImages];
-        
         track.innerHTML = fullSet.map(src => `<img src="${src}" alt="Background Cover">`).join('');
     }
 
-    // Run background setup on load
     window.addEventListener('DOMContentLoaded', setupBackgroundSlider);
 
     let hpCurrentSlots = 0;
@@ -1443,24 +1373,11 @@
         { key: 'feet', label: 'Feet' }
     ];
 
-    const bodySlotCounts = {
-        head: 1,
-        torso: 1,
-        arms: 1,
-        hands: 1,
-        legs: 1,
-        feet: 1
-    };
+    const bodySlotCounts = { head: 1, torso: 1, arms: 1, hands: 1, legs: 1, feet: 1 };
 
     const collapsedState = {
-        attacks: false,
-        hotlist: false,
-        gear: false,
-        skills: false,
-        spells: false,
-        items: false,
-        debuffs: false,
-        buffs: false
+        attacks: false, hotlist: false, gear: false, skills: false,
+        spells: false, items: false, debuffs: false, buffs: false
     };
 
     const currentMods = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
@@ -1500,12 +1417,10 @@
         const int = calculateAttribute('int');
         const cha = calculateAttribute('cha');
 
-        // HP Calculations
         maxHpSlots = parseInt(document.getElementById('hp-max-slots').value) || 10;
         const totalHp = maxHpSlots * con.mod;
         document.getElementById('hp-total-text').innerText = totalHp;
         
-        // Mana calculations
         const newMaxMana = int.total;
 
         if (!isInitialLoad) {
@@ -1522,14 +1437,12 @@
         if (hpCurrentSlots > maxHpSlots) hpCurrentSlots = maxHpSlots;
         if (manaCurrent > maxMana) manaCurrent = maxMana;
 
-        // Evade Calculation: d20 + Dex Mod + Buffs
         const evadeBuffs = parseInt(document.getElementById('evade-buffs').value) || 0;
         const totalEvadeMod = dex.mod + evadeBuffs;
         const evadeDispStr = totalEvadeMod >= 0 ? `d20 + ${totalEvadeMod}` : `d20 - ${Math.abs(totalEvadeMod)}`;
         document.getElementById('evade-total-disp').innerText = evadeDispStr;
         document.getElementById('evade-subtext').innerText = `(d20 + DEX +${dex.mod} + Buffs ${evadeBuffs >= 0 ? '+' + evadeBuffs : evadeBuffs})`;
 
-        // Damage Resistance Calculation: Armor + Buffs
         const armorVal = parseInt(document.getElementById('armor-val').value) || 0;
         const drBuffs = parseInt(document.getElementById('dr-buffs').value) || 0;
         const totalDR = armorVal + drBuffs;
@@ -1602,7 +1515,6 @@
         saveDataSilently();
     }
 
-    /* Debuffs Management */
     function addDebuff(data = null) {
         debuffCounter++;
         const id = debuffCounter;
@@ -1624,19 +1536,16 @@
         `;
 
         container.appendChild(card);
-
         if (data) {
             document.getElementById(`debuff-name-${id}`).value = data.name || '';
             document.getElementById(`debuff-notes-${id}`).value = data.notes || '';
         }
-
         updateAllDebuffs();
     }
 
     function updateAllDebuffs() {
         const summaryBox = document.getElementById('debuffs-summary');
         const cards = document.querySelectorAll('.debuff-card');
-
         if (cards.length === 0) {
             summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Active Debuffs</span>';
             saveDataSilently();
@@ -1647,13 +1556,7 @@
         cards.forEach(card => {
             const id = card.id.replace('debuff-card-', '');
             const name = document.getElementById(`debuff-name-${id}`).value || 'Unnamed Debuff';
-
-            tagsHtml += `
-                <div class="summary-tag dbf">
-                    <span>${name}</span>
-                    <span class="badge">Debuff</span>
-                </div>
-            `;
+            tagsHtml += `<div class="summary-tag dbf"><span>${name}</span><span class="badge">Debuff</span></div>`;
         });
         summaryBox.innerHTML = tagsHtml;
         saveDataSilently();
@@ -1665,7 +1568,6 @@
         updateAllDebuffs();
     }
 
-    /* External Buffs Management (Max 3) */
     function addExternalBuff(data = null) {
         const cards = document.querySelectorAll('.buff-card');
         if (cards.length >= 3) {
@@ -1693,12 +1595,10 @@
         `;
 
         container.appendChild(card);
-
         if (data) {
             document.getElementById(`buff-name-${id}`).value = data.name || '';
             document.getElementById(`buff-notes-${id}`).value = data.notes || '';
         }
-
         updateAllBuffs();
     }
 
@@ -1720,13 +1620,7 @@
         cards.forEach(card => {
             const id = card.id.replace('buff-card-', '');
             const name = document.getElementById(`buff-name-${id}`).value || 'Unnamed Buff';
-
-            tagsHtml += `
-                <div class="summary-tag ebf">
-                    <span>${name}</span>
-                    <span class="badge">Buff</span>
-                </div>
-            `;
+            tagsHtml += `<div class="summary-tag ebf"><span>${name}</span><span class="badge">Buff</span></div>`;
         });
         summaryBox.innerHTML = tagsHtml;
         saveDataSilently();
@@ -1738,16 +1632,13 @@
         updateAllBuffs();
     }
 
-    /* Attack Management */
     function addAttack(data = null) {
         attackCounter++;
         const id = attackCounter;
         const container = document.getElementById('attacks-list');
 
         let rankOptions = '';
-        for (let r = 1; r <= 20; r++) {
-            rankOptions += `<option value="${r}">Rank ${r}</option>`;
-        }
+        for (let r = 1; r <= 20; r++) rankOptions += `<option value="${r}">Rank ${r}</option>`;
 
         const card = document.createElement('div');
         card.className = 'attack-card';
@@ -1764,9 +1655,7 @@
                     <div class="sub-group-title">To Hit</div>
                     <div class="form-group">
                         <label>Rank</label>
-                        <select id="atk-rank-${id}" onchange="updateAttackCard(${id})">
-                            ${rankOptions}
-                        </select>
+                        <select id="atk-rank-${id}" onchange="updateAttackCard(${id})">${rankOptions}</select>
                     </div>
                     <div class="form-group">
                         <label>Attribute</label>
@@ -1790,9 +1679,7 @@
                         <span>Damage Dice</span>
                         <button type="button" class="btn-small-add" onclick="addDieEntry(${id})">+ Add Die</button>
                     </div>
-                    
                     <div id="dice-pool-${id}"></div>
-
                     <div style="font-size: 0.85rem; margin-top: 10px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
                         <span style="font-size: 0.7rem; color: var(--text-muted); display: block; text-transform: uppercase;">Total Formula</span>
                         <strong id="atk-dmg-disp-${id}" style="color: #60a5fa; font-size: 0.95rem;">+0</strong>
@@ -1807,13 +1694,11 @@
         `;
 
         container.appendChild(card);
-
         if (data) {
             document.getElementById(`atk-name-${id}`).value = data.name || '';
             document.getElementById(`atk-rank-${id}`).value = data.rank || 1;
             document.getElementById(`atk-stat-${id}`).value = data.stat || 'str';
             document.getElementById(`atk-effect-${id}`).value = data.effect || '';
-            
             if (data.dicePool && data.dicePool.length > 0) {
                 data.dicePool.forEach(die => addDieEntry(id, die.count, die.type));
             } else {
@@ -1829,7 +1714,6 @@
     function addDieEntry(attackId, count = 1, type = 'd6') {
         const pool = document.getElementById(`dice-pool-${attackId}`);
         const dieId = Date.now() + Math.random().toString(36).substring(2, 5);
-        
         const entry = document.createElement('div');
         entry.className = 'dice-entry';
         entry.id = `die-entry-${dieId}`;
@@ -1847,7 +1731,6 @@
             </select>
             <button type="button" class="btn-remove-die" onclick="removeDieEntry('${dieId}', ${attackId})">✕</button>
         `;
-
         pool.appendChild(entry);
         updateAttackCard(attackId);
     }
@@ -1861,7 +1744,6 @@
     function updateAttackCard(id) {
         const rank = parseInt(document.getElementById(`atk-rank-${id}`).value) || 1;
         const statKey = document.getElementById(`atk-stat-${id}`).value;
-
         const mod = currentMods[statKey] || 0;
         const totalHit = rank + mod;
 
@@ -1870,21 +1752,16 @@
 
         const diceEntries = document.querySelectorAll(`#dice-pool-${id} .dice-entry`);
         let diceParts = [];
-
         diceEntries.forEach(entry => {
             const count = parseInt(entry.querySelector('.die-count').value) || 0;
             const type = entry.querySelector('.die-type').value;
-            if (count > 0) {
-                diceParts.push(`${count}${type}`);
-            }
+            if (count > 0) diceParts.push(`${count}${type}`);
         });
 
         let dmgFormula = "";
         if (diceParts.length > 0) {
             dmgFormula = diceParts.join(' + ');
-            if (mod !== 0) {
-                dmgFormula += mod >= 0 ? ` + ${mod}` : ` - ${Math.abs(mod)}`;
-            }
+            if (mod !== 0) dmgFormula += mod >= 0 ? ` + ${mod}` : ` - ${Math.abs(mod)}`;
         } else {
             dmgFormula = mod >= 0 ? `+${mod}` : `${mod}`;
         }
@@ -1896,17 +1773,13 @@
 
     function updateAllAttacks() {
         const cards = document.querySelectorAll('.attack-card');
-        cards.forEach(card => {
-            const id = card.id.replace('attack-card-', '');
-            updateAttackCard(id);
-        });
+        cards.forEach(card => updateAttackCard(card.id.replace('attack-card-', '')));
         updateAttacksSummary();
     }
 
     function updateAttacksSummary() {
         const summaryBox = document.getElementById('attacks-summary');
         const cards = document.querySelectorAll('.attack-card');
-        
         if (cards.length === 0) {
             summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Attacks Recorded</span>';
             return;
@@ -1918,13 +1791,7 @@
             const name = document.getElementById(`atk-name-${id}`).value || 'Unnamed Attack';
             const hitVal = document.getElementById(`atk-total-hit-${id}`).innerText;
             const rankVal = document.getElementById(`atk-rank-${id}`).value;
-
-            tagsHtml += `
-                <div class="summary-tag atk">
-                    <span>${name}</span>
-                    <span class="badge">Rank ${rankVal} | Hit ${hitVal}</span>
-                </div>
-            `;
+            tagsHtml += `<div class="summary-tag atk"><span>${name}</span><span class="badge">Rank ${rankVal} | Hit ${hitVal}</span></div>`;
         });
         summaryBox.innerHTML = tagsHtml;
     }
@@ -1936,9 +1803,7 @@
         saveDataSilently();
     }
 
-    /* Hotlist & Gear Setup & Management */
     function initHotlistAndGear() {
-        // Initialize Hotlist slots
         const hotlistContainer = document.getElementById('hotlist-container');
         hotlistContainer.innerHTML = '';
         for (let i = 1; i <= 10; i++) {
@@ -1950,15 +1815,12 @@
             `;
             hotlistContainer.appendChild(slot);
         }
-
-        // Render Body Slots Grid
         renderBodySlots();
     }
 
     function renderBodySlots() {
         const grid = document.getElementById('gear-body-slots-grid');
         grid.innerHTML = '';
-
         bodySlotCategories.forEach(cat => {
             const count = bodySlotCounts[cat.key] || 1;
             const slot = document.createElement('div');
@@ -1980,9 +1842,7 @@
                     <label>${cat.label}</label>
                     <button type="button" class="btn-small-add" style="background: var(--gear-color);" onclick="addBodySubSlot('${cat.key}')">+ Slot / Patch</button>
                 </div>
-                <div class="gear-slot-list">
-                    ${selectsHtml}
-                </div>
+                <div class="gear-slot-list">${selectsHtml}</div>
             `;
             grid.appendChild(slot);
         });
@@ -1999,10 +1859,7 @@
         const selectId = `gear-${key}-${index}`;
         const el = document.getElementById(selectId);
         if (el) el.value = "";
-
-        if (bodySlotCounts[key] > 1) {
-            bodySlotCounts[key]--;
-        }
+        if (bodySlotCounts[key] > 1) bodySlotCounts[key]--;
         renderBodySlots();
         updateGearDropdowns();
         saveDataSilently();
@@ -2010,15 +1867,13 @@
 
     function addAccessorySlot(savedValue = null) {
         const container = document.getElementById('gear-accessories-container');
-        const currentCount = container.children.length;
-        if (currentCount >= 10) {
+        if (container.children.length >= 10) {
             alert("Maximum of 10 Accessory slots allowed!");
             return;
         }
 
         accessoryCounter++;
         const id = accessoryCounter;
-
         const slot = document.createElement('div');
         slot.className = 'gear-slot';
         slot.id = `acc-slot-wrapper-${id}`;
@@ -2031,7 +1886,6 @@
         `;
 
         container.appendChild(slot);
-
         updateGearDropdowns();
         if (savedValue) {
             const select = document.getElementById(`gear-acc-${id}`);
@@ -2044,10 +1898,8 @@
     function removeAccessorySlot(id) {
         const select = document.getElementById(`gear-acc-${id}`);
         if (select) select.value = "";
-
         const wrapper = document.getElementById(`acc-slot-wrapper-${id}`);
         if (wrapper) wrapper.remove();
-
         updateGearDropdowns();
         saveDataSilently();
     }
@@ -2058,9 +1910,7 @@
             const id = card.id.replace('item-card-', '');
             const nameInput = document.getElementById(`item-name-${id}`);
             const name = nameInput ? nameInput.value.trim() : '';
-            if (name) {
-                items.push({ id: id, name: name });
-            }
+            if (name) items.push({ id: id, name: name });
         });
         return items;
     }
@@ -2071,9 +1921,7 @@
             const id = card.id.replace('skill-card-', '');
             const nameInput = document.getElementById(`skl-name-${id}`);
             const name = nameInput ? nameInput.value.trim() : '';
-            if (name) {
-                skills.push({ id: id, name: name });
-            }
+            if (name) skills.push({ id: id, name: name });
         });
         return skills;
     }
@@ -2084,9 +1932,7 @@
             const id = card.id.replace('spell-card-', '');
             const nameInput = document.getElementById(`spl-name-${id}`);
             const name = nameInput ? nameInput.value.trim() : '';
-            if (name) {
-                spells.push({ id: id, name: name });
-            }
+            if (name) spells.push({ id: id, name: name });
         });
         return spells;
     }
@@ -2094,9 +1940,7 @@
     function getCurrentlyEquippedItemIds() {
         const equippedIds = [];
         document.querySelectorAll('.gear-select').forEach(select => {
-            if (select.value) {
-                equippedIds.push(select.value);
-            }
+            if (select.value) equippedIds.push(select.value);
         });
         return equippedIds;
     }
@@ -2104,22 +1948,14 @@
     function updateGearDropdowns() {
         const items = getAllItems();
         const gearSelects = document.querySelectorAll('.gear-select');
-
-        // Capture current values
         const currentSelections = {};
-        gearSelects.forEach(select => {
-            currentSelections[select.id] = select.value;
-        });
-
-        // Collect all currently selected item IDs
+        gearSelects.forEach(select => currentSelections[select.id] = select.value);
         const selectedIds = Object.values(currentSelections).filter(v => v !== "");
 
         gearSelects.forEach(select => {
             const myCurrent = currentSelections[select.id];
             select.innerHTML = '<option value="">-- Empty --</option>';
-
             items.forEach(item => {
-                // Show if it's currently selected in THIS dropdown OR not selected anywhere
                 if (item.id === myCurrent || !selectedIds.includes(item.id)) {
                     const opt = document.createElement('option');
                     opt.value = item.id;
@@ -2188,7 +2024,6 @@
                 select.appendChild(group);
             }
         });
-
         updateHotlistSummary();
     }
 
@@ -2212,20 +2047,11 @@
             if (select.value) {
                 count++;
                 const text = select.options[select.selectedIndex].text;
-                tagsHtml += `
-                    <div class="summary-tag htl">
-                        <span>#${idx + 1}: ${text}</span>
-                        <span class="badge">Hotlist</span>
-                    </div>
-                `;
+                tagsHtml += `<div class="summary-tag htl"><span>#${idx + 1}: ${text}</span><span class="badge">Hotlist</span></div>`;
             }
         });
 
-        if (count === 0) {
-            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Hotlist Items Assigned</span>';
-        } else {
-            summaryBox.innerHTML = tagsHtml;
-        }
+        summaryBox.innerHTML = count === 0 ? '<span style="color: var(--text-muted); font-size: 0.85rem;">No Hotlist Items Assigned</span>' : tagsHtml;
     }
 
     function updateGearSummary() {
@@ -2244,20 +2070,11 @@
                     const labelEl = parentGroup.querySelector('label');
                     if (labelEl) label = labelEl.innerText;
                 }
-                tagsHtml += `
-                    <div class="summary-tag ger">
-                        <span>${label}: ${text}</span>
-                        <span class="badge">Equipped</span>
-                    </div>
-                `;
+                tagsHtml += `<div class="summary-tag ger"><span>${label}: ${text}</span><span class="badge">Equipped</span></div>`;
             }
         });
 
-        if (count === 0) {
-            summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Gear Equipped</span>';
-        } else {
-            summaryBox.innerHTML = tagsHtml;
-        }
+        summaryBox.innerHTML = count === 0 ? '<span style="color: var(--text-muted); font-size: 0.85rem;">No Gear Equipped</span>' : tagsHtml;
     }
 
     function updateInventoryEquippedState() {
@@ -2281,7 +2098,6 @@
                 card.classList.remove('equipped-card');
             }
 
-            // Only move the DOM node if it actually changed categories
             if (card.parentElement !== targetContainer) {
                 targetContainer.appendChild(card);
             }
@@ -2296,16 +2112,12 @@
         }
     }
 
-    /* Skills Management */
     function addSkill(data = null) {
         skillCounter++;
         const id = skillCounter;
         const container = document.getElementById('skills-list');
-
         let rankOptions = '';
-        for (let r = 1; r <= 20; r++) {
-            rankOptions += `<option value="${r}">Rank ${r}</option>`;
-        }
+        for (let r = 1; r <= 20; r++) rankOptions += `<option value="${r}">Rank ${r}</option>`;
 
         const card = document.createElement('div');
         card.className = 'skill-card';
@@ -2322,9 +2134,7 @@
                     <div class="sub-group-title skill-title">Rank & Stat</div>
                     <div class="form-group">
                         <label>Rank</label>
-                        <select id="skl-rank-${id}" onchange="updateSkillCard(${id})">
-                            ${rankOptions}
-                        </select>
+                        <select id="skl-rank-${id}" onchange="updateSkillCard(${id})">${rankOptions}</select>
                     </div>
                     <div class="form-group">
                         <label>Associated Stat</label>
@@ -2357,26 +2167,20 @@
                         </select>
                     </div>
                     
-                    <!-- Skill Used Toggle Box -->
                     <div class="skill-use-toggle" onclick="toggleSkillUsedVisual(${id})">
                         <input type="checkbox" id="skl-used-${id}" onchange="onSkillUsedChange(${id})">
                         <label for="skl-used-${id}">Used This Turn</label>
-                    </div>
-
-                    <div style="font-size: 0.75rem; color: var(--text-muted); padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; margin-top: 6px;">
-                        Determines the execution requirement or mechanic used during gameplay.
                     </div>
                 </div>
 
                 <div class="sub-group">
                     <div class="sub-group-title skill-title">Effect, Notes & Upgrades</div>
-                    <textarea id="skl-effect-${id}" rows="6" placeholder="Describe skill effect, damage scaling, passive perks, or upgrade milestones..." oninput="saveDataSilently()"></textarea>
+                    <textarea id="skl-effect-${id}" rows="6" placeholder="Describe skill effect, damage scaling, passive perks..." oninput="saveDataSilently()"></textarea>
                 </div>
             </div>
         `;
 
         container.appendChild(card);
-
         if (data) {
             document.getElementById(`skl-name-${id}`).value = data.name || '';
             document.getElementById(`skl-rank-${id}`).value = data.rank || 1;
@@ -2384,9 +2188,7 @@
             document.getElementById(`skl-check-${id}`).value = data.checkType || 'Active Check';
             document.getElementById(`skl-effect-${id}`).value = data.effect || '';
             const usedCheckbox = document.getElementById(`skl-used-${id}`);
-            if (usedCheckbox) {
-                usedCheckbox.checked = !!data.used;
-            }
+            if (usedCheckbox) usedCheckbox.checked = !!data.used;
         }
 
         updateSkillCard(id);
@@ -2396,7 +2198,6 @@
         const checkbox = document.getElementById(`skl-used-${id}`);
         const card = document.getElementById(`skill-card-${id}`);
         if (!checkbox || !card) return;
-
         if (checkbox.checked) {
             card.classList.add('skill-used');
         } else {
@@ -2413,7 +2214,6 @@
     function updateSkillCard(id) {
         const rank = parseInt(document.getElementById(`skl-rank-${id}`).value) || 1;
         const statKey = document.getElementById(`skl-stat-${id}`).value;
-
         const mod = currentMods[statKey] || 0;
         const totalBonus = rank + mod;
 
@@ -2428,10 +2228,7 @@
 
     function updateAllSkills() {
         const cards = document.querySelectorAll('.skill-card');
-        cards.forEach(card => {
-            const id = card.id.replace('skill-card-', '');
-            updateSkillCard(id);
-        });
+        cards.forEach(card => updateSkillCard(card.id.replace('skill-card-', '')));
         updateSkillsSummary();
         updateHotlistDropdowns();
     }
@@ -2439,7 +2236,6 @@
     function updateSkillsSummary() {
         const summaryBox = document.getElementById('skills-summary');
         const cards = document.querySelectorAll('.skill-card');
-        
         if (cards.length === 0) {
             summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Skills Recorded</span>';
             return;
@@ -2471,16 +2267,12 @@
         saveDataSilently();
     }
 
-    /* Spells Management */
     function addSpell(data = null) {
         spellCounter++;
         const id = spellCounter;
         const container = document.getElementById('spells-list');
-
         let rankOptions = '';
-        for (let r = 1; r <= 20; r++) {
-            rankOptions += `<option value="${r}">Rank ${r}</option>`;
-        }
+        for (let r = 1; r <= 20; r++) rankOptions += `<option value="${r}">Rank ${r}</option>`;
 
         const card = document.createElement('div');
         card.className = 'spell-card';
@@ -2497,9 +2289,7 @@
                     <div class="sub-group-title spell-title">Rank & Stat</div>
                     <div class="form-group">
                         <label>Rank</label>
-                        <select id="spl-rank-${id}" onchange="updateSpellCard(${id})">
-                            ${rankOptions}
-                        </select>
+                        <select id="spl-rank-${id}" onchange="updateSpellCard(${id})">${rankOptions}</select>
                     </div>
                     <div class="form-group">
                         <label>Associated Stat</label>
@@ -2532,26 +2322,20 @@
                         </select>
                     </div>
                     
-                    <!-- Spell Used Toggle Box -->
                     <div class="spell-use-toggle" onclick="toggleSpellUsedVisual(${id})">
                         <input type="checkbox" id="spl-used-${id}" onchange="onSpellUsedChange(${id})">
                         <label for="spl-used-${id}">Used This Turn</label>
-                    </div>
-
-                    <div style="font-size: 0.75rem; color: var(--text-muted); padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; margin-top: 6px;">
-                        Determines the execution requirement or mechanic used during gameplay.
                     </div>
                 </div>
 
                 <div class="sub-group">
                     <div class="sub-group-title spell-title">Effect, Notes & Upgrades</div>
-                    <textarea id="spl-effect-${id}" rows="6" placeholder="Describe spell effect, mana cost, damage scaling, range, duration, or upgrade milestones..." oninput="saveDataSilently()"></textarea>
+                    <textarea id="spl-effect-${id}" rows="6" placeholder="Describe spell effect, mana cost..." oninput="saveDataSilently()"></textarea>
                 </div>
             </div>
         `;
 
         container.appendChild(card);
-
         if (data) {
             document.getElementById(`spl-name-${id}`).value = data.name || '';
             document.getElementById(`spl-rank-${id}`).value = data.rank || 1;
@@ -2559,9 +2343,7 @@
             document.getElementById(`spl-check-${id}`).value = data.checkType || 'Active Check';
             document.getElementById(`spl-effect-${id}`).value = data.effect || '';
             const usedCheckbox = document.getElementById(`spl-used-${id}`);
-            if (usedCheckbox) {
-                usedCheckbox.checked = !!data.used;
-            }
+            if (usedCheckbox) usedCheckbox.checked = !!data.used;
         }
 
         updateSpellCard(id);
@@ -2571,7 +2353,6 @@
         const checkbox = document.getElementById(`spl-used-${id}`);
         const card = document.getElementById(`spell-card-${id}`);
         if (!checkbox || !card) return;
-
         if (checkbox.checked) {
             card.classList.add('spell-used');
         } else {
@@ -2588,7 +2369,6 @@
     function updateSpellCard(id) {
         const rank = parseInt(document.getElementById(`spl-rank-${id}`).value) || 1;
         const statKey = document.getElementById(`spl-stat-${id}`).value;
-
         const mod = currentMods[statKey] || 0;
         const totalBonus = rank + mod;
 
@@ -2603,10 +2383,7 @@
 
     function updateAllSpells() {
         const cards = document.querySelectorAll('.spell-card');
-        cards.forEach(card => {
-            const id = card.id.replace('spell-card-', '');
-            updateSpellCard(id);
-        });
+        cards.forEach(card => updateSpellCard(card.id.replace('spell-card-', '')));
         updateSpellsSummary();
         updateHotlistDropdowns();
     }
@@ -2614,7 +2391,6 @@
     function updateSpellsSummary() {
         const summaryBox = document.getElementById('spells-summary');
         const cards = document.querySelectorAll('.spell-card');
-        
         if (cards.length === 0) {
             summaryBox.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No Spells Recorded</span>';
             return;
@@ -2646,7 +2422,6 @@
         saveDataSilently();
     }
 
-    /* Inventory Management */
     function addItem(data = null) {
         itemCounter++;
         const id = itemCounter;
@@ -2677,27 +2452,24 @@
 
                 <div class="sub-group">
                     <div class="sub-group-title item-title">Item Details & Notes</div>
-                    <textarea id="item-notes-${id}" rows="3" placeholder="Describe stats, active effects, duration, weight, or charges..." oninput="saveDataSilently()"></textarea>
+                    <textarea id="item-notes-${id}" rows="3" placeholder="Describe stats, active effects..." oninput="saveDataSilently()"></textarea>
                 </div>
             </div>
         `;
 
         container.appendChild(card);
-
         if (data) {
             document.getElementById(`item-name-${id}`).value = data.name || '';
             document.getElementById(`item-qty-${id}`).value = data.qty !== undefined ? data.qty : 1;
             document.getElementById(`item-notes-${id}`).value = data.notes || '';
         }
-
         updateAllItems();
     }
 
     function adjustItemQty(id, direction) {
         const qtyInput = document.getElementById(`item-qty-${id}`);
         let current = parseInt(qtyInput.value) || 0;
-        current = Math.max(0, current + direction);
-        qtyInput.value = current;
+        qtyInput.value = Math.max(0, current + direction);
         updateAllItems();
     }
 
@@ -2715,20 +2487,13 @@
 
         let totalUnique = cards.length;
         let totalCount = 0;
-
         cards.forEach(card => {
             const id = card.id.replace('item-card-', '');
             const qtyInput = document.getElementById(`item-qty-${id}`);
-            const qty = qtyInput ? (parseInt(qtyInput.value) || 0) : 0;
-            totalCount += qty;
+            totalCount += qtyInput ? (parseInt(qtyInput.value) || 0) : 0;
         });
 
-        summaryBox.innerHTML = `
-            <div style="font-size: 0.9rem; font-weight: bold; color: var(--item-color);">
-                📦 ${totalUnique} Unique Item Types (${totalCount} Total Qty)
-            </div>
-        `;
-
+        summaryBox.innerHTML = `<div style="font-size: 0.9rem; font-weight: bold; color: var(--item-color);">📦 ${totalUnique} Unique Item Types (${totalCount} Total Qty)</div>`;
         updateGearDropdowns();
         updateHotlistDropdowns();
         saveDataSilently();
@@ -2765,11 +2530,31 @@
 
     function saveDataSilently() {
         if (isInitialLoad) return;
+        const data = gatherSheetData();
 
+        if (currentUser) {
+            if (activeCharacterId) {
+                supabase.from('characters').update({ 
+                    character_data: data,
+                    campaign_id: currentCampaign ? currentCampaign.id : null 
+                }).eq('id', activeCharacterId);
+            } else {
+                supabase.from('characters').insert([{
+                    user_id: currentUser.id,
+                    campaign_id: currentCampaign ? currentCampaign.id : null,
+                    character_data: data
+                }]).select().then(({ data: newChar, error }) => {
+                    if (!error && newChar && newChar.length > 0) activeCharacterId = newChar[0].id;
+                });
+            }
+        }
+        localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
+    }
+
+    function gatherSheetData() {
         const attacks = [];
         document.querySelectorAll('.attack-card').forEach(card => {
             const id = card.id.replace('attack-card-', '');
-            
             const dicePool = [];
             document.querySelectorAll(`#dice-pool-${id} .dice-entry`).forEach(entry => {
                 dicePool.push({
@@ -2777,7 +2562,6 @@
                     type: entry.querySelector('.die-type').value
                 });
             });
-
             attacks.push({
                 name: document.getElementById(`atk-name-${id}`).value,
                 rank: document.getElementById(`atk-rank-${id}`).value,
@@ -2854,7 +2638,7 @@
             gearState[select.id] = select.value;
         });
 
-        const data = {
+        return {
             name: document.getElementById('char-name').value,
             number: document.getElementById('char-number').value,
             race: document.getElementById('char-race').value,
@@ -2862,7 +2646,6 @@
             level: document.getElementById('char-level').value,
             floor: document.getElementById('char-floor').value,
             avatarUrl: document.getElementById('avatar-url').value,
-            
             strBase: document.getElementById('stat-str-base').value,
             strEnh: document.getElementById('stat-str-enh').value,
             conBase: document.getElementById('stat-con-base').value,
@@ -2873,15 +2656,12 @@
             intEnh: document.getElementById('stat-int-enh').value,
             chaBase: document.getElementById('stat-cha-base').value,
             chaEnh: document.getElementById('stat-cha-enh').value,
-
             maxHpSlots: document.getElementById('hp-max-slots').value,
             hpCurrent: hpCurrentSlots,
             manaCurrent: manaCurrent,
-            
             evadeBuffs: document.getElementById('evade-buffs').value,
             armorVal: document.getElementById('armor-val').value,
             drBuffs: document.getElementById('dr-buffs').value,
-
             bodySlotCounts: bodySlotCounts,
             debuffs: debuffs,
             buffs: buffs,
@@ -2893,7 +2673,6 @@
             gearState: gearState,
             collapsedState: collapsedState
         };
-        localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
     }
 
     function loadData() {
@@ -2902,9 +2681,7 @@
             const data = JSON.parse(saved);
 
             if (data.bodySlotCounts) {
-                Object.keys(data.bodySlotCounts).forEach(k => {
-                    bodySlotCounts[k] = data.bodySlotCounts[k];
-                });
+                Object.keys(data.bodySlotCounts).forEach(k => { bodySlotCounts[k] = data.bodySlotCounts[k]; });
             }
 
             initHotlistAndGear();
@@ -2950,46 +2727,29 @@
             if (data.avatarUrl) updateAvatar();
 
             document.getElementById('debuffs-list').innerHTML = '';
-            if (data.debuffs && data.debuffs.length > 0) {
-                data.debuffs.forEach(dbf => addDebuff(dbf));
-            }
+            if (data.debuffs) data.debuffs.forEach(dbf => addDebuff(dbf));
 
             document.getElementById('buffs-list').innerHTML = '';
-            if (data.buffs && data.buffs.length > 0) {
-                data.buffs.forEach(bf => addExternalBuff(bf));
-            }
+            if (data.buffs) data.buffs.forEach(bf => addExternalBuff(bf));
 
             document.getElementById('attacks-list').innerHTML = '';
-            if (data.attacks && data.attacks.length > 0) {
-                data.attacks.forEach(atk => addAttack(atk));
-            }
+            if (data.attacks) data.attacks.forEach(atk => addAttack(atk));
 
             document.getElementById('skills-list').innerHTML = '';
-            if (data.skills && data.skills.length > 0) {
-                data.skills.forEach(skl => addSkill(skl));
-            }
+            if (data.skills) data.skills.forEach(skl => addSkill(skl));
 
             document.getElementById('spells-list').innerHTML = '';
-            if (data.spells && data.spells.length > 0) {
-                data.spells.forEach(spl => addSpell(spl));
-            }
+            if (data.spells) data.spells.forEach(spl => addSpell(spl));
 
             document.getElementById('items-list').innerHTML = '';
-            if (data.items && data.items.length > 0) {
-                data.items.forEach(itm => addItem(itm));
-            }
+            if (data.items) data.items.forEach(itm => addItem(itm));
 
-            // Re-create accessory slots if saved
             if (data.gearState) {
                 Object.keys(data.gearState).forEach(id => {
                     if (id.startsWith('gear-acc-')) {
-                        const val = data.gearState[id];
-                        if (!document.getElementById(id)) {
-                            addAccessorySlot(val);
-                        }
+                        if (!document.getElementById(id)) addAccessorySlot(data.gearState[id]);
                     }
                 });
-
                 Object.keys(data.gearState).forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = data.gearState[id];
@@ -3020,25 +2780,17 @@
         isInitialLoad = false;
     }
 
-    function openResetModal() {
-        document.getElementById('resetModal').style.display = 'flex';
-    }
-
-    function closeResetModal() {
-        document.getElementById('resetModal').style.display = 'none';
-    }
+    function openResetModal() { document.getElementById('resetModal').style.display = 'flex'; }
+    function closeResetModal() { document.getElementById('resetModal').style.display = 'none'; }
 
     function confirmReset() {
         localStorage.removeItem('crawler_split_attrs_data');
-        
         hpCurrentSlots = 0;
         manaCurrent = 0;
         maxMana = 0;
         accessoryCounter = 0;
 
-        bodySlotCategories.forEach(cat => {
-            bodySlotCounts[cat.key] = 1;
-        });
+        bodySlotCategories.forEach(cat => { bodySlotCounts[cat.key] = 1; });
 
         document.getElementById('attacks-list').innerHTML = '';
         document.getElementById('skills-list').innerHTML = '';
@@ -3058,15 +2810,10 @@
         collapsedState.buffs = false;
 
         document.querySelectorAll('input, textarea').forEach(input => {
-            if (input.id === 'hp-max-slots') {
-                input.value = 10;
-            } else if (input.id === 'char-floor' || input.id === 'char-level' || input.id === 'mana-adjust-amt') {
-                input.value = 1;
-            } else if (input.type === 'number') {
-                input.value = 0;
-            } else {
-                input.value = '';
-            }
+            if (input.id === 'hp-max-slots') input.value = 10;
+            else if (input.id === 'char-floor' || input.id === 'char-level' || input.id === 'mana-adjust-amt') input.value = 1;
+            else if (input.type === 'number') input.value = 0;
+            else input.value = '';
         });
         
         document.getElementById('avatar-img').style.display = 'none';
@@ -3088,454 +2835,262 @@
     }
 
     window.onload = loadData;
-    
+
     function openAuthModal() {
-    document.getElementById('authModal').style.display = 'flex';
-}
-
-function closeAuthModal() {
-    document.getElementById('authModal').style.display = 'none';
-}
-
-function switchAuthTab(tab) {
-    const loginTab = document.getElementById('auth-tab-login');
-    const dashTab = document.getElementById('auth-tab-dashboard');
-    const btnLogin = document.getElementById('tab-btn-login');
-    const btnDash = document.getElementById('tab-btn-dash');
-
-    if (tab === 'login') {
-        if (loginTab) loginTab.style.display = 'block';
-        if (dashTab) dashTab.style.display = 'none';
-        if (btnLogin) btnLogin.style.borderColor = 'var(--accent-color)';
-        if (btnDash) btnDash.style.borderColor = 'var(--panel-border)';
-    } else {
-        if (loginTab) loginTab.style.display = 'none';
-        if (dashTab) dashTab.style.display = 'block';
-        if (btnDash) btnDash.style.borderColor = 'var(--accent-color)';
-        if (btnLogin) btnLogin.style.borderColor = 'var(--panel-border)';
+        document.getElementById('authModal').style.display = 'flex';
     }
-}
+
+    function closeAuthModal() {
+        document.getElementById('authModal').style.display = 'none';
+    }
+
+    function switchAuthTab(tab) {
+        const loginTab = document.getElementById('auth-tab-login');
+        const dashTab = document.getElementById('auth-tab-dashboard');
+        const btnLogin = document.getElementById('tab-btn-login');
+        const btnDash = document.getElementById('tab-btn-dash');
+
+        if (tab === 'login') {
+            if (loginTab) loginTab.style.display = 'block';
+            if (dashTab) dashTab.style.display = 'none';
+            if (btnLogin) btnLogin.style.borderColor = 'var(--accent-color)';
+            if (btnDash) btnDash.style.borderColor = 'var(--panel-border)';
+        } else {
+            if (loginTab) loginTab.style.display = 'none';
+            if (dashTab) dashTab.style.display = 'block';
+            if (btnDash) btnDash.style.borderColor = 'var(--accent-color)';
+            if (btnLogin) btnLogin.style.borderColor = 'var(--panel-border)';
+        }
+    }
     
-    // Current active session tracking
-let currentUser = null;
-let currentCampaign = null;
-let activeCharacterId = null;
-let realtimeChannel = null; // For live DM subscription updates
+    let currentUser = null;
+    let currentCampaign = null;
+    let activeCharacterId = null;
+    let realtimeChannel = null;
 
-// 1. SUPABASE AUTHENTICATION (Login / Sign Up)
-async function handleAuthLogin() {
-    const email = document.getElementById('auth-email').value;
-    const password = document.getElementById('auth-password').value;
-    const role = document.getElementById('auth-role-select').value;
+    async function handleAuthLogin() {
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-password').value;
+        const role = document.getElementById('auth-role-select').value;
 
-    if (!email || !password) {
-        alert("Please enter both an email and password.");
-        return;
-    }
-
-    // Attempt to log in
-    let { data: { user, session }, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
-    });
-
-    // If user doesn't exist yet, automatically sign them up
-    if (error && error.message.includes("Invalid login credentials")) {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: { data: { role: role } }
-        });
-
-        if (signUpError) {
-            alert("Auth Error: " + signUpError.message);
+        if (!email || !password) {
+            alert("Please enter both an email and password.");
             return;
         }
-        user = signUpData.user;
-        alert("Account created! Logged in as " + email);
-    } else if (error) {
-        alert("Login Error: " + error.message);
-        return;
+
+        let { data: { user, session }, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+
+        if (error && error.message.includes("Invalid login credentials")) {
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: { data: { role: role } }
+            });
+
+            if (signUpError) {
+                alert("Auth Error: " + signUpError.message);
+                return;
+            }
+            user = signUpData.user;
+            alert("Account created! Logged in as " + email);
+        } else if (error) {
+            alert("Login Error: " + error.message);
+            return;
+        }
+
+        currentUser = user;
+        document.getElementById('nav-user-email').innerText = email;
+        const roleBadge = document.getElementById('nav-user-role');
+        
+        if (role === 'dm') {
+            roleBadge.innerText = 'DUNGEON MASTER';
+            roleBadge.className = 'preview-badge-dm';
+            document.getElementById('dash-dm-section').style.display = 'block';
+            document.getElementById('dash-crawler-section').style.display = 'none';
+        } else {
+            roleBadge.innerText = 'CRAWLER';
+            roleBadge.className = 'preview-badge-crawler';
+            document.getElementById('dash-dm-section').style.display = 'none';
+            document.getElementById('dash-crawler-section').style.display = 'block';
+        }
+
+        document.getElementById('top-nav-bar').style.display = 'flex';
+        
+        if (role === 'crawler') {
+            await loadCharacterFromCloud();
+        }
+
+        switchAuthTab('dashboard');
     }
 
-    currentUser = user;
-    
-    // Update Top Navigation Display
-    document.getElementById('nav-user-email').innerText = email;
-    const roleBadge = document.getElementById('nav-user-role');
-    
-    if (role === 'dm') {
-        roleBadge.innerText = 'DUNGEON MASTER';
-        roleBadge.className = 'preview-badge-dm';
-        document.getElementById('dash-dm-section').style.display = 'block';
-        document.getElementById('dash-crawler-section').style.display = 'none';
-    } else {
-        roleBadge.innerText = 'CRAWLER';
-        roleBadge.className = 'preview-badge-crawler';
-        document.getElementById('dash-dm-section').style.display = 'none';
-        document.getElementById('dash-crawler-section').style.display = 'block';
+    async function handleCreateCampaign() {
+        const title = document.getElementById('dash-campaign-title').value;
+        if (!title) {
+            alert("Please enter a campaign title.");
+            return;
+        }
+
+        const generatedCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        const { data, error } = await supabase
+            .from('campaigns')
+            .insert([{ title: title, join_code: generatedCode, dm_id: currentUser.id }])
+            .select();
+
+        if (error) {
+            alert("Campaign Creation Error: " + error.message);
+            return;
+        }
+
+        currentCampaign = data[0];
+        document.getElementById('nav-campaign-name').innerText = `${currentCampaign.title} [${generatedCode}]`;
+        alert(`Campaign Created! Share this code with your Crawlers: ${generatedCode}`);
+        
+        await loadDMRosterView();
+        closeAuthModal();
     }
 
-    document.getElementById('top-nav-bar').style.display = 'flex';
-    
-    // Fetch character sheet for players upon login
-    if (role === 'crawler') {
-        await loadCharacterFromCloud();
-    }
+    async function handleJoinCampaign() {
+        const code = document.getElementById('dash-join-code').value.toUpperCase();
+        if (!code) {
+            alert("Please enter a 6-digit campaign code.");
+            return;
+        }
 
-    switchAuthTab('dashboard');
-}
+        const { data: campaignData, error: campaignError } = await supabase
+            .from('campaigns')
+            .select('*')
+            .eq('join_code', code)
+            .single();
 
-// 2. CREATE CAMPAIGN (Dungeon Master)
-async function handleCreateCampaign() {
-    const title = document.getElementById('dash-campaign-title').value;
-    if (!title) {
-        alert("Please enter a campaign title.");
-        return;
-    }
+        if (campaignError || !campaignData) {
+            alert("Invalid Campaign Code!");
+            return;
+        }
 
-    const generatedCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        currentCampaign = campaignData;
+        document.getElementById('nav-campaign-name').innerText = `${currentCampaign.title} [${code}]`;
 
-    const { data, error } = await supabase
-        .from('campaigns')
-        .insert([{ title: title, join_code: generatedCode, dm_id: currentUser.id }])
-        .select();
-
-    if (error) {
-        alert("Campaign Creation Error: " + error.message);
-        return;
-    }
-
-    currentCampaign = data[0];
-    document.getElementById('nav-campaign-name').innerText = `${currentCampaign.title} [${generatedCode}]`;
-    alert(`Campaign Created! Share this code with your Crawlers: ${generatedCode}`);
-    
-    await loadDMRosterView();
-    
-    closeAuthModal();
-}
-
-// 3. JOIN CAMPAIGN (Crawler / Player)
-async function handleJoinCampaign() {
-    const code = document.getElementById('dash-join-code').value.toUpperCase();
-    if (!code) {
-        alert("Please enter a 6-digit campaign code.");
-        return;
-    }
-
-    // Lookup campaign code
-    const { data: campaignData, error: campaignError } = await supabase
-        .from('campaigns')
-        .select('*')
-        .eq('join_code', code)
-        .single();
-
-    if (campaignError || !campaignData) {
-        alert("Invalid Campaign Code!");
-        return;
-    }
-
-    currentCampaign = campaignData;
-    document.getElementById('nav-campaign-name').innerText = `${currentCampaign.title} [${code}]`;
-
-    // Link current character to this campaign ID in Supabase
-    if (activeCharacterId) {
-        await supabase
-            .from('characters')
-            .update({ campaign_id: currentCampaign.id })
-            .eq('id', activeCharacterId);
-    }
-
-    closeAuthModal();
-}
-
-// 4. SAVE CHARACTER SHEET TO SUPABASE CLOUD
-async function saveDataSilently() {
-    if (isInitialLoad) return;
-
-    // Compile entire character state payload
-    const data = gatherSheetData();
-
-    // If logged into Supabase, save to Cloud Database
-    if (currentUser) {
         if (activeCharacterId) {
-            // Update existing record
             await supabase
                 .from('characters')
-                .update({ 
-                    character_data: data,
-                    campaign_id: currentCampaign ? currentCampaign.id : null 
-                })
+                .update({ campaign_id: currentCampaign.id })
                 .eq('id', activeCharacterId);
-        } else {
-            // Insert new character record
-            const { data: newChar, error } = await supabase
-                .from('characters')
-                .insert([{
-                    user_id: currentUser.id,
-                    campaign_id: currentCampaign ? currentCampaign.id : null,
-                    character_data: data
-                }])
-                .select();
+        }
 
-            if (!error && newChar && newChar.length > 0) {
-                activeCharacterId = newChar[0].id;
-            }
+        closeAuthModal();
+    }
+
+    async function loadCharacterFromCloud() {
+        if (!currentUser) return;
+
+        const { data: charRecords, error } = await supabase
+            .from('characters')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (error) {
+            console.error("Cloud Load Error:", error);
+            return;
+        }
+
+        if (charRecords && charRecords.length > 0) {
+            const record = charRecords[0];
+            activeCharacterId = record.id;
+            localStorage.setItem('crawler_split_attrs_data', JSON.stringify(record.character_data));
+            loadData();
         }
     }
 
-    // Backup to local storage
-    localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
-}
+    async function loadDMRosterView() {
+        if (!currentCampaign || !currentUser) return;
 
-// Helper function to extract all form values into JSON
-function gatherSheetData() {
-    const attacks = [];
-    document.querySelectorAll('.attack-card').forEach(card => {
-        const id = card.id.replace('attack-card-', '');
-        const dicePool = [];
-        document.querySelectorAll(`#dice-pool-${id} .dice-entry`).forEach(entry => {
-            dicePool.push({
-                count: entry.querySelector('.die-count').value,
-                type: entry.querySelector('.die-type').value
-            });
-        });
-        attacks.push({
-            name: document.getElementById(`atk-name-${id}`).value,
-            rank: document.getElementById(`atk-rank-${id}`).value,
-            stat: document.getElementById(`atk-stat-${id}`).value,
-            effect: document.getElementById(`atk-effect-${id}`).value,
-            dicePool: dicePool
-        });
-    });
+        document.getElementById('dm-roster-panel').style.display = 'block';
+        await fetchCampaignRoster();
 
-    const skills = [];
-    document.querySelectorAll('.skill-card').forEach(card => {
-        const id = card.id.replace('skill-card-', '');
-        skills.push({
-            id: id,
-            name: document.getElementById(`skl-name-${id}`).value,
-            rank: document.getElementById(`skl-rank-${id}`).value,
-            stat: document.getElementById(`skl-stat-${id}`).value,
-            checkType: document.getElementById(`skl-check-${id}`).value,
-            effect: document.getElementById(`skl-effect-${id}`).value,
-            used: document.getElementById(`skl-used-${id}`)?.checked || false
-        });
-    });
+        if (realtimeChannel) supabase.removeChannel(realtimeChannel);
 
-    const spells = [];
-    document.querySelectorAll('.spell-card').forEach(card => {
-        const id = card.id.replace('spell-card-', '');
-        spells.push({
-            id: id,
-            name: document.getElementById(`spl-name-${id}`).value,
-            rank: document.getElementById(`spl-rank-${id}`).value,
-            stat: document.getElementById(`spl-stat-${id}`).value,
-            checkType: document.getElementById(`spl-check-${id}`).value,
-            effect: document.getElementById(`spl-effect-${id}`).value,
-            used: document.getElementById(`spl-used-${id}`)?.checked || false
-        });
-    });
-
-    const items = [];
-    document.querySelectorAll('.item-card').forEach(card => {
-        const id = card.id.replace('item-card-', '');
-        items.push({
-            id: id,
-            name: document.getElementById(`item-name-${id}`).value,
-            qty: document.getElementById(`item-qty-${id}`).value,
-            notes: document.getElementById(`item-notes-${id}`).value
-        });
-    });
-
-    const debuffs = [];
-    document.querySelectorAll('.debuff-card').forEach(card => {
-        const id = card.id.replace('debuff-card-', '');
-        debuffs.push({
-            name: document.getElementById(`debuff-name-${id}`).value,
-            notes: document.getElementById(`debuff-notes-${id}`).value
-        });
-    });
-
-    const buffs = [];
-    document.querySelectorAll('.buff-card').forEach(card => {
-        const id = card.id.replace('buff-card-', '');
-        buffs.push({
-            name: document.getElementById(`buff-name-${id}`).value,
-            notes: document.getElementById(`buff-notes-${id}`).value
-        });
-    });
-
-    const hotlistState = {};
-    document.querySelectorAll('.hotlist-select').forEach(select => {
-        hotlistState[select.id] = select.value;
-    });
-
-    const gearState = {};
-    document.querySelectorAll('.gear-select').forEach(select => {
-        gearState[select.id] = select.value;
-    });
-
-    return {
-        name: document.getElementById('char-name').value,
-        number: document.getElementById('char-number').value,
-        race: document.getElementById('char-race').value,
-        class: document.getElementById('char-class').value,
-        level: document.getElementById('char-level').value,
-        floor: document.getElementById('char-floor').value,
-        avatarUrl: document.getElementById('avatar-url').value,
-        
-        strBase: document.getElementById('stat-str-base').value,
-        strEnh: document.getElementById('stat-str-enh').value,
-        conBase: document.getElementById('stat-con-base').value,
-        conEnh: document.getElementById('stat-con-enh').value,
-        dexBase: document.getElementById('stat-dex-base').value,
-        dexEnh: document.getElementById('stat-dex-enh').value,
-        intBase: document.getElementById('stat-int-base').value,
-        intEnh: document.getElementById('stat-int-enh').value,
-        chaBase: document.getElementById('stat-cha-base').value,
-        chaEnh: document.getElementById('stat-cha-enh').value,
-
-        maxHpSlots: document.getElementById('hp-max-slots').value,
-        hpCurrent: hpCurrentSlots,
-        manaCurrent: manaCurrent,
-        
-        evadeBuffs: document.getElementById('evade-buffs').value,
-        armorVal: document.getElementById('armor-val').value,
-        drBuffs: document.getElementById('dr-buffs').value,
-
-        bodySlotCounts: bodySlotCounts,
-        debuffs: debuffs,
-        buffs: buffs,
-        attacks: attacks,
-        skills: skills,
-        spells: spells,
-        items: items,
-        hotlistState: hotlistState,
-        gearState: gearState,
-        collapsedState: collapsedState
-    };
-}
-
-// 5. LOAD CHARACTER FROM SUPABASE CLOUD
-async function loadCharacterFromCloud() {
-    if (!currentUser) return;
-
-    const { data: charRecords, error } = await supabase
-        .from('characters')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-    if (error) {
-        console.error("Cloud Load Error:", error);
-        return;
+        realtimeChannel = supabase
+            .channel('public:characters')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'characters',
+                filter: `campaign_id=eq.${currentCampaign.id}`
+            }, () => {
+                fetchCampaignRoster();
+            })
+            .subscribe();
     }
 
-    if (charRecords && charRecords.length > 0) {
-        const record = charRecords[0];
-        activeCharacterId = record.id;
-        
-        // Populate the sheet using the loaded character JSON
-        localStorage.setItem('crawler_split_attrs_data', JSON.stringify(record.character_data));
-        loadData();
-    }
-}
+    async function fetchCampaignRoster() {
+        if (!currentCampaign) return;
 
-// 6. DM ROSTER & REALTIME SYNC
-async function loadDMRosterView() {
-    if (!currentCampaign || !currentUser) return;
+        const { data: chars, error } = await supabase
+            .from('characters')
+            .select('*')
+            .eq('campaign_id', currentCampaign.id);
 
-    // Show DM panel container
-    document.getElementById('dm-roster-panel').style.display = 'block';
+        if (error) {
+            console.error("DM Roster Fetch Error:", error.message);
+            return;
+        }
 
-    // Fetch initial player list
-    await fetchCampaignRoster();
+        const grid = document.getElementById('dm-roster-grid');
+        document.getElementById('dm-player-count').innerText = chars ? chars.length : 0;
 
-    // Subscribe to live database updates for this campaign
-    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+        if (!chars || chars.length === 0) {
+            grid.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No players connected yet. Share your campaign code!</span>';
+            return;
+        }
 
-    realtimeChannel = supabase
-        .channel('public:characters')
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'characters',
-            filter: `campaign_id=eq.${currentCampaign.id}`
-        }, (payload) => {
-            fetchCampaignRoster();
-        })
-        .subscribe();
-}
+        grid.innerHTML = chars.map(record => {
+            const char = record.character_data || {};
+            const hpMax = (parseInt(char.maxHpSlots) || 10) * (getModifier(parseInt(char.conBase || 0) + parseInt(char.conEnh || 0)) || 1);
+            const hpCurrent = (char.hpCurrent || 0) * (getModifier(parseInt(char.conBase || 0) + parseInt(char.conEnh || 0)) || 1);
+            const manaMax = parseInt(char.intBase || 0) + parseInt(char.intEnh || 0);
+            const manaCurrent = char.manaCurrent || 0;
 
-async function fetchCampaignRoster() {
-    if (!currentCampaign) return;
+            const debuffList = (char.debuffs || []).map(d => `<span style="background: rgba(239, 68, 68, 0.2); color: var(--debuff-color); border: 1px solid var(--debuff-color); padding: 1px 5px; border-radius: 4px; font-size: 0.7rem;">${d.name || 'Debuff'}</span>`).join(' ');
 
-    const { data: chars, error } = await supabase
-        .from('characters')
-        .select('*')
-        .eq('campaign_id', currentCampaign.id);
+            return `
+                <div style="background: var(--input-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="color: var(--accent-color); font-size: 0.95rem;">${char.name || 'Unnamed Crawler'}</strong>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">${char.race || 'Race'} | Lvl ${char.level || 1}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Floor ${char.floor || 1} • ${char.class || 'No Class'}</div>
+                    
+                    <div style="margin-bottom: 6px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 2px;">
+                            <span>HP Capacity</span>
+                            <strong>${hpCurrent} / ${hpMax} HP</strong>
+                        </div>
+                        <div style="background: rgba(224, 79, 95, 0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: var(--accent-color); width: ${hpMax > 0 ? Math.min(100, (hpCurrent / hpMax) * 100) : 0}%; height: 100%;"></div>
+                        </div>
+                    </div>
 
-    if (error) {
-        console.error("DM Roster Fetch Error:", error.message);
-        return;
-    }
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 2px;">
+                            <span style="color: #60a5fa;">Mana</span>
+                            <strong style="color: #60a5fa;">${manaCurrent} / ${manaMax}</strong>
+                        </div>
+                        <div style="background: rgba(59, 130, 246, 0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: var(--mana-color); width: ${manaMax > 0 ? Math.min(100, (manaCurrent / manaMax) * 100) : 0}%; height: 100%;"></div>
+                        </div>
+                    </div>
 
-    const grid = document.getElementById('dm-roster-grid');
-    document.getElementById('dm-player-count').innerText = chars ? chars.length : 0;
-
-    if (!chars || chars.length === 0) {
-        grid.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No players connected yet. Share your campaign code!</span>';
-        return;
-    }
-
-    grid.innerHTML = chars.map(record => {
-        const char = record.character_data || {};
-        const hpMax = (parseInt(char.maxHpSlots) || 10) * (getModifier(parseInt(char.conBase || 0) + parseInt(char.conEnh || 0)) || 1);
-        const hpCurrent = (char.hpCurrent || 0) * (getModifier(parseInt(char.conBase || 0) + parseInt(char.conEnh || 0)) || 1);
-        const manaMax = parseInt(char.intBase || 0) + parseInt(char.intEnh || 0);
-        const manaCurrent = char.manaCurrent || 0;
-
-        const debuffList = (char.debuffs || []).map(d => `<span style="background: rgba(239, 68, 68, 0.2); color: var(--debuff-color); border: 1px solid var(--debuff-color); padding: 1px 5px; border-radius: 4px; font-size: 0.7rem;">${d.name || 'Debuff'}</span>`).join(' ');
-
-        return `
-            <div style="background: var(--input-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <strong style="color: var(--accent-color); font-size: 0.95rem;">${char.name || 'Unnamed Crawler'}</strong>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">${char.race || 'Race'} | Lvl ${char.level || 1}</span>
+                    <div>${debuffList || '<span style="font-size: 0.7rem; color: var(--text-muted);">No Active Debuffs</span>'}</div>
                 </div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Floor ${char.floor || 1} • ${char.class || 'No Class'}</div>
-                
-                <!-- HP Bar -->
-                <div style="margin-bottom: 6px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 2px;">
-                        <span>HP Capacity</span>
-                        <strong>${hpCurrent} / ${hpMax} HP</strong>
-                    </div>
-                    <div style="background: rgba(224, 79, 95, 0.2); height: 8px; border-radius: 4px; overflow: hidden;">
-                        <div style="background: var(--accent-color); width: ${hpMax > 0 ? Math.min(100, (hpCurrent / hpMax) * 100) : 0}%; height: 100%;"></div>
-                    </div>
-                </div>
-
-                <!-- Mana Bar -->
-                <div style="margin-bottom: 8px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 2px;">
-                        <span style="color: #60a5fa;">Mana</span>
-                        <strong style="color: #60a5fa;">${manaCurrent} / ${manaMax}</strong>
-                    </div>
-                    <div style="background: rgba(59, 130, 246, 0.2); height: 8px; border-radius: 4px; overflow: hidden;">
-                        <div style="background: var(--mana-color); width: ${manaMax > 0 ? Math.min(100, (manaCurrent / manaMax) * 100) : 0}%; height: 100%;"></div>
-                    </div>
-                </div>
-
-                <!-- Debuffs -->
-                <div>${debuffList || '<span style="font-size: 0.7rem; color: var(--text-muted);">No Active Debuffs</span>'}</div>
-            </div>
-        `;
-    }).join('');
-}
-    
+            `;
+        }).join('');
+    }
 </script>
 </body>
 </html>
