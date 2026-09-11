@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Crawler RPG - Portal Access</title>
+    <link rel="icon" type="image/png" href="Zev_icon.png">
+    <style>
+        :root {
+            --bg-color: #0f111a;
+            --panel-bg: rgba(26, 30, 46, 0.95);
+            --panel-border: #2a314d;
+            --accent-color: #e04f5f;
+            --skill-color: #10b981;
+            --spell-color: #a855f7;
+            --hotlist-color: #f97316;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --input-bg: #121524;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        .portal-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        .logo-box {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-box img {
+            max-width: 220px;
+            height: auto;
+            filter: drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.6));
+        }
+
+        .tab-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            border-color: var(--accent-color);
+            background: rgba(224, 79, 95, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        input, select {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 16px;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-color);
+        }
+
+        button.btn-primary {
+            width: 100%;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            touch-action: manipulation;
+            margin-top: 10px;
+        }
+
+        button.btn-secondary {
+            width: 100%;
+            background: #475569;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            touch-action: manipulation;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="portal-card">
+    <div class="logo-box">
+        <img src="https://133870449.cdn6.editmysite.com/uploads/1/3/3/8/133870449/ZGK5MHHRZUJXLDLAINVFJ7F4.png?width=2400&optimize=medium" alt="Dungeon Crawler RPG Logo">
+    </div>
+
+    <div class="tab-nav">
+        <button type="button" class="tab-btn active" id="tab-login">Login / Register</button>
+        <button type="button" class="tab-btn" id="tab-campaign">Campaign Hub</button>
+    </div>
+
+    <!-- Login Panel -->
+    <div id="panel-login">
+        <div class="form-group">
+            <label>User Role</label>
+            <select id="auth-role">
+                <option value="crawler">🎒 Crawler (Player)</option>
+                <option value="dm">👑 Dungeon Master</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="auth-email" placeholder="crawler@dungeon.com">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="auth-password" placeholder="••••••••">
+        </div>
+        <button type="button" class="btn-primary" id="btn-login">Enter Portal</button>
+    </div>
+
+    <!-- Campaign Hub Panel -->
+    <div id="panel-campaign" style="display: none;">
+        <div id="section-crawler">
+            <h4 style="color: var(--skill-color); margin-bottom: 8px;">🎒 Join a Campaign</h4>
+            <div class="form-group">
+                <label>6-Digit Campaign Code</label>
+                <input type="text" id="join-code" placeholder="e.g. X9K2P4" style="text-transform: uppercase;">
+            </div>
+            <button type="button" class="btn-primary" style="background: var(--skill-color);" id="btn-join">Join Campaign</button>
+        </div>
+
+        <div id="section-dm" style="display: none; margin-top: 15px;">
+            <h4 style="color: var(--spell-color); margin-bottom: 8px;">👑 Create Campaign</h4>
+            <div class="form-group">
+                <label>Campaign Title</label>
+                <input type="text" id="create-title" placeholder="e.g. Floor 3: Overworld">
+            </div>
+            <button type="button" class="btn-primary" style="background: var(--spell-color);" id="btn-create">Create Campaign</button>
+        </div>
+    </div>
+
+    <button type="button" class="btn-secondary" id="btn-solo">Play Solo / Offline Mode</button>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://ghgtvryxqfwzznrxewaw.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_ikbKYyQYQtWQ84BFSAolaw_X1A3xDim';
+    let supabase = null;
+
+    if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    function switchTab(tab) {
+        const pLogin = document.getElementById('panel-login');
+        const pCamp = document.getElementById('panel-campaign');
+        const tLogin = document.getElementById('tab-login');
+        const tCamp = document.getElementById('tab-campaign');
+
+        if (tab === 'login') {
+            pLogin.style.display = 'block';
+            pCamp.style.display = 'none';
+            tLogin.classList.add('active');
+            tCamp.classList.remove('active');
+        } else {
+            pLogin.style.display = 'none';
+            pCamp.style.display = 'block';
+            tCamp.classList.add('active');
+            tLogin.classList.remove('active');
+        }
+    }
+
+    async function handleLogin() {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value.trim();
+        const role = document.getElementById('auth-role').value;
+
+        if (!email || !password) {
+            alert("Please enter both an email and password.");
+            return;
+        }
+
+        if (!supabase) {
+            alert("Database connection initializing. Please try again.");
+            return;
+        }
+
+        let { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+        if (error && error.message.includes("Invalid login credentials")) {
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email,
+                password,
+                options: { data: { role } }
+            });
+
+            if (signUpError) {
+                alert("Sign Up Error: " + signUpError.message);
+                return;
+            }
+            alert("Account created! Logged in as " + email);
+        } else if (error) {
+            alert("Login Error: " + error.message);
+            return;
+        }
+
+        localStorage.setItem('dcc_user_role', role);
+        localStorage.setItem('dcc_user_email', email);
+
+        if (role === 'dm') {
+            document.getElementById('section-dm').style.display = 'block';
+            document.getElementById('section-crawler').style.display = 'none';
+        } else {
+            document.getElementById('section-dm').style.display = 'none';
+            document.getElementById('section-crawler').style.display = 'block';
+        }
+
+        switchTab('campaign');
+    }
+
+    async function handleJoin() {
+        const code = document.getElementById('join-code').value.toUpperCase().trim();
+        if (!code) {
+            alert("Please enter a campaign code.");
+            return;
+        }
+
+        const { data, error } = await supabase.from('campaigns').select('*').eq('join_code', code).single();
+        if (error || !data) {
+            alert("Invalid Campaign Code!");
+            return;
+        }
+
+        localStorage.setItem('dcc_campaign_id', data.id);
+        localStorage.setItem('dcc_campaign_title', data.title);
+        localStorage.setItem('dcc_campaign_code', code);
+
+        window.location.href = 'character.html';
+    }
+
+    async function handleCreate() {
+        const title = document.getElementById('create-title').value.trim();
+        if (!title) {
+            alert("Please enter a title.");
+            return;
+        }
+
+        const user = (await supabase.auth.getUser()).data.user;
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        const { data, error } = await supabase.from('campaigns').insert([{ title, join_code: code, dm_id: user.id }]).select();
+        if (error) {
+            alert("Campaign Creation Error: " + error.message);
+            return;
+        }
+
+        localStorage.setItem('dcc_campaign_id', data[0].id);
+        localStorage.setItem('dcc_campaign_title', title);
+        localStorage.setItem('dcc_campaign_code', code);
+
+        window.location.href = 'character.html';
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('tab-login').onclick = () => switchTab('login');
+        document.getElementById('tab-campaign').onclick = () => switchTab('campaign');
+        document.getElementById('btn-login').onclick = handleLogin;
+        document.getElementById('btn-join').onclick = handleJoin;
+        document.getElementById('btn-create').onclick = handleCreate;
+        document.getElementById('btn-solo').onclick = () => {
+            localStorage.setItem('dcc_user_role', 'crawler');
+            localStorage.removeItem('dcc_campaign_id');
+            window.location.href = 'character.html';
+        };
+    });
+</script>
+</body>
+</html>
