@@ -3075,88 +3075,327 @@
     }
 
     window.onload = loadData;
+    // Current active session tracking
+let activeCharacterId = null;
+
+// 1. SUPABASE AUTHENTICATION (Login / Sign Up)
+async function handleAuthLogin() {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    const role = document.getElementById('auth-role-select').value;
+
+    if (!email || !password) {
+        alert("Please enter both an email and password.");
+        return;
+    }
+
+    // Attempt to log in
+    let { data: { user, session }, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+    });
+
+    // If user doesn't exist yet, automatically sign them up
+    if (error && error.message.includes("Invalid login credentials")) {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: { data: { role: role } }
+        });
+
+        if (signUpError) {
+            alert("Auth Error: " + signUpError.message);
+            return;
+        }
+        user = signUpData.user;
+        alert("Account created! Logged in as " + email);
+    } else if (error) {
+        alert("Login Error: " + error.message);
+        return;
+    }
+
+    currentUser = user;
     
-            // Auth & Campaign State Management
-        let currentUser = null;
-        let currentCampaign = null;
-        
-        function openAuthModal() {
-            document.getElementById('authModal').style.display = 'flex';
-        }
-        
-        function closeAuthModal() {
-            document.getElementById('authModal').style.display = 'none';
-        }
-        
-        function switchAuthTab(tab) {
-            const loginTab = document.getElementById('auth-tab-login');
-            const dashTab = document.getElementById('auth-tab-dashboard');
-            const btnLogin = document.getElementById('tab-btn-login');
-            const btnDash = document.getElementById('tab-btn-dash');
-        
-            if (tab === 'login') {
-                loginTab.style.display = 'block';
-                dashTab.style.display = 'none';
-                btnLogin.style.borderColor = 'var(--accent-color)';
-                btnDash.style.borderColor = 'var(--panel-border)';
-            } else {
-                loginTab.style.display = 'none';
-                dashTab.style.display = 'block';
-                btnDash.style.borderColor = 'var(--accent-color)';
-                btnLogin.style.borderColor = 'var(--panel-border)';
+    // Update Top Navigation Display
+    document.getElementById('nav-user-email').innerText = email;
+    const roleBadge = document.getElementById('nav-user-role');
+    
+    if (role === 'dm') {
+        roleBadge.innerText = 'DUNGEON MASTER';
+        roleBadge.className = 'preview-badge-dm';
+        document.getElementById('dash-dm-section').style.display = 'block';
+        document.getElementById('dash-crawler-section').style.display = 'none';
+    } else {
+        roleBadge.innerText = 'CRAWLER';
+        roleBadge.className = 'preview-badge-crawler';
+        document.getElementById('dash-dm-section').style.display = 'none';
+        document.getElementById('dash-crawler-section').style.display = 'block';
+    }
+
+    document.getElementById('top-nav-bar').style.display = 'flex';
+    
+    // Fetch character sheet for players upon login
+    if (role === 'crawler') {
+        await loadCharacterFromCloud();
+    }
+
+    switchAuthTab('dashboard');
+}
+
+// 2. CREATE CAMPAIGN (Dungeon Master)
+async function handleCreateCampaign() {
+    const title = document.getElementById('dash-campaign-title').value;
+    if (!title) {
+        alert("Please enter a campaign title.");
+        return;
+    }
+
+    const generatedCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const { data, error } = await supabase
+        .from('campaigns')
+        .insert([{ title: title, join_code: generatedCode, dm_id: currentUser.id }])
+        .select();
+
+    if (error) {
+        alert("Campaign Creation Error: " + error.message);
+        return;
+    }
+
+    currentCampaign = data[0];
+    document.getElementById('nav-campaign-name').innerText = `${currentCampaign.title} [${generatedCode}]`;
+    alert(`Campaign Created! Share this code with your Crawlers: ${generatedCode}`);
+    closeAuthModal();
+}
+
+// 3. JOIN CAMPAIGN (Crawler / Player)
+async function handleJoinCampaign() {
+    const code = document.getElementById('dash-join-code').value.toUpperCase();
+    if (!code) {
+        alert("Please enter a 6-digit campaign code.");
+        return;
+    }
+
+    // Lookup campaign code
+    const { data: campaignData, error: campaignError } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('join_code', code)
+        .single();
+
+    if (campaignError || !campaignData) {
+        alert("Invalid Campaign Code!");
+        return;
+    }
+
+    currentCampaign = campaignData;
+    document.getElementById('nav-campaign-name').innerText = `${currentCampaign.title} [${code}]`;
+
+    // Link current character to this campaign ID in Supabase
+    if (activeCharacterId) {
+        await supabase
+            .from('characters')
+            .update({ campaign_id: currentCampaign.id })
+            .eq('id', activeCharacterId);
+    }
+
+    closeAuthModal();
+}
+
+// 4. SAVE CHARACTER SHEET TO SUPABASE CLOUD
+async function saveDataSilently() {
+    if (isInitialLoad) return;
+
+    // Compile entire character state payload
+    const data = gatherSheetData();
+
+    // If logged into Supabase, save to Cloud Database
+    if (currentUser) {
+        if (activeCharacterId) {
+            // Update existing record
+            await supabase
+                .from('characters')
+                .update({ 
+                    character_data: data,
+                    campaign_id: currentCampaign ? currentCampaign.id : null 
+                })
+                .eq('id', activeCharacterId);
+        } else {
+            // Insert new character record
+            const { data: newChar, error } = await supabase
+                .from('characters')
+                .insert([{
+                    user_id: currentUser.id,
+                    campaign_id: currentCampaign ? currentCampaign.id : null,
+                    character_data: data
+                }])
+                .select();
+
+            if (!error && newChar && newChar.length > 0) {
+                activeCharacterId = newChar[0].id;
             }
         }
+    }
+
+    // Backup to local storage
+    localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
+}
+
+// Helper function to extract all form values into JSON
+function gatherSheetData() {
+    const attacks = [];
+    document.querySelectorAll('.attack-card').forEach(card => {
+        const id = card.id.replace('attack-card-', '');
+        const dicePool = [];
+        document.querySelectorAll(`#dice-pool-${id} .dice-entry`).forEach(entry => {
+            dicePool.push({
+                count: entry.querySelector('.die-count').value,
+                type: entry.querySelector('.die-type').value
+            });
+        });
+        attacks.push({
+            name: document.getElementById(`atk-name-${id}`).value,
+            rank: document.getElementById(`atk-rank-${id}`).value,
+            stat: document.getElementById(`atk-stat-${id}`).value,
+            effect: document.getElementById(`atk-effect-${id}`).value,
+            dicePool: dicePool
+        });
+    });
+
+    const skills = [];
+    document.querySelectorAll('.skill-card').forEach(card => {
+        const id = card.id.replace('skill-card-', '');
+        skills.push({
+            id: id,
+            name: document.getElementById(`skl-name-${id}`).value,
+            rank: document.getElementById(`skl-rank-${id}`).value,
+            stat: document.getElementById(`skl-stat-${id}`).value,
+            checkType: document.getElementById(`skl-check-${id}`).value,
+            effect: document.getElementById(`skl-effect-${id}`).value,
+            used: document.getElementById(`skl-used-${id}`)?.checked || false
+        });
+    });
+
+    const spells = [];
+    document.querySelectorAll('.spell-card').forEach(card => {
+        const id = card.id.replace('spell-card-', '');
+        spells.push({
+            id: id,
+            name: document.getElementById(`spl-name-${id}`).value,
+            rank: document.getElementById(`spl-rank-${id}`).value,
+            stat: document.getElementById(`spl-stat-${id}`).value,
+            checkType: document.getElementById(`spl-check-${id}`).value,
+            effect: document.getElementById(`spl-effect-${id}`).value,
+            used: document.getElementById(`spl-used-${id}`)?.checked || false
+        });
+    });
+
+    const items = [];
+    document.querySelectorAll('.item-card').forEach(card => {
+        const id = card.id.replace('item-card-', '');
+        items.push({
+            id: id,
+            name: document.getElementById(`item-name-${id}`).value,
+            qty: document.getElementById(`item-qty-${id}`).value,
+            notes: document.getElementById(`item-notes-${id}`).value
+        });
+    });
+
+    const debuffs = [];
+    document.querySelectorAll('.debuff-card').forEach(card => {
+        const id = card.id.replace('debuff-card-', '');
+        debuffs.push({
+            name: document.getElementById(`debuff-name-${id}`).value,
+            notes: document.getElementById(`debuff-notes-${id}`).value
+        });
+    });
+
+    const buffs = [];
+    document.querySelectorAll('.buff-card').forEach(card => {
+        const id = card.id.replace('buff-card-', '');
+        buffs.push({
+            name: document.getElementById(`buff-name-${id}`).value,
+            notes: document.getElementById(`buff-notes-${id}`).value
+        });
+    });
+
+    const hotlistState = {};
+    document.querySelectorAll('.hotlist-select').forEach(select => {
+        hotlistState[select.id] = select.value;
+    });
+
+    const gearState = {};
+    document.querySelectorAll('.gear-select').forEach(select => {
+        gearState[select.id] = select.value;
+    });
+
+    return {
+        name: document.getElementById('char-name').value,
+        number: document.getElementById('char-number').value,
+        race: document.getElementById('char-race').value,
+        class: document.getElementById('char-class').value,
+        level: document.getElementById('char-level').value,
+        floor: document.getElementById('char-floor').value,
+        avatarUrl: document.getElementById('avatar-url').value,
         
-        function handleAuthLogin() {
-            const role = document.getElementById('auth-role-select').value;
-            const email = document.getElementById('auth-email').value || 'crawler@dungeon.com';
+        strBase: document.getElementById('stat-str-base').value,
+        strEnh: document.getElementById('stat-str-enh').value,
+        conBase: document.getElementById('stat-con-base').value,
+        conEnh: document.getElementById('stat-con-enh').value,
+        dexBase: document.getElementById('stat-dex-base').value,
+        dexEnh: document.getElementById('stat-dex-enh').value,
+        intBase: document.getElementById('stat-int-base').value,
+        intEnh: document.getElementById('stat-int-enh').value,
+        chaBase: document.getElementById('stat-cha-base').value,
+        chaEnh: document.getElementById('stat-cha-enh').value,
+
+        maxHpSlots: document.getElementById('hp-max-slots').value,
+        hpCurrent: hpCurrentSlots,
+        manaCurrent: manaCurrent,
         
-            currentUser = { email, role };
+        evadeBuffs: document.getElementById('evade-buffs').value,
+        armorVal: document.getElementById('armor-val').value,
+        drBuffs: document.getElementById('dr-buffs').value,
+
+        bodySlotCounts: bodySlotCounts,
+        debuffs: debuffs,
+        buffs: buffs,
+        attacks: attacks,
+        skills: skills,
+        spells: spells,
+        items: items,
+        hotlistState: hotlistState,
+        gearState: gearState,
+        collapsedState: collapsedState
+    };
+}
+
+// 5. LOAD CHARACTER FROM SUPABASE CLOUD
+async function loadCharacterFromCloud() {
+    if (!currentUser) return;
+
+    const { data: charRecords, error } = await supabase
+        .from('characters')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+    if (error) {
+        console.error("Cloud Load Error:", error);
+        return;
+    }
+
+    if (charRecords && charRecords.length > 0) {
+        const record = charRecords[0];
+        activeCharacterId = record.id;
         
-            // Update Top Navigation Bar
-            document.getElementById('nav-user-email').innerText = email;
-            const roleBadge = document.getElementById('nav-user-role');
-            
-            if (role === 'dm') {
-                roleBadge.innerText = 'DUNGEON MASTER';
-                roleBadge.className = 'preview-badge-dm';
-                document.getElementById('dash-dm-section').style.display = 'block';
-                document.getElementById('dash-crawler-section').style.display = 'none';
-            } else {
-                roleBadge.innerText = 'CRAWLER';
-                roleBadge.className = 'preview-badge-crawler';
-                document.getElementById('dash-dm-section').style.display = 'none';
-                document.getElementById('dash-crawler-section').style.display = 'block';
-            }
-        
-            document.getElementById('top-nav-bar').style.display = 'flex';
-            switchAuthTab('dashboard');
-        }
-        
-        function handleJoinCampaign() {
-            const code = document.getElementById('dash-join-code').value.toUpperCase();
-            if (!code) {
-                alert("Please enter a campaign code.");
-                return;
-            }
-            currentCampaign = { code: code, name: `Campaign (${code})` };
-            document.getElementById('nav-campaign-name').innerText = currentCampaign.name;
-            closeAuthModal();
-        }
-        
-        function handleCreateCampaign() {
-            const title = document.getElementById('dash-campaign-title').value;
-            if (!title) {
-                alert("Please enter a campaign title.");
-                return;
-            }
-            const generatedCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-            currentCampaign = { code: generatedCode, name: `${title} [${generatedCode}]` };
-            document.getElementById('nav-campaign-name').innerText = currentCampaign.name;
-            alert(`Campaign Created! Share Code: ${generatedCode}`);
-            closeAuthModal();
-        }
-        
+        // Populate the sheet using the loaded character JSON
+        localStorage.setItem('crawler_split_attrs_data', JSON.stringify(record.character_data));
+        loadData();
+    }
+}
+    
 </script>
 </body>
 </html>
