@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Supabase JS Client library -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crawler RPG - Character Sheet</title>
@@ -1379,6 +1383,11 @@
 </div>
 
 <script>
+
+	const SUPABASE_URL = 'https://ghgtvryxqfwzznrxewaw.supabase.co';
+	const SUPABASE_ANON_KEY = 'sb_publishable_ikbKYyQYQtWQ84BFSAolaw_X1A3xDim';
+	const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     // Background Image List
     const bgImages = [
         'DCC_GN_Cover.jpg',
