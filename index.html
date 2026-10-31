@@ -2830,7 +2830,7 @@
                         out.skillBonus[key] = (out.skillBonus[key] || 0) + amount;
                     }
                 } else if (type === 'grant') {
-                    if (skill) out.grants.push({ name: skill, rank: amount, stat: stat });
+                    if (skill && amount > 0) out.grants.push({ name: skill, rank: amount, stat: stat });
                 } else if (type === 'dr') {
                     out.dr += amount;
                 } else if (type === 'evade') {
