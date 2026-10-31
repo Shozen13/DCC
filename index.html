@@ -883,6 +883,17 @@
         .spell-card .rulebook-tier b { color: var(--spell-color); }
         .rulebook-next { color: var(--text-muted); font-style: italic; }
         .rulebook-warn { color: #f59e0b; font-size: 0.8rem; }
+
+        .bonus-entry {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .bonus-entry select, .bonus-entry input { flex: 1 1 110px; min-width: 0; }
+        .bonus-entry input.bonus-skill { flex: 2 1 150px; }
+        .bonus-entry input.bonus-amount { flex: 0 1 80px; }
     </style>
 </head>
 <body>
@@ -966,6 +977,10 @@
                         <span>Total STR:</span>
                         <strong id="stat-str-total">0</strong>
                     </div>
+                    <div class="stat-total-bar" id="stat-str-gear-row" style="display: none; margin-top: 6px;">
+                        <span>Gear bonus:</span>
+                        <strong id="stat-str-gear">+0</strong>
+                    </div>
                 </div>
 
                 <!-- CON -->
@@ -987,6 +1002,10 @@
                     <div class="stat-total-bar">
                         <span>Total CON:</span>
                         <strong id="stat-con-total">0</strong>
+                    </div>
+                    <div class="stat-total-bar" id="stat-con-gear-row" style="display: none; margin-top: 6px;">
+                        <span>Gear bonus:</span>
+                        <strong id="stat-con-gear">+0</strong>
                     </div>
                 </div>
 
@@ -1010,6 +1029,10 @@
                         <span>Total DEX:</span>
                         <strong id="stat-dex-total">0</strong>
                     </div>
+                    <div class="stat-total-bar" id="stat-dex-gear-row" style="display: none; margin-top: 6px;">
+                        <span>Gear bonus:</span>
+                        <strong id="stat-dex-gear">+0</strong>
+                    </div>
                 </div>
 
                 <!-- INT -->
@@ -1032,6 +1055,10 @@
                         <span>Total INT:</span>
                         <strong id="stat-int-total">0</strong>
                     </div>
+                    <div class="stat-total-bar" id="stat-int-gear-row" style="display: none; margin-top: 6px;">
+                        <span>Gear bonus:</span>
+                        <strong id="stat-int-gear">+0</strong>
+                    </div>
                 </div>
 
                 <!-- CHA -->
@@ -1053,6 +1080,10 @@
                     <div class="stat-total-bar">
                         <span>Total CHA:</span>
                         <strong id="stat-cha-total">0</strong>
+                    </div>
+                    <div class="stat-total-bar" id="stat-cha-gear-row" style="display: none; margin-top: 6px;">
+                        <span>Gear bonus:</span>
+                        <strong id="stat-cha-gear">+0</strong>
                     </div>
                 </div>
             </div>
@@ -1242,6 +1273,7 @@
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Pick a skill from the Chapter 4 rulebook in each card: its base effect and Rank 5 / 10 / 15 upgrades update automatically when you change its rank. Custom skills still work as before.</p>
             <div id="skills-summary" class="summary-box" style="display: none;"></div>
             <div id="skills-list"></div>
+            <div id="granted-skills-box" class="summary-box" style="margin-top: 10px;"></div>
         </div>
 
         <!-- Spells Section -->
@@ -1377,15 +1409,20 @@
     function calculateAttribute(id) {
         const base = parseInt(document.getElementById(`stat-${id}-base`).value) || 0;
         const enh = parseInt(document.getElementById(`stat-${id}-enh`).value) || 0;
-        const total = base + enh;
+        const gear = getEquippedItemBonuses().stat[id] || 0;
+        const total = base + enh + gear;
         
         document.getElementById(`stat-${id}-total`).innerText = total;
+        const gearEl = document.getElementById(`stat-${id}-gear`);
+        const gearRow = document.getElementById(`stat-${id}-gear-row`);
+        if (gearEl) gearEl.innerText = gear >= 0 ? '+' + gear : String(gear);
+        if (gearRow) gearRow.style.display = gear !== 0 ? 'flex' : 'none';
         
         const mod = getModifier(total);
         document.getElementById(`mod-${id}`).innerText = '+' + mod;
         
         currentMods[id] = mod;
-        return { total, mod };
+        return { total, mod, gear };
     }
 
     function calculateSheet() {
@@ -1417,22 +1454,25 @@
         if (hpCurrentSlots > maxHpSlots) hpCurrentSlots = maxHpSlots;
         if (manaCurrent > maxMana) manaCurrent = maxMana;
 
-        // Evade Calculation: d20 + Dex Mod + Buffs
+        // Evade Calculation: d20 + Dex Mod + Buffs + Gear
         const evadeBuffs = parseInt(document.getElementById('evade-buffs').value) || 0;
-        const totalEvadeMod = dex.mod + evadeBuffs;
+        const gearEvade = getEquippedItemBonuses().evade || 0;
+        const totalEvadeMod = dex.mod + evadeBuffs + gearEvade;
         const evadeDispStr = totalEvadeMod >= 0 ? `d20 + ${totalEvadeMod}` : `d20 - ${Math.abs(totalEvadeMod)}`;
         document.getElementById('evade-total-disp').innerText = evadeDispStr;
-        document.getElementById('evade-subtext').innerText = `(d20 + DEX +${dex.mod} + Buffs ${evadeBuffs >= 0 ? '+' + evadeBuffs : evadeBuffs})`;
+        document.getElementById('evade-subtext').innerText = `(d20 + DEX +${dex.mod} + Buffs ${evadeBuffs >= 0 ? '+' + evadeBuffs : evadeBuffs}${gearEvade !== 0 ? ' + Gear ' + (gearEvade >= 0 ? '+' + gearEvade : gearEvade) : ''})`;
 
-        // Damage Resistance Calculation: Armor + Buffs
+        // Damage Resistance Calculation: Armor + Buffs + Gear
         const armorVal = parseInt(document.getElementById('armor-val').value) || 0;
         const drBuffs = parseInt(document.getElementById('dr-buffs').value) || 0;
-        const totalDR = armorVal + drBuffs;
+        const gearDR = getEquippedItemBonuses().dr || 0;
+        const totalDR = armorVal + drBuffs + gearDR;
         document.getElementById('dr-total-disp').innerText = `${totalDR} DR`;
-        document.getElementById('dr-subtext').innerText = `(Armor ${armorVal} + Buffs ${drBuffs >= 0 ? '+' + drBuffs : drBuffs})`;
+        document.getElementById('dr-subtext').innerText = `(Armor ${armorVal} + Buffs ${drBuffs >= 0 ? '+' + drBuffs : drBuffs}${gearDR !== 0 ? ' + Gear ' + (gearDR >= 0 ? '+' + gearDR : gearDR) : ''})`;
 
         updateAllAttacks();
         updateAllSkills();
+        updateGrantedSkills();
         updateAllSpells();
         updateAllItems();
         updateAllDebuffs();
@@ -1457,12 +1497,20 @@
             if (listEl) listEl.style.display = 'none';
             if (summaryEl) summaryEl.style.display = 'flex';
             if (btnEl) btnEl.innerText = '► Expand';
+            if (sectionKey === 'skills') {
+                const grantedBox = document.getElementById('granted-skills-box');
+                if (grantedBox) grantedBox.style.display = 'none';
+            }
         } else {
             if (listEl) {
                 listEl.style.display = (sectionKey === 'hotlist' || sectionKey === 'gear') ? (sectionKey === 'hotlist' ? 'grid' : 'block') : 'block';
             }
             if (summaryEl) summaryEl.style.display = 'none';
             if (btnEl) btnEl.innerText = '▼ Collapse';
+        }
+        if (sectionKey === 'skills') {
+            const grantedBox = document.getElementById('granted-skills-box');
+            if (grantedBox) grantedBox.style.display = collapsedState[sectionKey] ? 'none' : 'flex';
         }
     }
 
@@ -1898,8 +1946,7 @@
     function addBodySubSlot(key) {
         bodySlotCounts[key] = (bodySlotCounts[key] || 1) + 1;
         renderBodySlots();
-        updateGearDropdowns();
-        saveDataSilently();
+        calculateSheet();
     }
 
     function removeBodySubSlot(key, index) {
@@ -1911,8 +1958,7 @@
             bodySlotCounts[key]--;
         }
         renderBodySlots();
-        updateGearDropdowns();
-        saveDataSilently();
+        calculateSheet();
     }
 
     function addAccessorySlot(savedValue = null) {
@@ -1955,8 +2001,7 @@
         const wrapper = document.getElementById(`acc-slot-wrapper-${id}`);
         if (wrapper) wrapper.remove();
 
-        updateGearDropdowns();
-        saveDataSilently();
+        calculateSheet();
     }
 
     function getAllItems() {
@@ -2100,8 +2145,7 @@
     }
 
     function onGearChange() {
-        updateGearDropdowns();
-        saveDataSilently();
+        calculateSheet();
     }
 
     function onHotlistChange() {
@@ -2451,10 +2495,11 @@
         const statKey = document.getElementById(`skl-stat-${id}`).value;
 
         const mod = currentMods[statKey] || 0;
-        const totalBonus = rank + mod;
+        const gearBonus = getSkillBonusFor(document.getElementById(`skl-name-${id}`).value);
+        const totalBonus = rank + mod + gearBonus;
 
         document.getElementById(`skl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`skl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`;
+        document.getElementById(`skl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod}${gearBonus !== 0 ? ' + Gear ' + (gearBonus >= 0 ? '+' + gearBonus : gearBonus) : ''})`;
         renderRulebookSkill(id);
 
         toggleSkillUsedVisual(id);
@@ -2640,10 +2685,11 @@
         const statKey = document.getElementById(`spl-stat-${id}`).value;
 
         const mod = currentMods[statKey] || 0;
-        const totalBonus = rank + mod;
+        const gearBonus = getSkillBonusFor(document.getElementById(`spl-name-${id}`).value);
+        const totalBonus = rank + mod + gearBonus;
 
         document.getElementById(`spl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`spl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`;
+        document.getElementById(`spl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod}${gearBonus !== 0 ? ' + Gear ' + (gearBonus >= 0 ? '+' + gearBonus : gearBonus) : ''})`;
         renderRulebookSpell(id);
 
         toggleSpellUsedVisual(id);
@@ -2758,6 +2804,105 @@
         updateAllItems();
     }
 
+
+    /* Structured item bonuses, applied only while an item is equipped.
+       Types: stat, skill (bonus to an existing skill/spell), grant
+       (a skill/spell at a given rank), dr, evade. */
+    function getEquippedItemBonuses() {
+        const out = { stat: { str: 0, con: 0, dex: 0, int: 0, cha: 0 }, skillBonus: {}, grants: [], dr: 0, evade: 0 };
+        const equippedIds = [];
+        document.querySelectorAll('.gear-select').forEach(select => {
+            if (select.value) equippedIds.push(select.value);
+        });
+        equippedIds.forEach(itemId => {
+            const card = document.getElementById(`item-card-${itemId}`);
+            if (!card) return;
+            card.querySelectorAll('.bonus-entry').forEach(entry => {
+                const type = entry.querySelector('.bonus-type')?.value || 'stat';
+                const stat = (entry.querySelector('.bonus-stat')?.value || 'str').toLowerCase();
+                const skill = (entry.querySelector('.bonus-skill')?.value || '').trim();
+                const amount = parseInt(entry.querySelector('.bonus-amount')?.value) || 0;
+                if (type === 'stat') {
+                    if (out.stat.hasOwnProperty(stat)) out.stat[stat] += amount;
+                } else if (type === 'skill') {
+                    if (skill) {
+                        const key = skill.toLowerCase();
+                        out.skillBonus[key] = (out.skillBonus[key] || 0) + amount;
+                    }
+                } else if (type === 'grant') {
+                    if (skill) out.grants.push({ name: skill, rank: amount, stat: stat });
+                } else if (type === 'dr') {
+                    out.dr += amount;
+                } else if (type === 'evade') {
+                    out.evade += amount;
+                }
+            });
+        });
+        return out;
+    }
+
+    function getSkillBonusFor(name) {
+        if (!name) return 0;
+        return getEquippedItemBonuses().skillBonus[name.trim().toLowerCase()] || 0;
+    }
+
+    function updateGrantedSkills() {
+        const box = document.getElementById('granted-skills-box');
+        if (!box) return;
+        const grants = getEquippedItemBonuses().grants;
+        if (!grants.length) {
+            box.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No skills granted by equipped gear.</span>';
+            return;
+        }
+        let tagsHtml = '';
+        grants.forEach(g => {
+            const mod = currentMods[g.stat] || 0;
+            const bonus = g.rank + mod + getSkillBonusFor(g.name);
+            tagsHtml += `<div class="summary-tag ger"><span>${escapeHtml(g.name)}</span><span class="badge">Granted Rank ${g.rank} | Mod +${bonus}</span></div>`;
+        });
+        box.innerHTML = tagsHtml;
+    }
+
+    function addBonusEntry(itemId, data = null) {
+        const container = document.getElementById(`item-bonuses-${itemId}`);
+        if (!container) return;
+        if (container.querySelectorAll('.bonus-entry').length >= 5) return;
+        const entry = document.createElement('div');
+        entry.className = 'bonus-entry';
+        entry.innerHTML = `
+            <select class="bonus-type" onchange="calculateSheet()">
+                <option value="stat">Stat bonus</option>
+                <option value="skill">Skill bonus</option>
+                <option value="grant">Skill grant</option>
+                <option value="dr">Damage Resistance</option>
+                <option value="evade">Evade</option>
+            </select>
+            <select class="bonus-stat" onchange="calculateSheet()">
+                <option value="str">STR</option>
+                <option value="con">CON</option>
+                <option value="dex">DEX</option>
+                <option value="int">INT</option>
+                <option value="cha">CHA</option>
+            </select>
+            <input type="text" class="bonus-skill" placeholder="Skill name (skill bonus / grant)" oninput="calculateSheet()">
+            <input type="number" class="bonus-amount" value="0" oninput="calculateSheet()">
+            <button type="button" class="btn-remove-die" onclick="removeBonusEntry(this)">✕</button>
+        `;
+        container.appendChild(entry);
+        if (data) {
+            entry.querySelector('.bonus-type').value = data.type || 'stat';
+            entry.querySelector('.bonus-stat').value = data.stat || 'str';
+            entry.querySelector('.bonus-skill').value = data.skill || '';
+            entry.querySelector('.bonus-amount').value = data.amount !== undefined ? data.amount : 0;
+        }
+    }
+
+    function removeBonusEntry(btn) {
+        const entry = btn.closest('.bonus-entry');
+        if (entry) entry.remove();
+        calculateSheet();
+    }
+
     /* Inventory Management */
     function addItem(data = null) {
         let id;
@@ -2805,6 +2950,14 @@
                     <textarea id="item-notes-${id}" rows="3" placeholder="Describe stats, active effects, duration, weight, or charges..." oninput="saveDataSilently()"></textarea>
                 </div>
             </div>
+            <div class="sub-group" style="margin-top: 10px;">
+                <div class="sub-group-title item-title">
+                    <span>Bonuses (only when equipped)</span>
+                    <button type="button" class="btn-small-add" onclick="addBonusEntry(${id})">+ Add Bonus</button>
+                </div>
+                <div id="item-bonuses-${id}"></div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">Stat: use Stat + Amount. Skill bonus: use Skill name + Amount. Skill grant: use Skill name + Amount as Rank + Stat. DR / Evade: use Amount only. Max 5 bonuses per item. Bonuses apply only while this item is selected in Equipped Gear.</div>
+            </div>
         `;
 
         container.appendChild(card);
@@ -2813,6 +2966,9 @@
             document.getElementById(`item-name-${id}`).value = data.name || '';
             document.getElementById(`item-qty-${id}`).value = data.qty !== undefined ? data.qty : 1;
             document.getElementById(`item-notes-${id}`).value = data.notes || '';
+            if (data.bonuses && data.bonuses.length > 0) {
+                data.bonuses.forEach(b => addBonusEntry(id, b));
+            }
         }
 
         updateAllItems();
@@ -2864,6 +3020,7 @@
         const card = document.getElementById(`item-card-${id}`);
         if (card) card.remove();
         updateAllItems();
+        calculateSheet();
     }
 
     function updateAvatar() {
@@ -2945,11 +3102,22 @@
         const items = [];
         document.querySelectorAll('.item-card').forEach(card => {
             const id = card.id.replace('item-card-', '');
+            const bonusCard = document.getElementById(`item-card-${id}`);
+            const bonuses = [];
+            if (bonusCard) bonusCard.querySelectorAll('.bonus-entry').forEach(entry => {
+                bonuses.push({
+                    type: entry.querySelector('.bonus-type')?.value || 'stat',
+                    stat: entry.querySelector('.bonus-stat')?.value || 'str',
+                    skill: entry.querySelector('.bonus-skill')?.value || '',
+                    amount: entry.querySelector('.bonus-amount')?.value || 0
+                });
+            });
             items.push({
                 id: id,
                 name: document.getElementById(`item-name-${id}`).value,
                 qty: document.getElementById(`item-qty-${id}`).value,
-                notes: document.getElementById(`item-notes-${id}`).value
+                notes: document.getElementById(`item-notes-${id}`).value,
+                bonuses: bonuses
             });
         });
 
