@@ -1489,7 +1489,11 @@
     }
 
     function applySectionVisibility(sectionKey) {
-        const listEl = document.getElementById(`${sectionKey}-list`) || document.getElementById(`${sectionKey}-container`);
+        let listEl = document.getElementById(`${sectionKey}-list`) || document.getElementById(`${sectionKey}-container`);
+        // Inventory is special: its cards live in two places (equipped + stored)
+        // inside items-container. Hiding only items-list left equipped items
+        // visible, which made Inventory look uncollapsed.
+        if (sectionKey === 'items') listEl = document.getElementById('items-container');
         const summaryEl = document.getElementById(`${sectionKey}-summary`);
         const btnEl = document.getElementById(`btn-toggle-${sectionKey}`);
 
