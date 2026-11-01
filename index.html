@@ -911,6 +911,18 @@
         .persistent-header .ph-stat { font-size: 0.9rem; color: var(--text-muted); white-space: nowrap; }
         .persistent-header .ph-stat strong { color: var(--text-main); }
         .persistent-header button { padding: 2px 10px; }
+        .landing-screen {
+            position: fixed; inset: 0; z-index: 100;
+            background: rgba(10, 12, 20, 0.97);
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; overflow-y: auto;
+        }
+        .landing-card {
+            background: var(--panel-bg); border: 1px solid var(--panel-border);
+            border-radius: 12px; padding: 24px; max-width: 560px; width: 100%;
+            text-align: center;
+        }
+        .landing-card .btn-group { justify-content: center; flex-wrap: wrap; }
         .main-content { min-width: 0; }
         .tab-bar {
             display: flex;
@@ -966,6 +978,42 @@
     <div class="bg-track" id="bgTrack"></div>
 </div>
 <div class="bg-overlay"></div>
+
+<div class="landing-screen" id="landing-screen">
+    <div class="landing-card">
+        <h2>Dungeon Crawler Carl - Character Sheet</h2>
+        <p class="cloud-note">How are you joining today?</p>
+        <div id="landing-choices">
+            <div class="btn-group">
+                <button type="button" onclick="chooseGuest()">Continue as Guest</button>
+                <button type="button" onclick="chooseRole('player')">Log in as Player</button>
+                <button type="button" onclick="chooseRole('dm')">Log in as DM</button>
+            </div>
+            <p class="cloud-note">Guest works offline, like the sheet always has. A player loads their own crawler. A DM sees a dashboard of their campaigns, players and parties. The same account can be a player in one game and a DM in another, just pick the view you need.</p>
+        </div>
+        <div id="landing-auth" style="display: none;">
+            <div class="form-group"><label>Email</label><input type="email" id="landing-email" placeholder="you@example.com" autocomplete="email"></div>
+            <div class="form-group"><label>Password</label><input type="password" id="landing-password" placeholder="Password" autocomplete="current-password"></div>
+            <div class="btn-group">
+                <button type="button" onclick="landingSignUp()">Sign up</button>
+                <button type="button" onclick="landingLogIn()">Log in</button>
+                <button type="button" class="btn-reset" onclick="landingBack()">Back</button>
+            </div>
+            <p id="landing-status" class="cloud-note"></p>
+        </div>
+        <div id="landing-signedin" style="display: none;">
+            <p class="cloud-note" id="landing-signedin-text"></p>
+            <div class="btn-group">
+                <button type="button" onclick="chooseRole('player')">Continue as Player</button>
+                <button type="button" onclick="chooseRole('dm')">Continue as DM</button>
+                <button type="button" class="btn-reset" onclick="landingSignOut()">Sign out</button>
+            </div>
+        </div>
+        <div class="btn-group" id="landing-close-wrap" style="display: none;">
+            <button type="button" class="btn-reset" onclick="hideLanding()">Back to sheet</button>
+        </div>
+    </div>
+</div>
 
 <div class="container">
     <!-- Left Column: Profile & Attributes -->
@@ -1191,6 +1239,7 @@
         <div class="persistent-header" id="persistent-header">
             <span class="ph-name"><span id="ph-name">Unnamed Crawler</span> <span id="ph-crown" class="leader-crown" style="display: none;" title="Party Leader">👑</span> <span id="ph-number" style="color: var(--text-muted); font-weight: normal;"></span></span>
             <span class="ph-stat">HP <strong id="ph-hp">0 / 0</strong> <button type="button" onclick="adjustHpSlots(-1)">-1</button> <button type="button" onclick="adjustHpSlots(1)">+1</button></span>
+            <span class="ph-stat"><button type="button" onclick="showLanding()">Start screen</button></span>
             <span class="ph-stat">Mana <strong id="ph-mana">0 / 0</strong> <button type="button" onclick="adjustMana(-1)">-1</button> <button type="button" onclick="adjustMana(1)">+1</button></span>
         </div>
         <div class="tab-bar" id="tab-bar">
@@ -1201,6 +1250,7 @@
             <button type="button" class="tab-btn" data-tab="spells" onclick="showTab('spells')">Spells</button>
             <button type="button" class="tab-btn" data-tab="items" onclick="showTab('items')">Inventory</button>
             <button type="button" class="tab-btn" data-tab="campaign" onclick="showTab('campaign')">Campaign</button>
+            <button type="button" class="tab-btn" data-tab="dm" onclick="showTab('dm')">DM Dashboard</button>
             <button type="button" class="tab-btn" data-tab="all" onclick="showTab('all')">All</button>
         </div>
         <!-- Vitals & Defenses -->
@@ -1391,7 +1441,7 @@
         <!-- Campaign Section (Phase 3) -->
         <div class="card" id="panel-campaign">
             <h2><span>Campaign</span></h2>
-            <p class="cloud-note">Log in, save your crawler to the cloud, then join a campaign with the code your DM gave you. DM changes to a crawler appear when that player loads their crawler from the cloud.</p>
+            <p class="cloud-note">Log in, save your crawler to the cloud, then join a campaign with the code your DM gave you. When a player is signed in with a cloud crawler loaded, changes sync live: a DM heal shows on the player's sheet right away, and player changes show on the DM dashboard right away.</p>
             <div class="cloud-subhead">Account</div>
             <div class="form-group"><label>Email</label><input type="email" id="cloud-email" placeholder="you@example.com" autocomplete="email"></div>
             <div class="form-group"><label>Password</label><input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password"></div>
@@ -1417,6 +1467,16 @@
             <div id="cloud-campaign-detail"></div>
             <div id="cloud-parties"></div>
             <div id="cloud-dm-tools"></div>
+        </div>
+        <div class="card" id="panel-dm" style="display: none;">
+            <h2><span>DM Dashboard</span></h2>
+            <p class="cloud-note">Campaigns you control, with their players and parties. HP and mana here update live as players change, and your HP/mana buttons here update players live. Party creation, buffs and debuffs are still in the Campaign tab.</p>
+            <div class="btn-group">
+                <button type="button" onclick="refreshDmDashboard()">Refresh dashboard</button>
+                <button type="button" onclick="showTab('campaign')">Open Campaign tab</button>
+            </div>
+            <p id="dm-status" class="cloud-note"></p>
+            <div id="dm-dashboard"></div>
         </div>
     </div>
 </div>
@@ -1599,10 +1659,11 @@
         if (tab === 'hotlist') tab = 'vitals';
         activeTab = tab;
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-        ['vitals', 'attacks', 'gear', 'skills', 'spells', 'items', 'campaign'].forEach(p => {
+        ['vitals', 'attacks', 'gear', 'skills', 'spells', 'items', 'campaign', 'dm'].forEach(p => {
             const el = document.getElementById('panel-' + p);
             if (el) el.style.display = (tab === 'all' || tab === p) ? 'block' : 'none';
         });
+        if (tab === 'dm') refreshDmDashboard();
         saveDataSilently();
     }
 
@@ -3204,6 +3265,7 @@
 
     function saveDataSilently() {
         if (isInitialLoad) return;
+        try { if (typeof scheduleCloudAutosave === 'function') scheduleCloudAutosave(); } catch (e) {}
 
         const attacks = [];
         document.querySelectorAll('.attack-card').forEach(card => {
@@ -3694,12 +3756,12 @@
         sb.auth.getSession().then(function (res) {
             cloudUser = res.data && res.data.session ? res.data.session.user : null;
             cloudStatus(cloudUser ? ('Signed in as ' + cloudUser.email) : 'Not signed in. The sheet still works offline without an account.');
-            if (cloudUser) refreshCloudAll();
+            if (cloudUser) { refreshCloudAll(); startRealtime(); if (localStorage.getItem('player_autoload_pending') === 'create' && crawlerMode === 'player') { localStorage.removeItem('player_autoload_pending'); cloudSave(); } if (crawlerMode === 'dm') refreshDmDashboard(); }
         });
         sb.auth.onAuthStateChange(function (_event, session) {
             cloudUser = session ? session.user : null;
             cloudStatus(cloudUser ? ('Signed in as ' + cloudUser.email) : 'Signed out.');
-            if (cloudUser) refreshCloudAll();
+            if (cloudUser) { refreshCloudAll(); startRealtime(); if (localStorage.getItem('player_autoload_pending') === 'create' && crawlerMode === 'player') { localStorage.removeItem('player_autoload_pending'); cloudSave(); } if (crawlerMode === 'dm') refreshDmDashboard(); }
         });
     }
     async function cloudSignUp() {
@@ -3987,6 +4049,7 @@
         const res = await sb.from('characters').update({ data: d, updated_at: new Date().toISOString() }).eq('id', characterId);
         if (res.error) return cloudStatus('Update failed: ' + res.error.message);
         refreshCampaign();
+        try { refreshDmDashboard(); } catch (e) {}
     }
     async function dmAddCondition(characterId, kind) {
         const input = document.getElementById('dm-cond-' + characterId);
@@ -4009,9 +4072,211 @@
         await loadMyCampaigns();
         await refreshCampaign();
     }
+    /* Phase 4: landing, player auto-load, DM dashboard, realtime */
+    let crawlerMode = localStorage.getItem('crawler_mode') || null;
+    let pendingRole = null;
+    let realtimeChannel = null;
+    let applyingRemote = false;
+    let autosaveTimer = null;
+
+    function landingStatus(msg) {
+        const el = document.getElementById('landing-status');
+        if (el) el.innerText = msg || '';
+    }
+    function hideLanding() {
+        const el = document.getElementById('landing-screen');
+        if (el) el.style.display = 'none';
+    }
+    function showLanding() {
+        const el = document.getElementById('landing-screen');
+        if (!el) return;
+        el.style.display = 'flex';
+        document.getElementById('landing-choices').style.display = 'block';
+        document.getElementById('landing-auth').style.display = 'none';
+        const signed = document.getElementById('landing-signedin');
+        if (cloudUser) {
+            document.getElementById('landing-signedin-text').innerText = 'Signed in as ' + cloudUser.email;
+            signed.style.display = 'block';
+        } else {
+            signed.style.display = 'none';
+        }
+        document.getElementById('landing-close-wrap').style.display = crawlerMode ? 'block' : 'none';
+    }
+    function setMode(mode) {
+        crawlerMode = mode;
+        localStorage.setItem('crawler_mode', mode);
+    }
+    function chooseGuest() {
+        setMode('guest');
+        hideLanding();
+    }
+    function chooseRole(role) {
+        pendingRole = role;
+        if (cloudUser) { afterRoleLogin(role); return; }
+        document.getElementById('landing-choices').style.display = 'none';
+        document.getElementById('landing-signedin').style.display = 'none';
+        document.getElementById('landing-auth').style.display = 'block';
+        landingStatus('Log in as ' + (role === 'dm' ? 'DM' : 'player') + ', or sign up if you do not have an account yet.');
+    }
+    function landingBack() {
+        document.getElementById('landing-auth').style.display = 'none';
+        document.getElementById('landing-choices').style.display = 'block';
+    }
+    async function landingSignUp() {
+        if (!sb) return landingStatus('Supabase library failed to load. Reload the page and try again.');
+        const email = document.getElementById('landing-email').value.trim();
+        const password = document.getElementById('landing-password').value;
+        if (!email || !password) return landingStatus('Enter an email and a password first.');
+        const res = await sb.auth.signUp({ email: email, password: password });
+        if (res.error) return landingStatus('Sign up failed: ' + res.error.message);
+        if (!res.data.session) return landingStatus('Account created. Check your email to confirm it, then log in.');
+        cloudUser = res.data.session.user;
+        afterRoleLogin(pendingRole || 'player');
+    }
+    async function landingLogIn() {
+        if (!sb) return landingStatus('Supabase library failed to load. Reload the page and try again.');
+        const email = document.getElementById('landing-email').value.trim();
+        const password = document.getElementById('landing-password').value;
+        if (!email || !password) return landingStatus('Enter an email and a password first.');
+        const res = await sb.auth.signInWithPassword({ email: email, password: password });
+        if (res.error) return landingStatus('Log in failed: ' + res.error.message);
+        cloudUser = res.data.session.user;
+        afterRoleLogin(pendingRole || 'player');
+    }
+    async function landingSignOut() {
+        if (sb) await sb.auth.signOut();
+        cloudUser = null;
+        localStorage.removeItem('crawler_mode');
+        crawlerMode = null;
+        showLanding();
+    }
+    async function afterRoleLogin(role) {
+        setMode(role);
+        hideLanding();
+        startRealtime();
+        if (role === 'dm') {
+            refreshCloudAll();
+            showTab('dm');
+            return;
+        }
+        await playerAutoLoad();
+    }
+    async function cloudLoadSilent(id) {
+        const res = await sb.from('characters').select('id, campaign_id, data').eq('id', id).single();
+        if (res.error) { cloudStatus('Cloud load failed: ' + res.error.message); return; }
+        localStorage.setItem('crawler_split_attrs_data', JSON.stringify(res.data.data));
+        localStorage.setItem('crawler_cloud_id', res.data.id);
+        cloudCharacterId = res.data.id;
+        if (res.data.campaign_id) {
+            cloudCampaignId = res.data.campaign_id;
+            localStorage.setItem('cloud_campaign_id', cloudCampaignId);
+        }
+        location.reload();
+    }
+    async function playerAutoLoad() {
+        if (!needLogin()) return;
+        const res = await sb.from('characters').select('id, name, level, updated_at').eq('owner_id', cloudUser.id).order('updated_at', { ascending: false });
+        if (res.error) { cloudStatus('Could not list crawlers: ' + res.error.message); showTab('campaign'); return; }
+        if (!res.data.length) {
+            localStorage.removeItem('crawler_split_attrs_data');
+            localStorage.removeItem('crawler_cloud_id');
+            localStorage.removeItem('cloud_campaign_id');
+            cloudCharacterId = null; cloudCampaignId = null;
+            localStorage.setItem('player_autoload_pending', 'create');
+            location.reload();
+            return;
+        }
+        if (res.data.length === 1) { cloudLoadSilent(res.data[0].id); return; }
+        refreshCloudAll();
+        showTab('campaign');
+        cloudStatus('You have ' + res.data.length + ' crawlers. Pick one to load in My Crawlers.');
+    }
+    function scheduleCloudAutosave() {
+        if (!cloudUser || crawlerMode !== 'player' || !cloudCharacterId || applyingRemote) return;
+        if (autosaveTimer) clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(async function () {
+            try {
+                const raw = localStorage.getItem('crawler_split_attrs_data');
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                await sb.from('characters').update({ name: data.name || 'Unnamed Crawler', level: parseInt(data.level, 10) || 1, data: data, updated_at: new Date().toISOString() }).eq('id', cloudCharacterId);
+            } catch (e) {}
+        }, 800);
+    }
+    function startRealtime() {
+        if (!sb || !cloudUser) return;
+        if (realtimeChannel) { try { sb.removeChannel(realtimeChannel); } catch (e) {} }
+        realtimeChannel = sb.channel('crawler-live')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters' }, function (payload) {
+                const row = payload.new;
+                if (!row) return;
+                if (crawlerMode === 'player' && cloudCharacterId && row.id === cloudCharacterId && !applyingRemote) {
+                    applyingRemote = true;
+                    try {
+                        localStorage.setItem('crawler_split_attrs_data', JSON.stringify(row.data));
+                        loadData();
+                    } finally { applyingRemote = false; }
+                } else if (crawlerMode === 'dm') {
+                    refreshDmDashboard();
+                }
+            })
+            .subscribe();
+    }
+    function dmStatus(msg) {
+        const el = document.getElementById('dm-status');
+        if (el) el.innerText = msg || '';
+    }
+    async function refreshDmDashboard() {
+        const box = document.getElementById('dm-dashboard');
+        if (!box) return;
+        if (!cloudUser) { box.innerHTML = '<p class="cloud-note">Log in as DM from the start screen first.</p>'; return; }
+        const res = await sb.from('campaigns').select('id, name, code').eq('dm_id', cloudUser.id).order('created_at');
+        if (res.error) { box.innerHTML = '<p class="cloud-note">Could not list campaigns: ' + esc(res.error.message) + '</p>'; return; }
+        if (!res.data.length) { box.innerHTML = '<p class="cloud-note">No campaigns you control yet. Create one in the Campaign tab.</p>'; return; }
+        let htmlOut = '';
+        for (const camp of res.data) {
+            const mem = await fetchCampaignMembers(camp.id);
+            const members = mem.members || [];
+            const partiesRes = await sb.from('parties').select('id, name, leader_character_id').eq('campaign_id', camp.id).order('created_at');
+            const parties = partiesRes.data || [];
+            let partyHtml = '<p class="cloud-note">No parties yet.</p>';
+            if (parties.length) {
+                const pmAll = await sb.from('party_members').select('party_id, character_id').in('party_id', parties.map(function (p) { return p.id; }));
+                const pmMap = {};
+                (pmAll.data || []).forEach(function (r) { (pmMap[r.party_id] = pmMap[r.party_id] || []).push(r.character_id); });
+                partyHtml = parties.map(function (p) {
+                    const ids = pmMap[p.id] || [];
+                    const names = ids.map(function (id) {
+                        const m = members.find(function (x) { return x.id === id; });
+                        return m ? esc(m.name) + (id === p.leader_character_id ? ' 👑' : '') : 'Unknown';
+                    }).join(', ');
+                    return '<div class="cloud-row"><span><strong>' + esc(p.name) + '</strong> - ' + names + '</span></div>';
+                }).join('');
+            }
+            const memberHtml = members.length ? members.map(function (m) {
+                const d = m.data || {};
+                return '<div class="cloud-row"><span>' + esc(m.name) + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><span><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'hp\', -1)">HP -1</button> <button type="button" onclick="dmAdjust(\'' + m.id + '\', \'hp\', 1)">HP +1</button> <button type="button" onclick="dmAdjust(\'' + m.id + '\', \'mana\', -1)">Mana -1</button> <button type="button" onclick="dmAdjust(\'' + m.id + '\', \'mana\', 1)">Mana +1</button></span></div>';
+            }).join('') : '<p class="cloud-note">No players in this campaign yet.</p>';
+            htmlOut += '<div class="cloud-subhead">' + esc(camp.name) + ' - Code ' + esc(camp.code) + '</div><div class="cloud-subhead">Players</div>' + memberHtml + '<div class="cloud-subhead">Parties</div>' + partyHtml;
+        }
+        box.innerHTML = htmlOut;
+    }
+    function afterLoadMode() {
+        if (crawlerMode) {
+            hideLanding();
+            if (crawlerMode === 'dm') showTab('dm');
+            if (localStorage.getItem('player_autoload_pending') === 'create' && cloudUser && crawlerMode === 'player') {
+                localStorage.removeItem('player_autoload_pending');
+                cloudSave();
+            }
+            return;
+        }
+        showLanding();
+    }
+
     initCloud();
 
-    window.onload = loadData;
+    window.onload = function () { loadData(); afterLoadMode(); };
 </script>
 </body>
 </html>
