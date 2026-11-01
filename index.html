@@ -3366,6 +3366,17 @@
         reader.readAsText(file);
     }
 
+    function ensureUnarmedCombat() {
+        const hasUnarmed = Array.from(document.querySelectorAll('.skill-card')).some(card => {
+            const id = card.id.replace('skill-card-', '');
+            const el = document.getElementById(`skl-name-${id}`);
+            return el && el.value.trim().toLowerCase() === 'unarmed combat';
+        });
+        if (!hasUnarmed) {
+            addSkill({ name: 'UNARMED COMBAT', rank: 1, stat: 'str', checkType: 'Active Check', effect: '' });
+        }
+    }
+
     function loadData() {
         const saved = localStorage.getItem('crawler_split_attrs_data');
         let savedActiveTab = 'vitals';
@@ -3481,6 +3492,7 @@
             isFreshCrawler = true;
         }
 
+        ensureUnarmedCombat();
         calculateSheet();
 
         if (isFreshCrawler) {
@@ -3560,6 +3572,7 @@
         document.getElementById('avatar-placeholder').style.display = 'block';
         
         initHotlistAndGear();
+        ensureUnarmedCombat();
         calculateSheet();
 
         hpCurrentSlots = maxHpSlots;
