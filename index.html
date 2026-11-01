@@ -3768,6 +3768,18 @@
         }
         location.reload();
     }
+    async function cloudDelete(id) {
+        if (!needLogin()) return;
+        if (!confirm('Delete this crawler from the cloud? This cannot be undone.')) return;
+        const res = await sb.from('characters').delete().eq('id', id);
+        if (res.error) return cloudStatus('Delete failed: ' + res.error.message);
+        if (id === cloudCharacterId) {
+            cloudCharacterId = null;
+            localStorage.removeItem('crawler_cloud_id');
+        }
+        cloudStatus('Crawler deleted from the cloud.');
+        refreshCloudAll();
+    }
     async function refreshMyCrawlers() {
         if (!cloudUser) return;
         const res = await sb.from('characters').select('id, name, level, updated_at').eq('owner_id', cloudUser.id).order('updated_at', { ascending: false });
@@ -3776,7 +3788,7 @@
         if (!res.data.length) { box.innerHTML = '<p class="cloud-note">No crawlers in the cloud yet. Save this sheet to cloud to create one.</p>'; return; }
         box.innerHTML = res.data.map(function (c) {
             const mark = c.id === cloudCharacterId ? ' (this sheet)' : '';
-            return '<div class="cloud-row"><span>' + esc(c.name) + ' - Level ' + esc(c.level) + esc(mark) + '</span><button type="button" onclick="cloudLoad(\'' + c.id + '\')">Load</button></div>';
+            return '<div class="cloud-row"><span>' + esc(c.name) + ' - Level ' + esc(c.level) + esc(mark) + '</span><span><button type="button" onclick="cloudLoad(\'' + c.id + '\')">Load</button> <button type="button" class="btn-reset" onclick="cloudDelete(\'' + c.id + '\')">Delete</button></span></div>';
         }).join('');
     }
     function makeCode() {
