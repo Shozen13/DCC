@@ -3294,8 +3294,10 @@
 
     function loadData() {
         const saved = localStorage.getItem('crawler_split_attrs_data');
+        let savedActiveTab = 'vitals';
         if (saved) {
             const data = JSON.parse(saved);
+            if (data.activeTab) savedActiveTab = data.activeTab;
 
             if (data.bodySlotCounts) {
                 Object.keys(data.bodySlotCounts).forEach(k => {
@@ -3413,8 +3415,7 @@
         applySectionVisibility('debuffs');
         applySectionVisibility('buffs');
 
-        if (data.activeTab) showTab(data.activeTab);
-        else showTab('vitals');
+        showTab(savedActiveTab);
 
         isInitialLoad = false;
     }
