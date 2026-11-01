@@ -1166,9 +1166,8 @@
         <div class="card">
             <h2>Actions</h2>
             <div class="btn-group">
-                <button type="button" onclick="saveData()">Save Character</button>
-                <button type="button" onclick="exportCharacter()">Export JSON</button>
-                <button type="button" onclick="document.getElementById('import-file').click()">Import JSON</button>
+                <button type="button" onclick="exportCharacter()">Export Crawler</button>
+                <button type="button" onclick="document.getElementById('import-file').click()">Import Crawler</button>
                 <button type="button" class="btn-reset" onclick="openResetModal()">Clear Sheet</button>
             </div>
             <input type="file" id="import-file" accept=".json,application/json" style="display: none;" onchange="importCharacterFile(event)">
