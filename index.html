@@ -949,6 +949,14 @@
         .hp-box.filled.hp-damaged { background: #eab308; box-shadow: 0 0 8px rgba(234, 179, 8, 0.4); color: #111; }
         .hp-box.filled.hp-low { background: #f97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4); color: #fff; }
         .hp-box.filled.hp-critical { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); color: #fff; }
+
+        /* Phase 3: Campaign / cloud */
+        .leader-crown { color: #facc15; filter: drop-shadow(0 0 6px rgba(250,204,21,0.9)); animation: crownGlow 2s ease-in-out infinite; }
+        @keyframes crownGlow { 50% { filter: drop-shadow(0 0 12px rgba(250,204,21,1)); } }
+        .cloud-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--panel-border); font-size: 0.9rem; }
+        .cloud-row button { padding: 2px 8px; }
+        .cloud-subhead { margin-top: 14px; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .cloud-note { font-size: 0.8rem; color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -1181,7 +1189,7 @@
     <!-- Right Column: Vitals, Attacks, Hotlist, Gear, Skills, Spells & Inventory -->
     <div class="main-content">
         <div class="persistent-header" id="persistent-header">
-            <span class="ph-name"><span id="ph-name">Unnamed Crawler</span> <span id="ph-number" style="color: var(--text-muted); font-weight: normal;"></span></span>
+            <span class="ph-name"><span id="ph-name">Unnamed Crawler</span> <span id="ph-crown" class="leader-crown" style="display: none;" title="Party Leader">👑</span> <span id="ph-number" style="color: var(--text-muted); font-weight: normal;"></span></span>
             <span class="ph-stat">HP <strong id="ph-hp">0 / 0</strong> <button type="button" onclick="adjustHpSlots(-1)">-1</button> <button type="button" onclick="adjustHpSlots(1)">+1</button></span>
             <span class="ph-stat">Mana <strong id="ph-mana">0 / 0</strong> <button type="button" onclick="adjustMana(-1)">-1</button> <button type="button" onclick="adjustMana(1)">+1</button></span>
         </div>
@@ -1192,6 +1200,7 @@
             <button type="button" class="tab-btn" data-tab="skills" onclick="showTab('skills')">Skills</button>
             <button type="button" class="tab-btn" data-tab="spells" onclick="showTab('spells')">Spells</button>
             <button type="button" class="tab-btn" data-tab="items" onclick="showTab('items')">Inventory</button>
+            <button type="button" class="tab-btn" data-tab="campaign" onclick="showTab('campaign')">Campaign</button>
             <button type="button" class="tab-btn" data-tab="all" onclick="showTab('all')">All</button>
         </div>
         <!-- Vitals & Defenses -->
@@ -1379,6 +1388,36 @@
             </div>
         </div>
     </div>
+
+        <!-- Campaign Section (Phase 3) -->
+        <div class="card" id="panel-campaign">
+            <h2><span>Campaign</span></h2>
+            <p class="cloud-note">Log in, save your crawler to the cloud, then join a campaign with the code your DM gave you. DM changes to a crawler appear when that player loads their crawler from the cloud.</p>
+            <div class="cloud-subhead">Account</div>
+            <div class="form-group"><label>Email</label><input type="email" id="cloud-email" placeholder="you@example.com" autocomplete="email"></div>
+            <div class="form-group"><label>Password</label><input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password"></div>
+            <div class="btn-group">
+                <button type="button" onclick="cloudSignUp()">Sign up</button>
+                <button type="button" onclick="cloudLogIn()">Log in</button>
+                <button type="button" class="btn-reset" onclick="cloudLogOut()">Log out</button>
+            </div>
+            <p id="cloud-status" class="cloud-note"></p>
+            <div class="cloud-subhead">My Crawlers (cloud)</div>
+            <div class="btn-group">
+                <button type="button" onclick="cloudSave()">Save this sheet to cloud</button>
+                <button type="button" onclick="refreshCloudAll()">Refresh</button>
+            </div>
+            <div id="cloud-crawlers"></div>
+            <div class="cloud-subhead">Campaign</div>
+            <div class="form-group"><label>New campaign name (DM only)</label><input type="text" id="cloud-new-campaign" placeholder="e.g. Floor 1 - The Beginning"></div>
+            <button type="button" onclick="createCampaign()">Create campaign</button>
+            <div class="form-group" style="margin-top: 10px;"><label>Join with a code</label><input type="text" id="cloud-join-code" placeholder="e.g. K7Q2XA"></div>
+            <button type="button" onclick="joinCampaign()">Join campaign with this crawler</button>
+            <div id="cloud-campaigns"></div>
+            <div id="cloud-campaign-detail"></div>
+            <div id="cloud-parties"></div>
+            <div id="cloud-dm-tools"></div>
+        </div>
 </div>
 
 <!-- Reset Modal -->
@@ -1393,6 +1432,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     // Background Image List
     const bgImages = [
@@ -1558,7 +1598,7 @@
         if (tab === 'hotlist') tab = 'vitals';
         activeTab = tab;
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-        ['vitals', 'attacks', 'gear', 'skills', 'spells', 'items'].forEach(p => {
+        ['vitals', 'attacks', 'gear', 'skills', 'spells', 'items', 'campaign'].forEach(p => {
             const el = document.getElementById('panel-' + p);
             if (el) el.style.display = (tab === 'all' || tab === p) ? 'block' : 'none';
         });
@@ -3597,6 +3637,354 @@
 
         closeResetModal();
     }
+
+
+    /* Phase 3: Supabase auth, cloud sync, campaigns, parties, DM tools */
+    const SUPABASE_URL = "https://pcogpowectjamqwppzgq.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_cRw8dcqNcT8SAtbCEdme6A_3VYkJl1h";
+    let sb = null;
+    let cloudUser = null;
+    let cloudCharacterId = localStorage.getItem('crawler_cloud_id') || null;
+    let cloudCampaignId = localStorage.getItem('cloud_campaign_id') || null;
+    let cloudCampaignsCache = [];
+
+    function esc(s) {
+        return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+        });
+    }
+    function cloudStatus(msg) {
+        const el = document.getElementById('cloud-status');
+        if (el) el.innerText = msg || '';
+    }
+    function getSheetData() {
+        try { saveDataSilently(); } catch (e) {}
+        const raw = localStorage.getItem('crawler_split_attrs_data');
+        return raw ? JSON.parse(raw) : null;
+    }
+    function baseStatTotal(d) {
+        if (!d) return 0;
+        return ['strBase', 'conBase', 'dexBase', 'intBase', 'chaBase'].reduce(function (sum, k) {
+            return sum + (parseInt(d[k], 10) || 0);
+        }, 0);
+    }
+    function hpSlotsText(d) {
+        if (!d) return '?';
+        return (d.hpCurrent === null || d.hpCurrent === undefined ? '?' : d.hpCurrent) + ' / 10 slots';
+    }
+    function needLogin() {
+        if (!sb) { cloudStatus('Supabase library failed to load. Check your connection and reload the page.'); return false; }
+        if (!cloudUser) { cloudStatus('Log in first, in the Account section above.'); return false; }
+        return true;
+    }
+    function initCloud() {
+        if (!window.supabase || !window.supabase.createClient) {
+            cloudStatus('Supabase library failed to load. Check your connection and reload the page.');
+            return;
+        }
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        sb.auth.getSession().then(function (res) {
+            cloudUser = res.data && res.data.session ? res.data.session.user : null;
+            cloudStatus(cloudUser ? ('Signed in as ' + cloudUser.email) : 'Not signed in. The sheet still works offline without an account.');
+            if (cloudUser) refreshCloudAll();
+        });
+        sb.auth.onAuthStateChange(function (_event, session) {
+            cloudUser = session ? session.user : null;
+            cloudStatus(cloudUser ? ('Signed in as ' + cloudUser.email) : 'Signed out.');
+            if (cloudUser) refreshCloudAll();
+        });
+    }
+    async function cloudSignUp() {
+        if (!sb) return cloudStatus('Supabase library failed to load. Reload the page and try again.');
+        const email = document.getElementById('cloud-email').value.trim();
+        const password = document.getElementById('cloud-password').value;
+        if (!email || !password) return cloudStatus('Enter an email and a password first.');
+        const res = await sb.auth.signUp({ email: email, password: password });
+        if (res.error) return cloudStatus('Sign up failed: ' + res.error.message);
+        cloudStatus(res.data.session ? ('Signed in as ' + email) : 'Account created. Check your email to confirm it, then log in.');
+    }
+    async function cloudLogIn() {
+        if (!sb) return cloudStatus('Supabase library failed to load. Reload the page and try again.');
+        const email = document.getElementById('cloud-email').value.trim();
+        const password = document.getElementById('cloud-password').value;
+        if (!email || !password) return cloudStatus('Enter an email and a password first.');
+        const res = await sb.auth.signInWithPassword({ email: email, password: password });
+        if (res.error) return cloudStatus('Log in failed: ' + res.error.message);
+        cloudStatus('Signed in as ' + email);
+    }
+    async function cloudLogOut() {
+        if (sb) await sb.auth.signOut();
+        cloudUser = null;
+        document.getElementById('cloud-crawlers').innerHTML = '';
+        document.getElementById('cloud-campaigns').innerHTML = '';
+        document.getElementById('cloud-campaign-detail').innerHTML = '';
+        document.getElementById('cloud-parties').innerHTML = '';
+        document.getElementById('cloud-dm-tools').innerHTML = '';
+        cloudStatus('Signed out.');
+    }
+    async function cloudSave() {
+        if (!needLogin()) return null;
+        const data = getSheetData();
+        if (!data) return cloudStatus('Nothing to save yet. Fill in your crawler first.');
+        const name = data.name || 'Unnamed Crawler';
+        const level = parseInt(data.level, 10) || 1;
+        let res;
+        if (cloudCharacterId) {
+            res = await sb.from('characters').update({ name: name, level: level, data: data, updated_at: new Date().toISOString() }).eq('id', cloudCharacterId).select('id').single();
+        } else {
+            res = await sb.from('characters').insert({ owner_id: cloudUser.id, name: name, level: level, data: data }).select('id').single();
+        }
+        if (res.error) return cloudStatus('Cloud save failed: ' + res.error.message);
+        cloudCharacterId = res.data.id;
+        localStorage.setItem('crawler_cloud_id', cloudCharacterId);
+        cloudStatus('Saved to cloud: ' + name);
+        refreshCloudAll();
+        return cloudCharacterId;
+    }
+    async function cloudLoad(id) {
+        if (!needLogin()) return;
+        if (!confirm('Loading will replace the sheet on this device with the cloud version. Continue?')) return;
+        const res = await sb.from('characters').select('id, campaign_id, data').eq('id', id).single();
+        if (res.error) return cloudStatus('Cloud load failed: ' + res.error.message);
+        localStorage.setItem('crawler_split_attrs_data', JSON.stringify(res.data.data));
+        localStorage.setItem('crawler_cloud_id', res.data.id);
+        cloudCharacterId = res.data.id;
+        if (res.data.campaign_id) {
+            cloudCampaignId = res.data.campaign_id;
+            localStorage.setItem('cloud_campaign_id', cloudCampaignId);
+        }
+        location.reload();
+    }
+    async function refreshMyCrawlers() {
+        if (!cloudUser) return;
+        const res = await sb.from('characters').select('id, name, level, updated_at').eq('owner_id', cloudUser.id).order('updated_at', { ascending: false });
+        const box = document.getElementById('cloud-crawlers');
+        if (res.error) { box.innerHTML = '<p class="cloud-note">Could not list crawlers: ' + esc(res.error.message) + '</p>'; return; }
+        if (!res.data.length) { box.innerHTML = '<p class="cloud-note">No crawlers in the cloud yet. Save this sheet to cloud to create one.</p>'; return; }
+        box.innerHTML = res.data.map(function (c) {
+            const mark = c.id === cloudCharacterId ? ' (this sheet)' : '';
+            return '<div class="cloud-row"><span>' + esc(c.name) + ' - Level ' + esc(c.level) + esc(mark) + '</span><button type="button" onclick="cloudLoad(\'' + c.id + '\')">Load</button></div>';
+        }).join('');
+    }
+    function makeCode() {
+        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        let out = '';
+        for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+        return out;
+    }
+    async function createCampaign() {
+        if (!needLogin()) return;
+        const name = document.getElementById('cloud-new-campaign').value.trim();
+        if (!name) return cloudStatus('Give the campaign a name first.');
+        let res = null;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            res = await sb.from('campaigns').insert({ name: name, code: makeCode(), dm_id: cloudUser.id }).select('id, code').single();
+            if (!res.error) break;
+        }
+        if (res.error) return cloudStatus('Campaign creation failed: ' + res.error.message);
+        cloudCampaignId = res.data.id;
+        localStorage.setItem('cloud_campaign_id', cloudCampaignId);
+        cloudStatus('Campaign created. Share this code with your players: ' + res.data.code);
+        document.getElementById('cloud-new-campaign').value = '';
+        refreshCloudAll();
+    }
+    async function joinCampaign() {
+        if (!needLogin()) return;
+        const code = document.getElementById('cloud-join-code').value.trim().toUpperCase();
+        if (!code) return cloudStatus('Enter a campaign code first.');
+        let id = cloudCharacterId;
+        if (!id) {
+            id = await cloudSave();
+            if (!id) return;
+        }
+        const res = await sb.rpc('join_campaign_by_code', { p_code: code, p_character_id: id });
+        if (res.error) return cloudStatus('Join failed: ' + res.error.message);
+        cloudCampaignId = res.data;
+        localStorage.setItem('cloud_campaign_id', cloudCampaignId);
+        cloudStatus('Joined the campaign. Your DM can now see and edit this crawler.');
+        refreshCloudAll();
+    }
+    async function loadMyCampaigns() {
+        if (!cloudUser) return;
+        const dmRes = await sb.from('campaigns').select('id, name, code, dm_id').eq('dm_id', cloudUser.id);
+        let list = dmRes.data || [];
+        const myChars = await sb.from('characters').select('id').eq('owner_id', cloudUser.id);
+        const charIds = (myChars.data || []).map(function (c) { return c.id; });
+        if (charIds.length) {
+            const cc = await sb.from('campaign_characters').select('campaign_id').in('character_id', charIds);
+            const ids = Array.from(new Set((cc.data || []).map(function (r) { return r.campaign_id; })));
+            if (ids.length) {
+                const camp = await sb.from('campaigns').select('id, name, code, dm_id').in('id', ids);
+                (camp.data || []).forEach(function (c) {
+                    if (!list.some(function (x) { return x.id === c.id; })) list.push(c);
+                });
+            }
+        }
+        cloudCampaignsCache = list;
+        const box = document.getElementById('cloud-campaigns');
+        if (!list.length) { box.innerHTML = '<p class="cloud-note">No campaigns yet. Create one as DM, or join one with a code.</p>'; return; }
+        box.innerHTML = list.map(function (c) {
+            const role = c.dm_id === cloudUser.id ? 'DM' : 'Member';
+            const sel = c.id === cloudCampaignId ? ' (selected)' : '';
+            return '<div class="cloud-row"><span>' + esc(c.name) + ' - ' + role + ' - Code ' + esc(c.code) + esc(sel) + '</span><button type="button" onclick="selectCampaign(\'' + c.id + '\')">Select</button></div>';
+        }).join('');
+    }
+    function selectCampaign(id) {
+        cloudCampaignId = id;
+        localStorage.setItem('cloud_campaign_id', id);
+        refreshCampaign();
+    }
+    async function fetchCampaignMembers(campaignId) {
+        const cc = await sb.from('campaign_characters').select('character_id, characters(id, name, level, data, owner_id)').eq('campaign_id', campaignId);
+        if (cc.error) return { error: cc.error };
+        return { members: (cc.data || []).map(function (r) { return r.characters; }).filter(Boolean) };
+    }
+    async function refreshCampaign() {
+        const detail = document.getElementById('cloud-campaign-detail');
+        const partiesBox = document.getElementById('cloud-parties');
+        const dmBox = document.getElementById('cloud-dm-tools');
+        detail.innerHTML = ''; partiesBox.innerHTML = ''; dmBox.innerHTML = '';
+        document.getElementById('ph-crown').style.display = 'none';
+        if (!cloudUser || !cloudCampaignId) {
+            detail.innerHTML = '<p class="cloud-note">Select a campaign above to see its parties and members.</p>';
+            return;
+        }
+        const camp = cloudCampaignsCache.find(function (c) { return c.id === cloudCampaignId; });
+        const isDm = camp && camp.dm_id === cloudUser.id;
+        detail.innerHTML = '<p><strong>' + esc(camp ? camp.name : 'Campaign') + '</strong> - ' + (isDm ? 'You are the DM' : 'Member') + (camp ? ' - Code ' + esc(camp.code) : '') + '</p>';
+        const mem = await fetchCampaignMembers(cloudCampaignId);
+        if (mem.error) { detail.innerHTML += '<p class="cloud-note">Could not load members: ' + esc(mem.error.message) + '</p>'; return; }
+        const members = mem.members;
+        const partiesRes = await sb.from('parties').select('id, name, leader_character_id').eq('campaign_id', cloudCampaignId).order('created_at');
+        const parties = partiesRes.data || [];
+        const myPartyIds = [];
+        if (cloudCharacterId) {
+            const pm = await sb.from('party_members').select('party_id').eq('character_id', cloudCharacterId);
+            (pm.data || []).forEach(function (r) { myPartyIds.push(r.party_id); });
+        }
+        const myParties = parties.filter(function (p) { return myPartyIds.indexOf(p.id) !== -1; });
+        if (myParties.length) {
+            let html = '<div class="cloud-subhead">My parties</div>';
+            for (const p of myParties) {
+                const pm = await sb.from('party_members').select('character_id, characters(id, name, level, data)').eq('party_id', p.id);
+                const roster = (pm.data || []).map(function (r) { return r.characters; }).filter(Boolean);
+                const leader = roster.find(function (m) { return m.id === p.leader_character_id; });
+                const iAmLeader = p.leader_character_id === cloudCharacterId;
+                if (iAmLeader) document.getElementById('ph-crown').style.display = 'inline';
+                html += '<p><strong>' + esc(p.name) + '</strong>' + (leader ? ' - Leader: ' + esc(leader.name) + (iAmLeader ? ' 👑 (you)' : ' 👑') : '') + '</p>';
+                html += roster.map(function (m) {
+                    return '<div class="cloud-row"><span>' + esc(m.name) + ' - Level ' + esc(m.level) + ' - HP ' + esc(hpSlotsText(m.data)) + (m.id === p.leader_character_id ? ' 👑' : '') + '</span></div>';
+                }).join('');
+                if (iAmLeader) {
+                    html += '<div class="form-group"><label>Party name (you are the leader, you can change it)</label><input type="text" id="party-name-' + p.id + '" value="' + esc(p.name) + '"></div><button type="button" onclick="renameParty(\'' + p.id + '\')">Save party name</button>';
+                }
+            }
+            partiesBox.innerHTML = html;
+        } else {
+            partiesBox.innerHTML = '<p class="cloud-note">You are not in a party in this campaign yet. Your DM will put you in one.</p>';
+        }
+        if (isDm) {
+            let html = '<div class="cloud-subhead">DM tools - members</div><p class="cloud-note">Damage and healing change health slots. Buffs and debuffs are added to that crawler and show when they load it from the cloud.</p>';
+            html += members.map(function (m) {
+                return '<div class="cloud-row"><span>' + esc(m.name) + ' - Level ' + esc(m.level) + ' - HP ' + esc(hpSlotsText(m.data)) + ' - Mana ' + esc(m.data && m.data.manaCurrent !== undefined ? m.data.manaCurrent : '?') + '</span></div>' +
+                    '<div class="btn-group" style="margin-bottom: 6px;"><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'hp\', -1)">HP -1</button><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'hp\', 1)">HP +1</button><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'mana\', -1)">Mana -1</button><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'mana\', 1)">Mana +1</button></div>' +
+                    '<div class="form-group"><label>Buff / debuff for ' + esc(m.name) + '</label><input type="text" id="dm-cond-' + m.id + '" placeholder="e.g. Blessed, Poisoned"></div>' +
+                    '<div class="btn-group" style="margin-bottom: 12px;"><button type="button" onclick="dmAddCondition(\'' + m.id + '\', \'buff\')">Add buff</button><button type="button" onclick="dmAddCondition(\'' + m.id + '\', \'debuff\')">Add debuff</button></div>';
+            }).join('');
+            html += '<div class="cloud-subhead">DM tools - create a party</div><p class="cloud-note">Tick the players, then confirm. The leader is the player with the highest combined base stat total, and the party name stays even if the leader later changes.</p>';
+            html += members.map(function (m) {
+                return '<label style="display: block; font-size: 0.9rem;"><input type="checkbox" class="party-check" value="' + m.id + '"> ' + esc(m.name) + ' (base total ' + baseStatTotal(m.data) + ')</label>';
+            }).join('');
+            html += '<div style="margin-top: 8px;"><button type="button" onclick="createParty()">Confirm party</button></div>';
+            html += '<div class="cloud-subhead">DM tools - parties</div>';
+            html += parties.map(function (p) {
+                const leader = members.find(function (m) { return m.id === p.leader_character_id; });
+                return '<div class="cloud-row"><span>' + esc(p.name) + (leader ? ' - Leader: ' + esc(leader.name) + ' 👑' : ' - No leader yet') + '</span><span><button type="button" onclick="recalcLeader(\'' + p.id + '\')">Recalculate leader</button> <button type="button" class="btn-reset" onclick="deleteParty(\'' + p.id + '\')">Delete</button></span></div>';
+            }).join('') || '<p class="cloud-note">No parties yet.</p>';
+            dmBox.innerHTML = html;
+        }
+    }
+    async function renameParty(partyId) {
+        const name = document.getElementById('party-name-' + partyId).value.trim();
+        if (!name) return cloudStatus('Give the party a name first.');
+        const res = await sb.from('parties').update({ name: name }).eq('id', partyId);
+        if (res.error) return cloudStatus('Rename failed: ' + res.error.message);
+        cloudStatus('Party renamed to ' + name);
+        refreshCampaign();
+    }
+    async function createParty() {
+        if (!needLogin() || !cloudCampaignId) return cloudStatus('Select a campaign first.');
+        const ids = Array.from(document.querySelectorAll('.party-check:checked')).map(function (c) { return c.value; });
+        if (!ids.length) return cloudStatus('Tick at least one player for the party.');
+        const res = await sb.from('characters').select('id, data').in('id', ids);
+        if (res.error) return cloudStatus('Could not read party members: ' + res.error.message);
+        let leaderId = ids[0]; let best = -1;
+        res.data.forEach(function (c) {
+            const total = baseStatTotal(c.data);
+            if (total > best) { best = total; leaderId = c.id; }
+        });
+        const party = await sb.from('parties').insert({ campaign_id: cloudCampaignId, name: 'Unnamed Party', leader_character_id: leaderId }).select('id').single();
+        if (party.error) return cloudStatus('Party creation failed: ' + party.error.message);
+        const rows = ids.map(function (id) { return { party_id: party.data.id, character_id: id }; });
+        const pm = await sb.from('party_members').insert(rows);
+        if (pm.error) return cloudStatus('Party created, but adding members failed: ' + pm.error.message);
+        cloudStatus('Party created. Its leader is prompted to name it in their own Campaign panel.');
+        refreshCampaign();
+    }
+    async function recalcLeader(partyId) {
+        const pm = await sb.from('party_members').select('character_id, characters(id, data)').eq('party_id', partyId);
+        if (pm.error) return cloudStatus('Could not read party: ' + pm.error.message);
+        let leaderId = null; let best = -1;
+        (pm.data || []).forEach(function (r) {
+            if (!r.characters) return;
+            const total = baseStatTotal(r.characters.data);
+            if (total > best) { best = total; leaderId = r.characters.id; }
+        });
+        if (!leaderId) return cloudStatus('Party has no members to choose a leader from.');
+        const res = await sb.from('parties').update({ leader_character_id: leaderId }).eq('id', partyId);
+        if (res.error) return cloudStatus('Leader update failed: ' + res.error.message);
+        cloudStatus('Leader recalculated. The party name stays as it was; the new leader can change it.');
+        refreshCampaign();
+    }
+    async function deleteParty(partyId) {
+        if (!confirm('Delete this party? Its members stay in the campaign.')) return;
+        await sb.from('party_members').delete().eq('party_id', partyId);
+        const res = await sb.from('parties').delete().eq('id', partyId);
+        if (res.error) return cloudStatus('Delete failed: ' + res.error.message);
+        refreshCampaign();
+    }
+    async function dmAdjust(characterId, field, delta) {
+        const row = await sb.from('characters').select('id, data').eq('id', characterId).single();
+        if (row.error) return cloudStatus('Could not load that crawler: ' + row.error.message);
+        const d = row.data.data || {};
+        if (field === 'hp') d.hpCurrent = Math.max(0, Math.min(10, (parseInt(d.hpCurrent, 10) || 0) + delta));
+        else d.manaCurrent = Math.max(0, (parseInt(d.manaCurrent, 10) || 0) + delta);
+        const res = await sb.from('characters').update({ data: d, updated_at: new Date().toISOString() }).eq('id', characterId);
+        if (res.error) return cloudStatus('Update failed: ' + res.error.message);
+        refreshCampaign();
+    }
+    async function dmAddCondition(characterId, kind) {
+        const input = document.getElementById('dm-cond-' + characterId);
+        const name = input ? input.value.trim() : '';
+        if (!name) return cloudStatus('Type a buff or debuff name first.');
+        const row = await sb.from('characters').select('id, data').eq('id', characterId).single();
+        if (row.error) return cloudStatus('Could not load that crawler: ' + row.error.message);
+        const d = row.data.data || {};
+        const key = kind === 'buff' ? 'buffs' : 'debuffs';
+        if (!Array.isArray(d[key])) d[key] = [];
+        d[key].push({ name: name, notes: 'Added by DM' });
+        const res = await sb.from('characters').update({ data: d, updated_at: new Date().toISOString() }).eq('id', characterId);
+        if (res.error) return cloudStatus('Update failed: ' + res.error.message);
+        if (input) input.value = '';
+        refreshCampaign();
+    }
+    async function refreshCloudAll() {
+        if (!cloudUser) return;
+        await refreshMyCrawlers();
+        await loadMyCampaigns();
+        await refreshCampaign();
+    }
+    initCloud();
 
     window.onload = loadData;
 </script>
