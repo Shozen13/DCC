@@ -3866,8 +3866,8 @@
         if (myParties.length) {
             let html = '<div class="cloud-subhead">My parties</div>';
             for (const p of myParties) {
-                const pm = await sb.from('party_members').select('character_id, characters(id, name, level, data)').eq('party_id', p.id);
-                const roster = (pm.data || []).map(function (r) { return r.characters; }).filter(Boolean);
+                const rosterRes = await sb.rpc('party_roster', { p_party_id: p.id });
+                const roster = (rosterRes.data || []).map(function (r) { return { id: r.character_id, name: r.name, level: r.level, data: { hpCurrent: r.hp_slots, manaCurrent: r.mana_current } }; });
                 const leader = roster.find(function (m) { return m.id === p.leader_character_id; });
                 const iAmLeader = p.leader_character_id === cloudCharacterId;
                 if (iAmLeader) document.getElementById('ph-crown').style.display = 'inline';
