@@ -1167,8 +1167,11 @@
             <h2>Actions</h2>
             <div class="btn-group">
                 <button type="button" onclick="saveData()">Save Character</button>
+                <button type="button" onclick="exportCharacter()">Export JSON</button>
+                <button type="button" onclick="document.getElementById('import-file').click()">Import JSON</button>
                 <button type="button" class="btn-reset" onclick="openResetModal()">Clear Sheet</button>
             </div>
+            <input type="file" id="import-file" accept=".json,application/json" style="display: none;" onchange="importCharacterFile(event)">
             <p id="save-status" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
         </div>
     </div>
@@ -3302,6 +3305,68 @@
             collapsedState: collapsedState
         };
         localStorage.setItem('crawler_split_attrs_data', JSON.stringify(data));
+    }
+
+    function parseCharacterImport(text) {
+        let parsed;
+        try {
+            parsed = JSON.parse(text);
+        } catch (e) {
+            return { ok: false, error: 'That file is not valid JSON.' };
+        }
+        const character = (parsed && parsed.character && typeof parsed.character === 'object') ? parsed.character : parsed;
+        if (!character || typeof character !== 'object' || Array.isArray(character)) {
+            return { ok: false, error: 'That file does not look like a crawler character.' };
+        }
+        const looksLikeCharacter = character.name !== undefined || character.attacks !== undefined || character.skills !== undefined || character.spells !== undefined || character.items !== undefined || character.strBase !== undefined;
+        if (!looksLikeCharacter) {
+            return { ok: false, error: 'That file does not look like a crawler character.' };
+        }
+        return { ok: true, character: character };
+    }
+
+    function exportCharacter() {
+        saveDataSilently();
+        const saved = localStorage.getItem('crawler_split_attrs_data');
+        if (!saved) {
+            alert('Nothing to export yet. Save a character first.');
+            return;
+        }
+        const data = JSON.parse(saved);
+        const payload = { format: 'crawler-sheet', version: 1, exportedAt: new Date().toISOString(), character: data };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const name = (data.name || 'crawler').trim().replace(/[^a-zA-Z0-9-_]+/g, '-').replace(/^-+|-+$/g, '') || 'crawler';
+        a.href = url;
+        a.download = name + '-crawler.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        const status = document.getElementById('save-status');
+        if (status) {
+            status.innerText = 'Character exported as JSON!';
+            setTimeout(() => status.innerText = '', 2000);
+        }
+    }
+
+    function importCharacterFile(event) {
+        const file = event.target.files && event.target.files[0];
+        event.target.value = '';
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function() {
+            const result = parseCharacterImport(reader.result);
+            if (!result.ok) {
+                alert(result.error);
+                return;
+            }
+            if (!confirm('Importing will replace your current character. Continue?')) return;
+            localStorage.setItem('crawler_split_attrs_data', JSON.stringify(result.character));
+            location.reload();
+        };
+        reader.readAsText(file);
     }
 
     function loadData() {
