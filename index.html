@@ -1185,7 +1185,6 @@
         <div class="tab-bar" id="tab-bar">
             <button type="button" class="tab-btn active" data-tab="vitals" onclick="showTab('vitals')">Vitals</button>
             <button type="button" class="tab-btn" data-tab="attacks" onclick="showTab('attacks')">Attacks</button>
-            <button type="button" class="tab-btn" data-tab="hotlist" onclick="showTab('hotlist')">Hotlist</button>
             <button type="button" class="tab-btn" data-tab="gear" onclick="showTab('gear')">Gear</button>
             <button type="button" class="tab-btn" data-tab="skills" onclick="showTab('skills')">Skills</button>
             <button type="button" class="tab-btn" data-tab="spells" onclick="showTab('spells')">Spells</button>
@@ -1278,6 +1277,16 @@
             </div>
             <div id="buffs-summary" class="summary-box" style="display: none;"></div>
             <div id="buffs-list"></div>
+
+            <!-- Hotlist Section (moved into Vitals: combat page) -->
+            <div class="sub-section-header" style="color: var(--hotlist-color); border-color: rgba(245, 158, 11, 0.3);">
+                <span>Hotlist</span>
+                <div class="header-actions">
+                    <button type="button" class="btn-toggle" id="btn-toggle-hotlist" onclick="toggleSection('hotlist')">▼ Collapse</button>
+                </div>
+            </div>
+            <div id="hotlist-summary" class="summary-box" style="display: none;"></div>
+            <div id="hotlist-container" class="hotlist-grid"></div>
         </div>
 
         <!-- Attacks Section -->
@@ -1291,18 +1300,6 @@
             </h2>
             <div id="attacks-summary" class="summary-box" style="display: none;"></div>
             <div id="attacks-list"></div>
-        </div>
-
-        <!-- Hotlist Section -->
-        <div class="card" id="panel-hotlist">
-            <h2 style="color: var(--hotlist-color);">
-                <span>Hotlist</span>
-                <div class="header-actions">
-                    <button type="button" class="btn-toggle" id="btn-toggle-hotlist" onclick="toggleSection('hotlist')">▼ Collapse</button>
-                </div>
-            </h2>
-            <div id="hotlist-summary" class="summary-box" style="display: none;"></div>
-            <div id="hotlist-container" class="hotlist-grid"></div>
         </div>
 
         <!-- Equipped Gear Section -->
@@ -1555,9 +1552,10 @@
     let activeTab = 'vitals';
 
     function showTab(tab) {
+        if (tab === 'hotlist') tab = 'vitals';
         activeTab = tab;
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-        ['vitals', 'attacks', 'hotlist', 'gear', 'skills', 'spells', 'items'].forEach(p => {
+        ['vitals', 'attacks', 'gear', 'skills', 'spells', 'items'].forEach(p => {
             const el = document.getElementById('panel-' + p);
             if (el) el.style.display = (tab === 'all' || tab === p) ? 'block' : 'none';
         });
@@ -3375,6 +3373,7 @@
         if (saved) {
             const data = JSON.parse(saved);
             if (data.activeTab) savedActiveTab = data.activeTab;
+            if (savedActiveTab === 'hotlist') savedActiveTab = 'vitals';
 
             if (data.bodySlotCounts) {
                 Object.keys(data.bodySlotCounts).forEach(k => {
