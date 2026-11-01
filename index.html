@@ -1527,14 +1527,17 @@
                 <p class="cloud-note">Same as a loot box, plus an achievement name, message, and optional sound clip. The achievement appears in the player's Achievements tab once the box is opened.</p>
                 <div class="form-group"><label>Achievement name *</label><input type="text" id="ach-name" placeholder="e.g. First Blood"></div>
                 <div class="form-group"><label>Message *</label><textarea id="ach-message" placeholder="What the player did, and what this is for"></textarea></div>
+                <label class="player-check-label"><input type="checkbox" id="ach-no-box" onchange="toggleAchBoxFields()"> No loot box (achievement only, message only, no reward)</label>
                 <div class="form-group"><label>Sound clip (optional)</label><select id="ach-sound"><option value="">No sound</option><option value="new_achievement.mp3">New Achievement</option><option value="sultrynewachievement.mp3">Sultry New Achievement</option></select></div>
                 <div class="form-group"><label>Campaign</label><select id="ach-campaign" onchange="refreshAchPlayers()"></select></div>
                 <div class="form-group"><label>Players</label><div id="ach-players"></div></div>
+                <div id="ach-box-fields">
                 <div class="form-group"><label>Loot Box Name *</label><input type="text" id="ach-box-name" placeholder="e.g. Goblin King's Hoard"></div>
                 <div class="form-group"><label>Loot Box Grade *</label><select id="ach-box-grade"><option value="">Select grade</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Legendary</option><option>Celestial</option></select></div>
                 <div class="cloud-subhead">Items in this box</div>
                 <div id="ach-items"></div>
                 <div class="btn-group"><button type="button" onclick="addDmItemRow('ach-items')">Add item</button></div>
+                </div>
                 <div class="btn-group"><button type="button" onclick="sendAchievement()">Send achievement</button></div>
                 <p id="ach-status" class="cloud-note"></p>
             </div>
@@ -4289,8 +4292,9 @@
         realtimeChannel = sb.channel('crawler-live')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'loot_boxes' }, function (payload) {
                 if (crawlerMode === 'player' && payload.new && payload.new.recipient_character_id === cloudCharacterId) {
-                    lootStatus('New loot box received!');
+                    lootStatus(payload.new.status === 'opened' && payload.new.is_achievement ? 'New achievement received!' : 'New loot box received!');
                     refreshLoot();
+                    refreshAchPlayerList();
                 }
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters' }, function (payload) {
@@ -4510,6 +4514,13 @@
         if (err) return boxStatus('Send failed: ' + err.message + ' (if this is a new site version, run supabase_loot_v2.sql in Supabase first.)');
         boxStatus('Loot box sent to ' + playerIds.length + ' player(s).');
     }
+    function toggleAchBoxFields() {
+        const noBox = document.getElementById('ach-no-box').checked;
+        const fields = document.getElementById('ach-box-fields');
+        if (fields) fields.style.display = noBox ? 'none' : '';
+        const soundGroup = document.getElementById('ach-sound').closest('.form-group');
+        if (soundGroup) soundGroup.style.display = noBox ? 'none' : '';
+    }
     async function sendAchievement() {
         if (!needLogin()) return;
         const campaignId = document.getElementById('ach-campaign').value;
@@ -4517,17 +4528,18 @@
         const name = document.getElementById('ach-name').value.trim();
         const message = document.getElementById('ach-message').value.trim();
         const sound = document.getElementById('ach-sound').value;
-        const boxName = document.getElementById('ach-box-name').value.trim();
-        const boxGrade = document.getElementById('ach-box-grade').value;
-        const items = collectDmItems('ach-items');
+        const noBox = document.getElementById('ach-no-box').checked;
+        const boxName = noBox ? '' : document.getElementById('ach-box-name').value.trim();
+        const boxGrade = noBox ? '' : document.getElementById('ach-box-grade').value;
+        const items = noBox ? [] : collectDmItems('ach-items');
         if (!name) return achStatus('Achievement name is required.');
         if (!message) return achStatus('Message is required.');
         if (!campaignId || !playerIds.length) return achStatus('Pick a campaign and at least one player first.');
-        if (!boxName) return achStatus('Loot Box Name is required.');
-        if (!boxGrade) return achStatus('Loot Box Grade is required.');
-        const err = await insertLootBoxes(campaignId, playerIds, { dm_id: cloudUser.id, achievement_name: name, message: message, loot_box_name: boxName, loot_box_grade: boxGrade, sound_clip: sound || null, items: items, status: 'pending', is_achievement: true });
+        if (!noBox && !boxName) return achStatus('Loot Box Name is required.');
+        if (!noBox && !boxGrade) return achStatus('Loot Box Grade is required.');
+        const err = await insertLootBoxes(campaignId, playerIds, { dm_id: cloudUser.id, achievement_name: name, message: message, loot_box_name: boxName, loot_box_grade: boxGrade, sound_clip: noBox ? null : (sound || null), items: items, status: noBox ? 'opened' : 'pending', is_achievement: true });
         if (err) return achStatus('Send failed: ' + err.message + ' (if this is a new site version, run supabase_loot_v2.sql in Supabase first.)');
-        achStatus('Achievement sent to ' + playerIds.length + ' player(s).');
+        achStatus('Achievement sent to ' + playerIds.length + ' player(s).' + (noBox ? ' It appears directly in their Achievements tab, with no loot box.' : ''));
         document.getElementById('ach-name').value = '';
         document.getElementById('ach-message').value = '';
     }
@@ -4539,7 +4551,7 @@
         const res = await sb.from('loot_boxes').select('*').eq('recipient_character_id', cloudCharacterId).eq('status', 'opened').eq('is_achievement', true).order('created_at', { ascending: false });
         if (res.error) { box.innerHTML = '<p class="cloud-note">Could not list achievements: ' + esc(res.error.message) + '</p>'; return; }
         box.innerHTML = (res.data || []).length ? (res.data || []).map(function (b) {
-            return '<details style="margin-bottom: 10px;"><summary><strong>' + esc(b.achievement_name) + '</strong> - ' + esc(b.loot_box_name) + ' (' + esc(b.loot_box_grade) + ')</summary><p>' + esc(b.message || '') + '</p><p>Items: ' + esc((b.items || []).map(function (it) { return typeof it === 'string' ? it : it.name; }).join(', ') || 'No items') + '</p></details>';
+            return '<details style="margin-bottom: 10px;"><summary><strong>' + esc(b.achievement_name) + '</strong>' + (b.loot_box_name ? ' - ' + esc(b.loot_box_name) + ' (' + esc(b.loot_box_grade) + ')' : '') + '</summary><p>' + esc(b.message || '') + '</p>' + ((b.items || []).length ? '<p>Items: ' + esc((b.items || []).map(function (it) { return typeof it === 'string' ? it : it.name; }).join(', ')) + '</p>' : '') + '</details>';
         }).join('') : '<p class="cloud-note">No achievements yet. Open a loot box with an achievement to see it here.</p>';
     }
 
