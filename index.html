@@ -1551,6 +1551,10 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="achModal" style="display: none;">
+    <div class="modal-card" id="ach-modal-content"></div>
+</div>
+
 <div class="modal-overlay" id="lootModal" style="display: none;">
     <div class="modal-card" id="loot-modal-content"></div>
 </div>
@@ -1742,7 +1746,7 @@
         if (tab === 'dm') refreshDmDashboard();
         if (tab === 'loot') refreshLoot();
         if (tab === 'sendbox' || tab === 'sendach') refreshAchCampaigns();
-        if (tab === 'achievements') refreshAchPlayerList();
+        if (tab === 'achievements') { refreshAchPlayerList(); checkUnviewedAchievements(); }
         saveDataSilently();
     }
 
@@ -4543,6 +4547,32 @@
         document.getElementById('ach-name').value = '';
         document.getElementById('ach-message').value = '';
     }
+    let achUnviewedIds = [];
+    async function checkUnviewedAchievements() {
+        if (!cloudUser || !cloudCharacterId || crawlerMode !== 'player') return;
+        const res = await sb.from('loot_boxes').select('*').eq('recipient_character_id', cloudCharacterId).eq('status', 'opened').eq('is_achievement', true).eq('viewed', false);
+        if (res.error || !(res.data || []).length) return;
+        achUnviewedIds = (res.data || []).map(function (b) { return b.id; });
+        const modal = document.getElementById('achModal');
+        const content = document.getElementById('ach-modal-content');
+        content.innerHTML = '<h3>New achievements!</h3>'
+            + (res.data || []).map(function (b) {
+                return '<div style="margin-bottom: 12px;"><strong>' + esc(b.achievement_name) + '</strong>'
+                    + (b.loot_box_name ? ' - ' + esc(b.loot_box_name) + ' (' + esc(b.loot_box_grade) + ')' : '')
+                    + '<p>' + esc(b.message || '') + '</p></div>';
+            }).join('')
+            + '<div class="btn-group"><button type="button" onclick="dismissAchModal()">Got it</button></div>';
+        modal.style.display = 'flex';
+    }
+    async function dismissAchModal() {
+        document.getElementById('achModal').style.display = 'none';
+        if (achUnviewedIds.length) {
+            await sb.from('loot_boxes').update({ viewed: true }).in('id', achUnviewedIds);
+            achUnviewedIds = [];
+        }
+        refreshAchPlayerList();
+    }
+
     async function refreshAchPlayerList() {
         const box = document.getElementById('ach-player-items');
         if (!box) return;
@@ -4551,7 +4581,7 @@
         const res = await sb.from('loot_boxes').select('*').eq('recipient_character_id', cloudCharacterId).eq('status', 'opened').eq('is_achievement', true).order('created_at', { ascending: false });
         if (res.error) { box.innerHTML = '<p class="cloud-note">Could not list achievements: ' + esc(res.error.message) + '</p>'; return; }
         box.innerHTML = (res.data || []).length ? (res.data || []).map(function (b) {
-            return '<details style="margin-bottom: 10px;"><summary><strong>' + esc(b.achievement_name) + '</strong>' + (b.loot_box_name ? ' - ' + esc(b.loot_box_name) + ' (' + esc(b.loot_box_grade) + ')' : '') + '</summary><p>' + esc(b.message || '') + '</p>' + ((b.items || []).length ? '<p>Items: ' + esc((b.items || []).map(function (it) { return typeof it === 'string' ? it : it.name; }).join(', ')) + '</p>' : '') + '</details>';
+            return '<details style="margin-bottom: 10px;"><summary><strong>' + esc(b.achievement_name) + '</strong>' + (b.viewed === false ? ' <span style="color: var(--accent, #f59e0b);">NEW</span>' : '') + (b.loot_box_name ? ' - ' + esc(b.loot_box_name) + ' (' + esc(b.loot_box_grade) + ')' : '') + '</summary><p>' + esc(b.message || '') + '</p>' + ((b.items || []).length ? '<p>Items: ' + esc((b.items || []).map(function (it) { return typeof it === 'string' ? it : it.name; }).join(', ')) + '</p>' : '') + '</details>';
         }).join('') : '<p class="cloud-note">No achievements yet. Open a loot box with an achievement to see it here.</p>';
     }
 
@@ -4594,7 +4624,7 @@
         if (!box) {
             modal.style.display = 'none';
             refreshLoot();
-            refreshAchPlayerList();
+            checkUnviewedAchievements();
             return;
         }
         playLootSound(box.sound_clip);
