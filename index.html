@@ -939,6 +939,13 @@
         /* Segmented health bar: same slot boxes, stretched into a bar like CrawlerCo's */
         #hp-tracker { display: flex; flex-wrap: nowrap; gap: 4px; }
         #hp-tracker .tracker-box { flex: 1 1 0; width: auto; height: 28px; border-radius: 6px; }
+
+        #hp-tracker .tracker-box { display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; }
+        .hp-box:not(.filled) { color: var(--text-muted); }
+        .hp-box.filled.hp-healthy { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.4); color: #fff; }
+        .hp-box.filled.hp-damaged { background: #eab308; box-shadow: 0 0 8px rgba(234, 179, 8, 0.4); color: #111; }
+        .hp-box.filled.hp-low { background: #f97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4); color: #fff; }
+        .hp-box.filled.hp-critical { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); color: #fff; }
     </style>
 </head>
 <body>
@@ -1190,8 +1197,7 @@
             <div class="resource-group">
                 <div class="resource-header">
                     <span>Health Capacity (<span id="hp-total-text">0</span> HP)</span>
-                    <span>Slots: 10</span>
-                    <span id="hp-slot-count">0 / 10 Slots</span>
+                    <span id="hp-slot-count">0 / 0 HP (0%)</span>
                 </div>
                 <div class="tracker-grid" id="hp-tracker"></div>
             </div>
@@ -1613,17 +1619,21 @@
     function renderTrackers() {
         const hpContainer = document.getElementById('hp-tracker');
         hpContainer.innerHTML = '';
-        for (let i = 0; i < maxHpSlots; i++) {
-            const box = document.createElement('div');
-            box.className = `tracker-box hp-box ${i < hpCurrentSlots ? 'filled' : ''}`;
-            box.onclick = () => toggleHp(i);
-            hpContainer.appendChild(box);
-        }
         const conMod = currentMods.con || 0;
         const currentHp = hpCurrentSlots * conMod;
         const totalHp = maxHpSlots * conMod;
         const hpPct = totalHp > 0 ? Math.round((currentHp / totalHp) * 100) : 0;
-        document.getElementById('hp-slot-count').innerText = `${hpCurrentSlots} / ${maxHpSlots} Slots \u00b7 ${currentHp} / ${totalHp} HP (${hpPct}%)`;
+        const hpStatus = hpPct >= 75 ? 'healthy' : hpPct >= 50 ? 'damaged' : hpPct >= 25 ? 'low' : 'critical';
+        const hpStatusLabel = hpStatus.charAt(0).toUpperCase() + hpStatus.slice(1);
+        for (let i = 0; i < maxHpSlots; i++) {
+            const box = document.createElement('div');
+            const isFilled = i < hpCurrentSlots;
+            box.className = `tracker-box hp-box ${isFilled ? 'filled hp-' + hpStatus : ''}`;
+            box.innerText = conMod;
+            box.onclick = () => toggleHp(i);
+            hpContainer.appendChild(box);
+        }
+        document.getElementById('hp-slot-count').innerText = `${currentHp} / ${totalHp} HP (${hpPct}% \u00b7 ${hpStatusLabel})`;
         updatePersistentHeader();
     }
 
