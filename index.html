@@ -1541,13 +1541,13 @@
                 <div class="btn-group"><button type="button" onclick="sendAchievement()">Send achievement</button></div>
                 <p id="ach-status" class="cloud-note"></p>
             </div>
-                    </div>
         <div class="card" id="panel-achievements">
             <h2><span>Achievements</span></h2>
 <div id="ach-player-list">
                 <p class="cloud-note">Your achievements, from boxes you have opened. Click an achievement name to see its message.</p>
                 <div id="ach-player-items"></div>
-                    </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -4522,8 +4522,6 @@
         const noBox = document.getElementById('ach-no-box').checked;
         const fields = document.getElementById('ach-box-fields');
         if (fields) fields.style.display = noBox ? 'none' : '';
-        const soundGroup = document.getElementById('ach-sound').closest('.form-group');
-        if (soundGroup) soundGroup.style.display = noBox ? 'none' : '';
     }
     async function sendAchievement() {
         if (!needLogin()) return;
@@ -4541,7 +4539,7 @@
         if (!campaignId || !playerIds.length) return achStatus('Pick a campaign and at least one player first.');
         if (!noBox && !boxName) return achStatus('Loot Box Name is required.');
         if (!noBox && !boxGrade) return achStatus('Loot Box Grade is required.');
-        const err = await insertLootBoxes(campaignId, playerIds, { dm_id: cloudUser.id, achievement_name: name, message: message, loot_box_name: boxName, loot_box_grade: boxGrade, sound_clip: noBox ? null : (sound || null), items: items, status: noBox ? 'opened' : 'pending', is_achievement: true });
+        const err = await insertLootBoxes(campaignId, playerIds, { dm_id: cloudUser.id, achievement_name: name, message: message, loot_box_name: boxName, loot_box_grade: boxGrade, sound_clip: sound || null, items: items, status: noBox ? 'opened' : 'pending', is_achievement: true });
         if (err) return achStatus('Send failed: ' + err.message + ' (if this is a new site version, run supabase_loot_v2.sql in Supabase first.)');
         achStatus('Achievement sent to ' + playerIds.length + ' player(s).' + (noBox ? ' It appears directly in their Achievements tab, with no loot box.' : ''));
         document.getElementById('ach-name').value = '';
@@ -4553,6 +4551,8 @@
         const res = await sb.from('loot_boxes').select('*').eq('recipient_character_id', cloudCharacterId).eq('status', 'opened').eq('is_achievement', true).eq('viewed', false);
         if (res.error || !(res.data || []).length) return;
         achUnviewedIds = (res.data || []).map(function (b) { return b.id; });
+        const noBoxSound = (res.data || []).find(function (b) { return !b.loot_box_name && b.sound_clip; });
+        if (noBoxSound) playLootSound(noBoxSound.sound_clip);
         const modal = document.getElementById('achModal');
         const content = document.getElementById('ach-modal-content');
         content.innerHTML = '<h3>New achievements!</h3>'
