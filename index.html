@@ -1011,7 +1011,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-str-base" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-str-base" value="1" min="1" onchange="calculateSheet()">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1037,7 +1037,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-con-base" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-con-base" value="1" min="1" onchange="calculateSheet()">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1063,7 +1063,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-dex-base" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-dex-base" value="1" min="1" onchange="calculateSheet()">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1089,7 +1089,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-int-base" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-int-base" value="1" min="1" onchange="calculateSheet()">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1115,7 +1115,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-cha-base" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-cha-base" value="1" min="1" onchange="calculateSheet()">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1190,9 +1190,7 @@
             <div class="resource-group">
                 <div class="resource-header">
                     <span>Health Capacity (<span id="hp-total-text">0</span> HP)</span>
-                    <span>
-                        Slots Max: <input type="number" id="hp-max-slots" value="10" min="0" style="width: 60px; padding: 2px 5px; display: inline-block;" onchange="calculateSheet()">
-                    </span>
+                    <span>Slots: 10</span>
                     <span id="hp-slot-count">0 / 10 Slots</span>
                 </div>
                 <div class="tracker-grid" id="hp-tracker"></div>
@@ -1408,7 +1406,7 @@
     // Run background setup on load
     window.addEventListener('DOMContentLoaded', setupBackgroundSlider);
 
-    let hpCurrentSlots = 0;
+    let hpCurrentSlots = 10;
     let maxHpSlots = 10;
     let manaCurrent = 0;
     let maxMana = 0;
@@ -1467,10 +1465,14 @@
     }
 
     function calculateAttribute(id) {
-        const base = parseInt(document.getElementById(`stat-${id}-base`).value) || 0;
+        let base = parseInt(document.getElementById(`stat-${id}-base`).value) || 0;
+        if (base < 1) {
+            base = 1;
+            document.getElementById(`stat-${id}-base`).value = 1;
+        }
         const enh = parseInt(document.getElementById(`stat-${id}-enh`).value) || 0;
         const gear = getEquippedItemBonuses().stat[id] || 0;
-        const total = base + enh + gear;
+        const total = Math.max(1, base + enh + gear);
         
         document.getElementById(`stat-${id}-total`).innerText = total;
         const gearEl = document.getElementById(`stat-${id}-gear`);
@@ -1493,7 +1495,7 @@
         const cha = calculateAttribute('cha');
 
         // HP Calculations
-        maxHpSlots = parseInt(document.getElementById('hp-max-slots').value) || 10;
+        maxHpSlots = 10;
         const totalHp = maxHpSlots * con.mod;
         document.getElementById('hp-total-text').innerText = totalHp;
         
@@ -3269,7 +3271,7 @@
             chaBase: document.getElementById('stat-cha-base').value,
             chaEnh: document.getElementById('stat-cha-enh').value,
 
-            maxHpSlots: document.getElementById('hp-max-slots').value,
+            maxHpSlots: 10,
             hpCurrent: hpCurrentSlots,
             manaCurrent: manaCurrent,
             activeTab: activeTab,
@@ -3295,6 +3297,7 @@
     function loadData() {
         const saved = localStorage.getItem('crawler_split_attrs_data');
         let savedActiveTab = 'vitals';
+        let isFreshCrawler = false;
         if (saved) {
             const data = JSON.parse(saved);
             if (data.activeTab) savedActiveTab = data.activeTab;
@@ -3315,18 +3318,18 @@
             document.getElementById('char-floor').value = data.floor || '1';
             document.getElementById('avatar-url').value = data.avatarUrl || '';
             
-            document.getElementById('stat-str-base').value = data.strBase || 0;
+            document.getElementById('stat-str-base').value = data.strBase || 1;
             document.getElementById('stat-str-enh').value = data.strEnh || 0;
-            document.getElementById('stat-con-base').value = data.conBase || 0;
+            document.getElementById('stat-con-base').value = data.conBase || 1;
             document.getElementById('stat-con-enh').value = data.conEnh || 0;
-            document.getElementById('stat-dex-base').value = data.dexBase || 0;
+            document.getElementById('stat-dex-base').value = data.dexBase || 1;
             document.getElementById('stat-dex-enh').value = data.dexEnh || 0;
-            document.getElementById('stat-int-base').value = data.intBase || 0;
+            document.getElementById('stat-int-base').value = data.intBase || 1;
             document.getElementById('stat-int-enh').value = data.intEnh || 0;
-            document.getElementById('stat-cha-base').value = data.chaBase || 0;
+            document.getElementById('stat-cha-base').value = data.chaBase || 1;
             document.getElementById('stat-cha-enh').value = data.chaEnh || 0;
 
-            document.getElementById('hp-max-slots').value = data.maxHpSlots !== undefined ? data.maxHpSlots : 10;
+            maxHpSlots = 10;
             hpCurrentSlots = data.hpCurrent || 0;
             manaCurrent = data.manaCurrent || 0;
 
@@ -3402,9 +3405,18 @@
             }
         } else {
             initHotlistAndGear();
+            isFreshCrawler = true;
         }
 
         calculateSheet();
+
+        if (isFreshCrawler) {
+            hpCurrentSlots = maxHpSlots;
+            manaCurrent = maxMana;
+            renderTrackers();
+            renderManaBar();
+            saveDataSilently();
+        }
 
         applySectionVisibility('attacks');
         applySectionVisibility('hotlist');
@@ -3460,6 +3472,8 @@
         document.querySelectorAll('input, textarea').forEach(input => {
             if (input.id === 'hp-max-slots') {
                 input.value = 10;
+            } else if (input.id.endsWith('-base')) {
+                input.value = 1;
             } else if (input.id === 'char-floor' || input.id === 'char-level' || input.id === 'mana-adjust-amt') {
                 input.value = 1;
             } else if (input.type === 'number') {
@@ -3474,6 +3488,12 @@
         
         initHotlistAndGear();
         calculateSheet();
+
+        hpCurrentSlots = maxHpSlots;
+        manaCurrent = maxMana;
+        renderTrackers();
+        renderManaBar();
+        saveDataSilently();
 
         applySectionVisibility('attacks');
         applySectionVisibility('hotlist');
