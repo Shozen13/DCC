@@ -911,6 +911,13 @@
         .persistent-header .ph-stat { font-size: 0.9rem; color: var(--text-muted); white-space: nowrap; }
         .persistent-header .ph-stat strong { color: var(--text-main); }
         .persistent-header button { padding: 2px 10px; }
+        body.dm-mode .sidebar, body.dm-mode .persistent-header { display: none; }
+        body.dm-mode .container { grid-template-columns: 1fr; }
+        body.dm-mode .tab-btn[data-tab="vitals"], body.dm-mode .tab-btn[data-tab="attacks"],
+        body.dm-mode .tab-btn[data-tab="gear"], body.dm-mode .tab-btn[data-tab="skills"],
+        body.dm-mode .tab-btn[data-tab="spells"], body.dm-mode .tab-btn[data-tab="items"],
+        body.dm-mode .tab-btn[data-tab="loot"], body.dm-mode .tab-btn[data-tab="all"] { display: none; }
+        body:not(.dm-mode) .tab-btn[data-tab="achievements"] { display: none; }
         .landing-screen {
             position: fixed; inset: 0; z-index: 100;
             background: rgba(10, 12, 20, 0.97);
@@ -1251,6 +1258,8 @@
             <button type="button" class="tab-btn" data-tab="items" onclick="showTab('items')">Inventory</button>
             <button type="button" class="tab-btn" data-tab="campaign" onclick="showTab('campaign')">Campaign</button>
             <button type="button" class="tab-btn" data-tab="dm" onclick="showTab('dm')">DM Dashboard</button>
+            <button type="button" class="tab-btn" data-tab="loot" onclick="showTab('loot')">Loot</button>
+            <button type="button" class="tab-btn" data-tab="achievements" onclick="showTab('achievements')">Achievements</button>
             <button type="button" class="tab-btn" data-tab="all" onclick="showTab('all')">All</button>
         </div>
         <!-- Vitals & Defenses -->
@@ -1477,6 +1486,35 @@
             </div>
             <p id="dm-status" class="cloud-note"></p>
             <div id="dm-dashboard"></div>
+            <div class="btn-group"><button type="button" onclick="showLanding()">Start screen</button></div>
+        </div>
+        <div class="card" id="panel-loot" style="display: none;">
+            <h2><span>Loot Boxes</span></h2>
+            <p class="cloud-note">Boxes sent by your DM arrive here. There is no button to open just one box: Open all boxes opens every waiting box, one at a time, lowest grade first: Bronze, Silver, Gold, Platinum, Legendary, Celestial. Opening a box reveals its message and items, plays its sound if one was chosen, and adds its items to your Inventory.</p>
+            <div class="btn-group">
+                <button type="button" onclick="refreshLoot()">Refresh loot</button>
+                <button type="button" onclick="openAllLoot()">Open all boxes</button>
+            </div>
+            <p id="loot-status" class="cloud-note"></p>
+            <div id="loot-pending"></div>
+            <div id="loot-reveal"></div>
+            <div id="loot-opened"></div>
+        </div>
+        <div class="card" id="panel-achievements" style="display: none;">
+            <h2><span>Send Achievement (DM)</span></h2>
+            <p class="cloud-note">Send an achievement to a player in one of your campaigns. It arrives as a loot box in their Loot tab. Achievement name and message are required. If you attach items, Loot Box Name and Loot Box Grade are required. Without items, the box name defaults to the achievement name and the grade to Bronze.</p>
+            <div class="form-group"><label>Campaign</label><select id="ach-campaign" onchange="refreshAchPlayers()"></select></div>
+            <div class="form-group"><label>Player</label><select id="ach-player"></select></div>
+            <div class="form-group"><label>Achievement name *</label><input type="text" id="ach-name" placeholder="e.g. First Blood"></div>
+            <div class="form-group"><label>Message *</label><textarea id="ach-message" placeholder="What the player did, and what this is for"></textarea></div>
+            <div class="form-group"><label>Sound clip (optional)</label><select id="ach-sound"><option value="">No sound</option><option value="new_achievement.mp3">New Achievement</option><option value="sultrynewachievement.mp3">Sultry New Achievement</option></select></div>
+            <div class="form-group"><label>Loot Box Name (required if items are attached)</label><input type="text" id="ach-box-name" placeholder="e.g. Goblin King's Hoard"></div>
+            <div class="form-group"><label>Loot Box Grade (required if items are attached)</label><select id="ach-box-grade"><option value="">Select grade</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Legendary</option><option>Celestial</option></select></div>
+            <div class="cloud-subhead">Items to attach (optional)</div>
+            <div id="ach-items"></div>
+            <div class="btn-group"><button type="button" onclick="addAchItemRow()">Add item</button></div>
+            <div class="btn-group"><button type="button" onclick="sendAchievement()">Send achievement</button></div>
+            <p id="ach-status" class="cloud-note"></p>
         </div>
     </div>
 </div>
@@ -1657,13 +1695,17 @@
 
     function showTab(tab) {
         if (tab === 'hotlist') tab = 'vitals';
+        if (crawlerMode === 'dm' && ['dm', 'campaign', 'achievements'].indexOf(tab) === -1) tab = 'dm';
+        if (tab === 'achievements' && crawlerMode !== 'dm') tab = 'campaign';
         activeTab = tab;
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-        ['vitals', 'attacks', 'gear', 'skills', 'spells', 'items', 'campaign', 'dm'].forEach(p => {
+        ['vitals', 'attacks', 'gear', 'skills', 'spells', 'items', 'campaign', 'dm', 'loot', 'achievements'].forEach(p => {
             const el = document.getElementById('panel-' + p);
             if (el) el.style.display = (tab === 'all' || tab === p) ? 'block' : 'none';
         });
         if (tab === 'dm') refreshDmDashboard();
+        if (tab === 'loot') refreshLoot();
+        if (tab === 'achievements') refreshAchCampaigns();
         saveDataSilently();
     }
 
@@ -4053,8 +4095,8 @@
         refreshCampaign();
         try { refreshDmDashboard(); } catch (e) {}
     }
-    async function dmAddCondition(characterId, kind) {
-        const input = document.getElementById('dm-cond-' + characterId);
+    async function dmAddCondition(characterId, kind, inputId) {
+        const input = document.getElementById(inputId || ('dm-cond-' + characterId));
         const name = input ? input.value.trim() : '';
         if (!name) return cloudStatus('Type a buff or debuff name first.');
         const row = await sb.from('characters').select('id, data').eq('id', characterId).single();
@@ -4067,6 +4109,7 @@
         if (res.error) return cloudStatus('Update failed: ' + res.error.message);
         if (input) input.value = '';
         refreshCampaign();
+        try { refreshDmDashboard(); } catch (e) {}
     }
     async function refreshCloudAll() {
         if (!cloudUser) return;
@@ -4107,6 +4150,7 @@
     function setMode(mode) {
         crawlerMode = mode;
         localStorage.setItem('crawler_mode', mode);
+        applyModeClass();
     }
     function chooseGuest() {
         setMode('guest');
@@ -4209,6 +4253,12 @@
         if (!sb || !cloudUser) return;
         if (realtimeChannel) { try { sb.removeChannel(realtimeChannel); } catch (e) {} }
         realtimeChannel = sb.channel('crawler-live')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'loot_boxes' }, function (payload) {
+                if (crawlerMode === 'player' && payload.new && payload.new.recipient_character_id === cloudCharacterId) {
+                    lootStatus('New loot box received!');
+                    refreshLoot();
+                }
+            })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters' }, function (payload) {
                 const row = payload.new;
                 if (!row) return;
@@ -4228,6 +4278,19 @@
         const el = document.getElementById('dm-status');
         if (el) el.innerText = msg || '';
     }
+    let dmSelectedCampaignId = localStorage.getItem('dm_selected_campaign') || null;
+    let dmSelectedPlayerId = null;
+    let dmMembersCache = [];
+    function selectDmCampaign(id) {
+        dmSelectedCampaignId = id;
+        localStorage.setItem('dm_selected_campaign', id);
+        dmSelectedPlayerId = null;
+        refreshDmDashboard();
+    }
+    function selectDmPlayer(id) {
+        dmSelectedPlayerId = id;
+        refreshDmDashboard();
+    }
     async function refreshDmDashboard() {
         const box = document.getElementById('dm-dashboard');
         if (!box) return;
@@ -4235,65 +4298,195 @@
         const res = await sb.from('campaigns').select('id, name, code').eq('dm_id', cloudUser.id).order('created_at');
         if (res.error) { box.innerHTML = '<p class="cloud-note">Could not list campaigns: ' + esc(res.error.message) + '</p>'; return; }
         if (!res.data.length) { box.innerHTML = '<p class="cloud-note">No campaigns you control yet. Create one in the Campaign tab.</p>'; return; }
-        let htmlOut = '';
-        for (const camp of res.data) {
-            const mem = await fetchCampaignMembers(camp.id);
-            const members = mem.members || [];
-            const partiesRes = await sb.from('parties').select('id, name, leader_character_id').eq('campaign_id', camp.id).order('created_at');
-            const parties = partiesRes.data || [];
-            let partyHtml = '<p class="cloud-note">No parties yet.</p>';
-            if (parties.length) {
-                const pmAll = await sb.from('party_members').select('party_id, character_id').in('party_id', parties.map(function (p) { return p.id; }));
-                const pmMap = {};
-                (pmAll.data || []).forEach(function (r) { (pmMap[r.party_id] = pmMap[r.party_id] || []).push(r.character_id); });
-                partyHtml = parties.map(function (p) {
-                    const ids = pmMap[p.id] || [];
-                    const names = ids.map(function (id) {
-                        const m = members.find(function (x) { return x.id === id; });
-                        return m ? esc(m.name) + (id === p.leader_character_id ? ' 👑' : '') : 'Unknown';
-                    }).join(', ');
-                    return '<div class="cloud-row"><span><strong>' + esc(p.name) + '</strong> - ' + names + '</span></div>';
-                }).join('');
-            }
-            const memberHtml = members.length ? members.map(function (m) {
-                const d = m.data || {};
-                return '<div class="cloud-row"><span>' + esc(m.name) + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><span><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'hp\', -1)">HP -1</button> <button type="button" onclick="dmAdjust(\'' + m.id + '\', \'hp\', 1)">HP +1</button> <button type="button" onclick="dmAdjust(\'' + m.id + '\', \'mana\', -1)">Mana -1</button> <button type="button" onclick="dmAdjust(\'' + m.id + '\', \'mana\', 1)">Mana +1</button></span></div>';
-            }).join('') : '<p class="cloud-note">No players in this campaign yet.</p>';
-            htmlOut += '<div class="cloud-subhead">' + esc(camp.name) + ' - Code ' + esc(camp.code) + ' <button type="button" class="btn-reset" onclick="deleteCampaign(\'' + camp.id + '\')">Delete campaign</button></div><div class="cloud-subhead">Players</div>' + memberHtml + '<div class="cloud-subhead">Parties</div>' + partyHtml;
+        if (!dmSelectedCampaignId || !res.data.some(function (c) { return c.id === dmSelectedCampaignId; })) {
+            dmSelectedCampaignId = res.data[0].id;
+            localStorage.setItem('dm_selected_campaign', dmSelectedCampaignId);
         }
+        const camp = res.data.find(function (c) { return c.id === dmSelectedCampaignId; });
+        let htmlOut = '<div class="cloud-subhead">Your campaigns</div>' + res.data.map(function (c) {
+            return '<button type="button" onclick="selectDmCampaign(\'' + c.id + '\')">' + esc(c.name) + (c.id === dmSelectedCampaignId ? ' (selected)' : '') + '</button> ';
+        }).join('');
+        htmlOut += '<div class="cloud-subhead">' + esc(camp.name) + ' - Code ' + esc(camp.code) + ' <button type="button" class="btn-reset" onclick="deleteCampaign(\'' + camp.id + '\')">Delete campaign</button></div>';
+        const mem = await fetchCampaignMembers(camp.id);
+        const members = mem.members || [];
+        dmMembersCache = members;
+        if (!dmSelectedPlayerId || !members.some(function (m) { return m.id === dmSelectedPlayerId; })) dmSelectedPlayerId = members.length ? members[0].id : null;
+        const partiesRes = await sb.from('parties').select('id, name, leader_character_id').eq('campaign_id', camp.id).order('created_at');
+        const parties = partiesRes.data || [];
+        let partyHtml = '<p class="cloud-note">No parties yet. Create parties in the Campaign tab.</p>';
+        if (parties.length) {
+            const pmAll = await sb.from('party_members').select('party_id, character_id').in('party_id', parties.map(function (p) { return p.id; }));
+            const pmMap = {};
+            (pmAll.data || []).forEach(function (r) { (pmMap[r.party_id] = pmMap[r.party_id] || []).push(r.character_id); });
+            partyHtml = parties.map(function (p) {
+                const names = (pmMap[p.id] || []).map(function (id) {
+                    const m = members.find(function (x) { return x.id === id; });
+                    return m ? esc(m.name) + (id === p.leader_character_id ? ' \u{1F451}' : '') : 'Unknown';
+                }).join(', ');
+                return '<div class="cloud-row"><span><strong>' + esc(p.name) + '</strong> - ' + names + '</span></div>';
+            }).join('');
+        }
+        htmlOut += '<div class="cloud-subhead">Players (select one to alter)</div>' + (members.length ? members.map(function (m) {
+            const d = m.data || {};
+            return '<div class="cloud-row"><span>' + esc(m.name) + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><button type="button" onclick="selectDmPlayer(\'' + m.id + '\')">' + (m.id === dmSelectedPlayerId ? 'Selected' : 'Select') + '</button></div>';
+        }).join('') : '<p class="cloud-note">No players in this campaign yet.</p>');
+        const sel = members.find(function (m) { return m.id === dmSelectedPlayerId; });
+        if (sel) {
+            const d = sel.data || {};
+            htmlOut += '<div class="cloud-subhead">Alter selected player: ' + esc(sel.name) + '</div>';
+            htmlOut += '<div class="cloud-row"><span>HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><span><button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'hp\', -1)">HP -1</button> <button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'hp\', 1)">HP +1</button> <button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'mana\', -1)">Mana -1</button> <button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'mana\', 1)">Mana +1</button></span></div>';
+            htmlOut += '<div class="form-group"><label>Buff or debuff name</label><input type="text" id="dm-dash-cond" placeholder="e.g. Blessed"></div><div class="btn-group"><button type="button" onclick="dmAddCondition(\'' + sel.id + '\', \'buff\', \'dm-dash-cond\')">Add buff</button><button type="button" onclick="dmAddCondition(\'' + sel.id + '\', \'debuff\', \'dm-dash-cond\')">Add debuff</button></div>';
+        }
+        htmlOut += '<div class="cloud-subhead">Parties</div>' + partyHtml;
         box.innerHTML = htmlOut;
     }
-    async function leaveCampaign(campaignId) {
-        if (!needLogin()) return;
-        const id = campaignId || cloudCampaignId;
-        if (!id) return cloudStatus('Select a campaign first.');
-        if (!cloudCharacterId) return cloudStatus('Load a crawler first, then leave with that crawler.');
-        if (!confirm('Remove this crawler from the campaign? Your crawler will NOT be deleted, and it will also leave any parties in this campaign. You can rejoin later with the campaign code.')) return;
-        const res = await sb.rpc('leave_campaign_by_character', { p_campaign_id: id, p_character_id: cloudCharacterId });
-        if (res.error) return cloudStatus('Leave failed: ' + res.error.message + ' (if this is a new site version, run supabase_leave_campaign.sql in Supabase first.)');
-        if (id === cloudCampaignId) {
-            cloudCampaignId = null;
-            localStorage.removeItem('cloud_campaign_id');
-        }
-        cloudStatus('Left the campaign. Your crawler was not deleted.');
-        loadMyCampaigns();
-        refreshCampaign();
+    /* Phase 5: DM view, achievements, loot boxes */
+    const LOOT_GRADES = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Legendary', 'Celestial'];
+    let lootOpening = [];
+    let lootOpeningIndex = 0;
+    function applyModeClass() {
+        document.body.classList.toggle('dm-mode', crawlerMode === 'dm');
     }
-    async function deleteCampaign(id) {
-        if (!needLogin()) return;
-        if (!confirm('Delete this campaign? Players will be removed from the campaign, but their crawlers will NOT be deleted. Parties in this campaign will be removed. This cannot be undone.')) return;
-        const res = await sb.from('campaigns').delete().eq('id', id);
-        if (res.error) { dmStatus('Delete failed: ' + res.error.message); return cloudStatus('Delete failed: ' + res.error.message); }
-        if (id === cloudCampaignId) {
-            cloudCampaignId = null;
-            localStorage.removeItem('cloud_campaign_id');
-        }
-        dmStatus('Campaign deleted. Players were removed from it, their crawlers were not deleted.');
-        refreshDmDashboard();
-        loadMyCampaigns();
-        refreshCampaign();
+    function playLootSound(key) {
+        if (!key) return;
+        if (String(key).endsWith('.mp3')) { try { new Audio(key).play().catch(function () {}); } catch (e) {} return; }
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const tunes = {
+                fanfare: [523, 659, 784, 1047],
+                chime: [1319, 1568, 2093],
+                epic: [262, 392, 523, 784],
+                mystic: [440, 554, 659, 880],
+                victory: [523, 587, 659, 784, 1047]
+            };
+            const notes = tunes[key] || tunes.fanfare;
+            notes.forEach(function (freq, i) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine'; osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.18);
+                gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + i * 0.18 + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.18 + 0.35);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + i * 0.18); osc.stop(ctx.currentTime + i * 0.18 + 0.4);
+            });
+        } catch (e) {}
     }
+    function achStatus(msg) { const el = document.getElementById('ach-status'); if (el) el.innerText = msg || ''; }
+    function lootStatus(msg) { const el = document.getElementById('loot-status'); if (el) el.innerText = msg || ''; }
+    async function refreshAchCampaigns() {
+        if (!cloudUser) return;
+        const sel = document.getElementById('ach-campaign');
+        if (!sel) return;
+        const res = await sb.from('campaigns').select('id, name, code').eq('dm_id', cloudUser.id).order('created_at');
+        const list = res.data || [];
+        sel.innerHTML = list.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + ' - ' + esc(c.code) + '</option>'; }).join('');
+        if (list.length) refreshAchPlayers();
+    }
+    async function refreshAchPlayers() {
+        const campId = document.getElementById('ach-campaign').value;
+        const sel = document.getElementById('ach-player');
+        if (!campId) { sel.innerHTML = ''; return; }
+        const mem = await fetchCampaignMembers(campId);
+        sel.innerHTML = (mem.members || []).map(function (m) { return '<option value="' + m.id + '">' + esc(m.name) + ' - Level ' + esc(m.level) + '</option>'; }).join('');
+        if (!document.getElementById('ach-items').children.length) addAchItemRow();
+    }
+    function addAchItemRow() {
+        const box = document.getElementById('ach-items');
+        const input = document.createElement('input');
+        input.type = 'text'; input.className = 'ach-item'; input.placeholder = 'Item name, e.g. Health Potion';
+        input.style.cssText = 'width: 100%; margin-bottom: 6px;';
+        box.appendChild(input);
+    }
+    async function sendAchievement() {
+        if (!needLogin()) return;
+        const campaignId = document.getElementById('ach-campaign').value;
+        const playerId = document.getElementById('ach-player').value;
+        const name = document.getElementById('ach-name').value.trim();
+        const message = document.getElementById('ach-message').value.trim();
+        const sound = document.getElementById('ach-sound').value;
+        let boxName = document.getElementById('ach-box-name').value.trim();
+        let boxGrade = document.getElementById('ach-box-grade').value;
+        const items = Array.from(document.querySelectorAll('.ach-item')).map(function (i) { return i.value.trim(); }).filter(Boolean);
+        if (!campaignId || !playerId) return achStatus('Pick a campaign and a player first.');
+        if (!name) return achStatus('Achievement name is required.');
+        if (!message) return achStatus('Message is required.');
+        if (items.length) {
+            if (!boxName) return achStatus('Loot Box Name is required when items are attached.');
+            if (!boxGrade) return achStatus('Loot Box Grade is required when items are attached.');
+        }
+        if (!boxName) boxName = name;
+        if (!boxGrade) boxGrade = 'Bronze';
+        const res = await sb.from('loot_boxes').insert({ campaign_id: campaignId, recipient_character_id: playerId, dm_id: cloudUser.id, achievement_name: name, message: message, loot_box_name: boxName, loot_box_grade: boxGrade, sound_clip: sound || null, items: items, status: 'pending' });
+        if (res.error) return achStatus('Send failed: ' + res.error.message + ' (if this is a new site version, run supabase_loot.sql in Supabase first.)');
+        achStatus('Achievement sent to the player\'s Loot tab.');
+        document.getElementById('ach-name').value = '';
+        document.getElementById('ach-message').value = '';
+        document.getElementById('ach-box-name').value = '';
+        document.getElementById('ach-box-grade').value = '';
+        document.getElementById('ach-items').innerHTML = '';
+        addAchItemRow();
+    }
+    async function fetchLootPending() {
+        if (!cloudUser || !cloudCharacterId) return [];
+        const res = await sb.from('loot_boxes').select('*').eq('recipient_character_id', cloudCharacterId).eq('status', 'pending').order('created_at', { ascending: true });
+        if (res.error) { lootStatus('Could not list loot: ' + res.error.message + ' (if this is a new site version, run supabase_loot.sql in Supabase first.)'); return []; }
+        const order = {};
+        LOOT_GRADES.forEach(function (g, i) { order[g] = i; });
+        return (res.data || []).sort(function (a, b) {
+            const ga = order[a.loot_box_grade] === undefined ? 99 : order[a.loot_box_grade];
+            const gb = order[b.loot_box_grade] === undefined ? 99 : order[b.loot_box_grade];
+            return ga - gb;
+        });
+    }
+    async function refreshLoot() {
+        const pendingBox = document.getElementById('loot-pending');
+        const openedBox = document.getElementById('loot-opened');
+        if (!pendingBox) return;
+        if (!cloudUser) { pendingBox.innerHTML = '<p class="cloud-note">Log in as a player to receive loot boxes.</p>'; return; }
+        if (!cloudCharacterId) { pendingBox.innerHTML = '<p class="cloud-note">Load a cloud crawler first, then loot boxes for that crawler will show here.</p>'; return; }
+        const pending = await fetchLootPending();
+        pendingBox.innerHTML = pending.length
+            ? '<div class="cloud-subhead">Waiting boxes (' + pending.length + ')</div>' + pending.map(function (b) {
+                return '<div class="cloud-row"><span><strong>' + esc(b.loot_box_name) + '</strong> - ' + esc(b.loot_box_grade) + ' - ' + esc(b.achievement_name) + '</span></div>';
+            }).join('')
+            : '<p class="cloud-note">No loot boxes waiting.</p>';
+        const openedRes = await sb.from('loot_boxes').select('*').eq('recipient_character_id', cloudCharacterId).eq('status', 'opened').order('created_at', { ascending: false }).limit(20);
+        openedBox.innerHTML = (openedRes.data || []).length
+            ? '<div class="cloud-subhead">Opened boxes</div>' + (openedRes.data || []).map(function (b) {
+                return '<div class="cloud-row"><span><strong>' + esc(b.loot_box_name) + '</strong> - ' + esc(b.achievement_name) + ' - ' + esc((b.items || []).join(', ') || 'No items') + '</span></div>';
+            }).join('')
+            : '';
+    }
+    async function openAllLoot() {
+        const pending = await fetchLootPending();
+        if (!pending.length) { lootStatus('No loot boxes waiting.'); return; }
+        lootOpening = pending; lootOpeningIndex = 0;
+        revealLootBox();
+    }
+    function revealLootBox() {
+        const reveal = document.getElementById('loot-reveal');
+        const box = lootOpening[lootOpeningIndex];
+        if (!box) { reveal.innerHTML = '<p class="cloud-note">All boxes opened.</p>'; refreshLoot(); return; }
+        playLootSound(box.sound_clip);
+        reveal.innerHTML = '<div class="cloud-subhead">Opened: ' + esc(box.loot_box_name) + ' - ' + esc(box.loot_box_grade) + '</div>'
+            + '<p><strong>' + esc(box.achievement_name) + '</strong></p><p>' + esc(box.message) + '</p>'
+            + '<p>Items: ' + esc((box.items || []).join(', ') || 'No items') + '</p>'
+            + '<div class="btn-group"><button type="button" onclick="nextLootBox()">' + (lootOpeningIndex + 1 < lootOpening.length ? 'Open next box' : 'Finish') + '</button></div>';
+    }
+    async function nextLootBox() {
+        const box = lootOpening[lootOpeningIndex];
+        if (box) {
+            (box.items || []).forEach(function (itemName) { try { addItem({ name: itemName, notes: 'From loot box: ' + box.loot_box_name }); } catch (e) {} });
+            try { saveDataSilently(); } catch (e) {}
+            await sb.from('loot_boxes').update({ status: 'opened' }).eq('id', box.id);
+        }
+        lootOpeningIndex++;
+        revealLootBox();
+    }
+
     function afterLoadMode() {
+        applyModeClass();
         if (crawlerMode) {
             hideLanding();
             if (crawlerMode === 'dm') showTab('dm');
