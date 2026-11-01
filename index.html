@@ -1404,6 +1404,7 @@
             <div class="cloud-subhead">My Crawlers (cloud)</div>
             <div class="btn-group">
                 <button type="button" onclick="cloudSave()">Save this sheet to cloud</button>
+                <button type="button" onclick="cloudSaveAsNew()">Save as new crawler</button>
                 <button type="button" onclick="refreshCloudAll()">Refresh</button>
             </div>
             <div id="cloud-crawlers"></div>
@@ -3570,6 +3571,13 @@
 
     function confirmReset() {
         localStorage.removeItem('crawler_split_attrs_data');
+        // A cleared sheet is a new crawler, not an edit of the old one.
+        // Without this, the next cloud save updated the old cloud row
+        // and overwrote the previously saved crawler.
+        localStorage.removeItem('crawler_cloud_id');
+        localStorage.removeItem('cloud_campaign_id');
+        if (typeof cloudCharacterId !== 'undefined') cloudCharacterId = null;
+        if (typeof cloudCampaignId !== 'undefined') cloudCampaignId = null;
         
         hpCurrentSlots = 0;
         manaCurrent = 0;
@@ -3740,6 +3748,11 @@
         cloudStatus('Saved to cloud: ' + name);
         refreshCloudAll();
         return cloudCharacterId;
+    }
+    async function cloudSaveAsNew() {
+        cloudCharacterId = null;
+        localStorage.removeItem('crawler_cloud_id');
+        return cloudSave();
     }
     async function cloudLoad(id) {
         if (!needLogin()) return;
