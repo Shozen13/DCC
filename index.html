@@ -911,6 +911,7 @@
         .persistent-header .ph-stat { font-size: 0.9rem; color: var(--text-muted); white-space: nowrap; }
         .persistent-header .ph-stat strong { color: var(--text-main); }
         .persistent-header button { padding: 2px 10px; }
+        .main-content { min-width: 0; }
         .tab-bar {
             display: flex;
             flex-wrap: wrap;
@@ -919,8 +920,10 @@
             position: sticky;
             top: 0;
             z-index: 20;
-            padding: 10px 0;
-            background: var(--bg-color);
+            padding: 12px 16px;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
         }
         .tab-btn {
             padding: 8px 14px;
