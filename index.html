@@ -1818,7 +1818,10 @@
         const raceRow = document.getElementById(`stat-${id}-race-row`);
         if (raceEl) raceEl.innerText = raceBonusFull >= 0 ? '+' + raceBonusFull : String(raceBonusFull);
         if (raceRow) raceRow.style.display = raceBonusFull !== 0 ? 'flex' : 'none';
-        const total = Math.max(1, base + enh + racePenalty);
+        let total = Math.max(1, base + enh + racePenalty);
+        // Stat caps: Hobgoblin CHA capped at 10, Pocket Kuma STR capped at 10.
+        const cap = (typeof raceClassStatCap === 'function') ? raceClassStatCap(id) : null;
+        if (cap !== null && total > cap) total = cap;
         
         document.getElementById(`stat-${id}-total`).innerText = total;
         const gearEl = document.getElementById(`stat-${id}-gear`);
@@ -2284,6 +2287,14 @@
     function updateAttackCard(id) {
         const rank = parseInt(document.getElementById(`atk-rank-${id}`).value) || 1;
         const statKey = document.getElementById(`atk-stat-${id}`).value;
+        const atkName = document.getElementById(`atk-name-${id}`) ? document.getElementById(`atk-name-${id}`).value.trim().toLowerCase() : '';
+        const raceName = document.getElementById('char-race') ? document.getElementById('char-race').value : '';
+        // Damage-stat swaps (to-hit mod is unchanged): Cat Girl/Cat Boy Slice
+        // Attack damage uses Cha Mod instead of Str, Rat Hooligan Bite damage
+        // uses Dex Mod instead of Str. Only these two race/attack pairs change.
+        let dmgMod = currentMods[statKey] || 0;
+        if (raceName === 'Cat Girl/Cat Boy' && atkName === 'slice attack') dmgMod = currentMods.cha || 0;
+        if (raceName === 'Rat Hooligan' && atkName === 'bite') dmgMod = currentMods.dex || 0;
 
         const mod = currentMods[statKey] || 0;
         const totalHit = rank + mod;
@@ -2305,11 +2316,11 @@
         let dmgFormula = "";
         if (diceParts.length > 0) {
             dmgFormula = diceParts.join(' + ');
-            if (mod !== 0) {
-                dmgFormula += mod >= 0 ? ` + ${mod}` : ` - ${Math.abs(mod)}`;
+            if (dmgMod !== 0) {
+                dmgFormula += dmgMod >= 0 ? ` + ${dmgMod}` : ` - ${Math.abs(dmgMod)}`;
             }
         } else {
-            dmgFormula = mod >= 0 ? `+${mod}` : `${mod}`;
+            dmgFormula = dmgMod >= 0 ? `+${dmgMod}` : `${dmgMod}`;
         }
 
         document.getElementById(`atk-dmg-disp-${id}`).innerText = dmgFormula;
@@ -3019,12 +3030,16 @@
             rankEl.value = rank;
         }
         const statKey = document.getElementById(`skl-stat-${id}`).value;
+        const cardName = document.getElementById(`skl-name-${id}`) ? document.getElementById(`skl-name-${id}`).value : '';
 
         const mod = (bookEntry && !bookEntry.stat) ? 0 : (currentMods[statKey] || 0);
-        const totalBonus = rank + mod;
+        const groupBonus = (typeof getGroupSkillBonus === 'function') ? getGroupSkillBonus(cardName, 'skill', statKey) : 0;
+        const magePen = (typeof mageRankPenalty === 'function') ? mageRankPenalty(cardName, 'skill', statKey) : 0;
+        const effRank = magePen ? Math.max(1, rank - magePen) : rank;
+        const totalBonus = effRank + mod + groupBonus;
 
         document.getElementById(`skl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`skl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? `(Rank ${rank}, Passive, no stat mod)` : (grantFloor ? `(Rank ${rank} (Gear +${grantFloor} in rank) + ${statKey.toUpperCase()} +${mod})` : `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`);
+        document.getElementById(`skl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? `(Rank ${rank}, Passive, no stat mod)` : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`);
         renderRulebookSkill(id);
 
         toggleSkillUsedVisual(id);
@@ -3223,12 +3238,16 @@
             rankEl.value = rank;
         }
         const statKey = document.getElementById(`spl-stat-${id}`).value;
+        const cardName = document.getElementById(`spl-name-${id}`) ? document.getElementById(`spl-name-${id}`).value : '';
 
         const mod = (bookEntry && !bookEntry.stat) ? 0 : (currentMods[statKey] || 0);
-        const totalBonus = rank + mod;
+        const groupBonus = (typeof getGroupSkillBonus === 'function') ? getGroupSkillBonus(cardName, 'spell', statKey) : 0;
+        const magePen = (typeof mageRankPenalty === 'function') ? mageRankPenalty(cardName, 'spell', statKey) : 0;
+        const effRank = magePen ? Math.max(1, rank - magePen) : rank;
+        const totalBonus = effRank + mod + groupBonus;
 
         document.getElementById(`spl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`spl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? `(Rank ${rank}, Passive, no stat mod)` : (grantFloor ? `(Rank ${rank} (Gear +${grantFloor} in rank) + ${statKey.toUpperCase()} +${mod})` : `(Rank ${rank} + ${statKey.toUpperCase()} +${mod})`);
+        document.getElementById(`spl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? `(Rank ${rank}, Passive, no stat mod)` : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`);
         renderRulebookSpell(id);
 
         toggleSpellUsedVisual(id);
@@ -3903,6 +3922,86 @@
         RC_STAT_KEYS.forEach(k => out[k] = Math.min(0, f[k]));
         return out;
     }
+    function raceClassStatCap(statKey) {
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        let cap = null;
+        [race, cls].forEach(e => {
+            if (!e) return;
+            if (e.name === 'Hobgoblin' && statKey === 'cha') cap = 10;
+            if (e.name === 'Pocket Kuma' && statKey === 'str') cap = 10;
+        });
+        return cap;
+    }
+    let raceClassMoveApplied = null; // {sourceKind, sourceName, amount, ownBefore} or null
+    function raceClassMoveBonus() {
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        let total = 0;
+        [race, cls].forEach(e => { if (e && e.name === 'Tigran') total += 10; });
+        return total;
+    }
+    function applyRaceClassMoveBonus(kind, entry) {
+        // Sync Move bonus from the CURRENT race+class, not just the changed
+        // source, so changing class does not drop a Tigran race bonus.
+        const el = document.getElementById('tracker-move');
+        if (!el) return;
+        if (raceClassMoveApplied) {
+            const cur = parseInt(el.value, 10) || 20;
+            el.value = Math.max(0, Math.max(raceClassMoveApplied.ownBefore, cur - raceClassMoveApplied.amount));
+            raceClassMoveApplied = null;
+        }
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        const isTigran = [race, cls].some(e => e && e.name === 'Tigran');
+        if (isTigran) {
+            const ownBefore = parseInt(el.value, 10) || 20;
+            el.value = ownBefore + 10;
+            raceClassMoveApplied = { sourceKind: 'race', sourceName: 'Tigran', amount: 10, ownBefore: ownBefore };
+        }
+    }
+    function getGroupSkillBonus(name, kind, statKey) {
+        // Group bonuses, applied at display time so they follow the current
+        // race/class and any card, old or new. Mappings are stated plainly:
+        // Edged = Slashing attacks + Dagger/Rapier (piercing blades);
+        // Trap = Trap Engineer/Find Trap/Detect Trap; Explosive = Bomb Surgeon,
+        // Improvised Explosive Device, Explosives Handling, Goblin Explosives,
+        // Incendiary Device Handling; Muscle movement = Running/Climbing/
+        // Swimming/Jumping; DEX weapon = attack cards with DEX to-hit;
+        // Electric/Fire/Ice spells = library spells whose damage/effect names
+        // those types; Heal spells = spells whose name contains Heal.
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        const key = (name || '').trim().toLowerCase();
+        const lib = findRulebookEntry(name, ['attack', 'utility', 'spell']);
+        const isTrap = ['trap engineer', 'find trap', 'detect trap'].includes(key);
+        const isExplosive = ['bomb surgeon', 'improvised explosive device', 'explosives handling', 'goblin explosives', 'incendiary device handling'].includes(key);
+        const isEdged = kind === 'skill' && lib && lib.kind === 'attack' && ((lib.base_damage || '').includes('Slashing') || ['dagger', 'rapier'].includes(key));
+        const isMuscleMove = ['running', 'climbing', 'swimming', 'jumping'].includes(key);
+        const isEfiSpell = kind === 'spell' && lib && /Electric|Fire|Ice/.test((lib.base_damage || '') + ' ' + (lib.effect || ''));
+        const isHealSpell = kind === 'spell' && key.includes('heal');
+        let total = 0;
+        [race, cls].forEach(e => {
+            if (!e) return;
+            if (e.name === 'Tetrakai' && isEdged) total += 1;
+            if (e.name === 'Skyfowl' && statKey === 'cha') total += 2;
+            if (e.name === 'Hobgoblin' && (isTrap || isExplosive)) total += 3;
+            if (e.name === 'Bomb Squad Tech' && isExplosive) total += 2;
+            if (e.name === 'Shotgun Messenger' && isMuscleMove) total += 1;
+            if ((e.name === 'Boring Ol\u2019 Monk' || e.name === 'Street Monk') && kind === 'skill' && lib && lib.kind === 'attack' && statKey === 'dex') total += 1;
+            if (e.name === 'Elemental Monk' && isEfiSpell) total += 1;
+            if (e.name === 'Lifebringer' && isHealSpell) total += 1;
+        });
+        return total;
+    }
+    function mageRankPenalty(name, kind, statKey) {
+        // Boring Ol' Mage: -3 Ranks in all DEX and STR skills, minimum Rank 1.
+        // Applied to the effective rank in the bonus display, not the card's Rank field.
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        const isMage = [race, cls].some(e => e && e.name === 'Boring Ol\u2019 Mage');
+        return (isMage && (statKey === 'dex' || statKey === 'str')) ? 3 : 0;
+    }
     function raceClassEvadeDice() {
         // "add 1d4 to your Evade Checks" - Elf, High and Obsidian Butterfly.
         // Counts each race/class entry that grants it (normally at most one).
@@ -4069,6 +4168,7 @@
             const amt = parseInt(m[1], 10);
             listTxt.split(/,| and /).forEach(raw => {
                 let name = raw.trim().replace(/\([^)]*\)/g, '').trim();
+                if (name.toLowerCase() === 'intimidation') name = 'Intimidate';
                 name = name.replace(/^\+?\d+\s*/, '').trim();
                 name = name.replace(/^(a |an |the )/i, '').trim();
                 if (!name || /choice|chosen|different|all |based/i.test(name)) return;
@@ -4111,6 +4211,7 @@
         }
         if (kind === 'race') window._lastRaceName = entry ? entry.name : (nameEl ? nameEl.value : '');
         else window._lastClassName = entry ? entry.name : (nameEl ? nameEl.value : '');
+        if (typeof applyRaceClassMoveBonus === 'function') applyRaceClassMoveBonus(kind, entry);
         applyFixedSkillBonuses(kind, entry);
         renderBaseStats();
         renderRaceClassBenefitsBox();
@@ -4619,6 +4720,7 @@
             ownBase: (typeof ownBase !== 'undefined' ? ownBase : undefined),
             raceClassChoices: (typeof raceClassChoices !== 'undefined' ? raceClassChoices : undefined),
             raceClassSkillApplied: (typeof raceClassSkillApplied !== 'undefined' ? raceClassSkillApplied : undefined),
+            raceClassMoveApplied: (typeof raceClassMoveApplied !== 'undefined' ? raceClassMoveApplied : undefined),
             bonusesAlreadyInBase: (typeof bonusesAlreadyInBase !== 'undefined' ? bonusesAlreadyInBase : undefined),
             maxHpSlots: 10,
             hpCurrent: hpCurrentSlots,
@@ -4748,6 +4850,7 @@
             else { ownBase = { str: parseInt(data.strBase, 10) || 1, con: parseInt(data.conBase, 10) || 1, dex: parseInt(data.dexBase, 10) || 1, int: parseInt(data.intBase, 10) || 1, cha: parseInt(data.chaBase, 10) || 1 }; bonusesAlreadyInBase = true; }
             if (data.raceClassChoices) raceClassChoices = data.raceClassChoices;
             if (data.raceClassSkillApplied) raceClassSkillApplied = data.raceClassSkillApplied;
+            if (data.raceClassMoveApplied) raceClassMoveApplied = data.raceClassMoveApplied;
             if (document.getElementById('stat-points-spent')) document.getElementById('stat-points-spent').value = data.statPointsSpent || 0;
             renderRaceClassBox('race'); renderRaceClassBox('class'); updateLevelPoints();
             document.getElementById('char-level').value = data.level || '1';
@@ -4936,6 +5039,7 @@
         ownBase = { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
         raceClassChoices = {};
         raceClassSkillApplied = [];
+        raceClassMoveApplied = null;
         bonusesAlreadyInBase = false;
         creationPromptPending = true;
         window._lastRaceName = '';
