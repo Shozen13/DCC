@@ -667,21 +667,23 @@
         }
 
         .stat-bank-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; width: 100%; }
-        .header-counters { flex-basis: 100%; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--panel-border); padding-top: 10px; }
+        .header-counters { flex-basis: 100%; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px; }
         .hc-strip { display: flex; align-items: center; gap: 10px; }
-        .hc-strip .hc-marks { flex: 1; font-size: 1.15rem; letter-spacing: 2px; }
+        .hc-strip .hc-marks { flex: 1; font-size: 1.05rem; letter-spacing: 3px; line-height: 1.2; white-space: nowrap; overflow: hidden; }
         .hc-mark { color: #facc15; }
-        .hc-mark.big { font-size: 1.6rem; text-shadow: 0 0 8px rgba(250,204,21,.9); }
+        .hc-mark.big { font-size: 1.35rem; text-shadow: 0 0 6px rgba(250,204,21,.8); }
         .hc-marks.pk .hc-mark { color: #ef4444; }
-        .hc-marks.pk .hc-mark.big { text-shadow: 0 0 8px rgba(239,68,68,.9); }
-        .hc-strip button { padding: 4px 10px; }
-        .hc-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-        .hc-col { flex: 1 1 72px; text-align: center; min-width: 72px; }
-        .hc-col label { text-align: center; }
-        .hc-counter { display: flex; justify-content: center; align-items: center; gap: 4px; }
-        .hc-counter button { padding: 4px 8px; }
-        .hc-counter input { width: 52px; text-align: center; padding: 4px 2px; }
-        .hc-value { min-width: 28px; font-weight: bold; display: inline-block; text-align: center; }
+        .hc-marks.pk .hc-mark.big { text-shadow: 0 0 6px rgba(239,68,68,.8); }
+        .hc-strip button { padding: 4px 10px; flex: none; }
+        .hc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 8px; }
+        .hc-col { text-align: center; min-width: 0; background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 8px; padding: 6px 4px; }
+        .hc-col label { text-align: center; margin-bottom: 4px; }
+        .hc-counter { display: flex; justify-content: center; align-items: center; gap: 4px; flex-wrap: nowrap; }
+        .hc-counter button { padding: 5px 9px; flex: none; }
+        .hc-counter input { width: 46px; min-width: 0; text-align: center; padding: 4px 2px; }
+        .hc-value { min-width: 30px; font-weight: bold; display: inline-block; text-align: center; }
+        .hc-rules { margin: 0; font-size: 0.8rem; }
+        .hc-rules summary { cursor: pointer; color: var(--text-muted); }
         .stat-bank-row label { margin-bottom: 0; }
         .stat-bank-row button { padding: 6px 10px; flex: none; }
         .stat-bank-row button#stat-bank-btn { flex: 1; min-width: 48px; }
@@ -1059,6 +1061,10 @@
         <!-- Crawler Profile Card -->
         <div class="card">
             <h2>Crawler Profile</h2>
+            <input type="hidden" id="char-level" value="1">
+            <input type="hidden" id="char-floor" value="1">
+            <input type="hidden" id="stat-points-spent" value="0">
+            <input type="hidden" id="stat-bank" value="0">
             <div class="avatar-box">
                 <img id="avatar-img" src="" alt="Portrait Preview" style="display: none;">
                 <span id="avatar-placeholder" style="color: var(--text-muted); font-size: 0.8rem;">No Image Loaded</span>
@@ -1087,41 +1093,6 @@
                     <input type="text" id="char-class" placeholder="Class" oninput="saveDataSilently(); renderRaceClassBox('class')">
                     <select id="char-class-lib" onchange="applyRaceClass('class', this.value)"><option value="">-- Pick from book / Custom --</option></select><button type="button" id="class-info-btn" class="info-btn" style="display: none;" onclick="showRaceClassPopup('class')" title="Show class information">?</button>
                     <div id="class-rulebook-box" class="rulebook-box" style="display: none;"></div>
-                </div>
-            </div>
-            <div class="form-row-2">
-                <div class="form-group">
-                    <label>Level</label>
-                    <input type="hidden" id="char-level" value="1">
-                    <div class="hc-counter" style="justify-content: flex-start;">
-                        <button type="button" onclick="adjustLevel(-1)">-</button>
-                        <span class="hc-value level-display">1</span>
-                        <button type="button" onclick="openLevelUp()">+</button>
-                    </div>
-                    <p class="cloud-note" style="margin: 4px 0 0 0;">Level + opens the Level Up dialog and banks your 3 points, like CrawlerCo; Level - is a manual correction only.</p>
-                    <div id="level-points-box" class="summary-box">
-                        <strong>Level-up Stat Points</strong>
-                        <span id="level-points-text"></span>
-                        <input type="hidden" id="stat-points-spent" value="0">
-                        <input type="hidden" id="stat-bank" value="0">
-                        <label style="margin: 6px 0 0 0;">Stat Bank</label>
-                        <div class="stat-bank-row">
-                            <button type="button" onclick="adjustStatBank(-1)">-</button>
-                            <button type="button" id="stat-bank-btn" class="stat-bank-btn" onclick="openDistributeStatPoints()">0</button>
-                            <button type="button" onclick="adjustStatBank(1)">+</button>
-                        </div>
-                        <button type="button" onclick="openLevelUp()">Level Up</button>
-                        <p class="cloud-note" style="margin: 6px 0 0 0;">Book rule: 3 stat points per level gained, distributed in a saferoom after the Third Floor. Level cap 250. Level Up banks points; clicking the Stat Bank number distributes them to your Base stats. The -/+ buttons beside the bank are manual corrections only. Race and Class are selected on the Third Floor (Chapter 3); no lock is enforced in this sheet.</p>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Current Floor</label>
-                    <input type="hidden" id="char-floor" value="1">
-                    <div class="hc-counter" style="justify-content: flex-start;">
-                        <button type="button" onclick="adjustFloor(-1)">-</button>
-                        <span class="hc-value floor-display">1</span>
-                        <button type="button" onclick="adjustFloor(1)">+</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1317,8 +1288,9 @@
                     <div class="hc-col"><label>Move</label><div class="hc-counter"><input type="number" id="tracker-move" value="20" min="0" oninput="clampTracker('move'); saveDataSilently();"></div></div>
                     <div class="hc-col"><label>Step</label><div class="hc-counter"><input type="number" id="tracker-step" value="10" min="0" oninput="clampTracker('step'); saveDataSilently();"></div></div>
                 </div>
+                <p id="level-points-text" class="cloud-note" style="margin: 0;"></p>
                 <div class="hc-strip"><strong>PLAYER KILLER</strong><span id="pk-marks" class="hc-marks pk">No marks</span><span><button type="button" onclick="adjustTracker('pk', -1)">-</button> <button type="button" onclick="adjustTracker('pk', 1)">+</button></span></div>
-                <p class="cloud-note" style="margin: 0;">Book rules: Move defaults to 20 ft per Move Action; Step defaults to 10 ft, free with every Action, not an Action itself (both Actions moving = 60 ft). AI Favor: spend 1 to reroll a d20 once per Check (not a Natural 1), or once per round for an extra non-Attack Action. Popularity starts equal to your Cha modifier. Gold is dungeon currency, one Inventory slot, dropped by mobs from the Second Floor. Boss kills show as gold stars, player-killer kills as red skulls; every 5 of a kind condenses in the display to one bigger, shining mark, the count itself is unchanged.</p>
+                <details class="hc-rules cloud-note"><summary>Book rules for these trackers</summary>Book rules: Move defaults to 20 ft per Move Action; Step defaults to 10 ft, free with every Action, not an Action itself (both Actions moving = 60 ft). AI Favor: spend 1 to reroll a d20 once per Check (not a Natural 1), or once per round for an extra non-Attack Action. Popularity starts equal to your Cha modifier. Gold is dungeon currency, one Inventory slot, dropped by mobs from the Second Floor. Boss kills show as gold stars, player-killer kills as red skulls; every 5 of a kind condenses in the display to one bigger, shining mark, the count itself is unchanged.</details>
             </div>
         </div>
         <div class="tab-bar" id="tab-bar">
