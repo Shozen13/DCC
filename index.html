@@ -2833,6 +2833,9 @@
             const txt = entry.upgrades && entry.upgrades[String(t)];
             if (txt && rank >= t) tiers += `<div class="rulebook-tier"><b>Rank ${t} unlocked:</b> ${escapeHtml(txt)}</div>`;
         });
+        if (entry.name === "NATURE'S BREATH" && typeof naturesBreathHealFormula === 'function') {
+            tiers += `<div class="rulebook-tier"><b>Heal at Rank ${rank}:</b> ${escapeHtml(naturesBreathHealFormula(rank))}</div>`;
+        }
         let next = '';
         for (const t of [5, 10, 15]) {
             const txt = entry.upgrades && entry.upgrades[String(t)];
@@ -2991,6 +2994,7 @@
 
         if (data) {
             if (data.gearGrants) cardGearGrants['skl-' + id] = { ...data.gearGrants };
+            cardGroupApplied['skl-' + id] = data.groupBonus || 0;
             document.getElementById(`skl-name-${id}`).value = data.name || '';
             document.getElementById(`skl-rank-${id}`).value = data.rank || 1;
             document.getElementById(`skl-stat-${id}`).value = data.stat || 'str';
@@ -3042,15 +3046,27 @@
             ensureRankOption(rankEl2, rank);
             rankEl2.value = rank;
         }
+        // Group bonuses are Rank, not just a bonus: adjust the Rank field
+        // itself by the change in group bonus since last update. Stored
+        // groupBonus (from save, or 0 on old sheets) prevents double-counting
+        // on load, and removal drops Rank by exactly the group amount.
+        const groupBonus = (typeof getGroupSkillBonus === 'function') ? getGroupSkillBonus(cardName, 'skill', statKey) : 0;
+        const storedGroup = cardGroupApplied['skl-' + id] || 0;
+        if (groupBonus !== storedGroup) {
+            rank = Math.max(1, rank + (groupBonus - storedGroup));
+            const rankEl3 = document.getElementById(`skl-rank-${id}`);
+            ensureRankOption(rankEl3, rank);
+            rankEl3.value = rank;
+            cardGroupApplied['skl-' + id] = groupBonus;
+        }
 
         const mod = (bookEntry && !bookEntry.stat) ? 0 : (currentMods[statKey] || 0);
-        const groupBonus = (typeof getGroupSkillBonus === 'function') ? getGroupSkillBonus(cardName, 'skill', statKey) : 0;
         const magePen = (typeof mageRankPenalty === 'function') ? mageRankPenalty(cardName, 'skill', statKey) : 0;
         const effRank = magePen ? Math.max(1, rank - magePen) : rank;
-        const totalBonus = effRank + mod + groupBonus;
+        const totalBonus = effRank + mod;
 
         document.getElementById(`skl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`skl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? (`(Rank ${effRank}, Passive, no stat mod` + (magePen ? ' (Mage -3)' : '') + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`) : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`);
+        document.getElementById(`skl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? (`(Rank ${effRank}, Passive, no stat mod` + (magePen ? ' (Mage -3)' : '') + (groupBonus ? ` (Group +${groupBonus} in rank)` : '') + `)`) : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + (groupBonus ? ` (Group +${groupBonus} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + `)`);
         renderRulebookSkill(id);
 
         toggleSkillUsedVisual(id);
@@ -3102,6 +3118,7 @@
             return;
         }
         delete cardGearGrants['skl-' + id];
+        delete cardGroupApplied['skl-' + id];
         const card = document.getElementById(`skill-card-${id}`);
         if (card) card.remove();
         updateSkillsSummary();
@@ -3206,6 +3223,7 @@
 
         if (data) {
             if (data.gearGrants) cardGearGrants['spl-' + id] = { ...data.gearGrants };
+            cardGroupApplied['spl-' + id] = data.groupBonus || 0;
             document.getElementById(`spl-name-${id}`).value = data.name || '';
             document.getElementById(`spl-rank-${id}`).value = data.rank || 1;
             document.getElementById(`spl-stat-${id}`).value = data.stat || 'int';
@@ -3257,15 +3275,23 @@
             ensureRankOption(rankEl2, rank);
             rankEl2.value = rank;
         }
+        const groupBonus = (typeof getGroupSkillBonus === 'function') ? getGroupSkillBonus(cardName, 'spell', statKey) : 0;
+        const storedGroup = cardGroupApplied['spl-' + id] || 0;
+        if (groupBonus !== storedGroup) {
+            rank = Math.max(1, rank + (groupBonus - storedGroup));
+            const rankEl3 = document.getElementById(`spl-rank-${id}`);
+            ensureRankOption(rankEl3, rank);
+            rankEl3.value = rank;
+            cardGroupApplied['spl-' + id] = groupBonus;
+        }
 
         const mod = (bookEntry && !bookEntry.stat) ? 0 : (currentMods[statKey] || 0);
-        const groupBonus = (typeof getGroupSkillBonus === 'function') ? getGroupSkillBonus(cardName, 'spell', statKey) : 0;
         const magePen = (typeof mageRankPenalty === 'function') ? mageRankPenalty(cardName, 'spell', statKey) : 0;
         const effRank = magePen ? Math.max(1, rank - magePen) : rank;
-        const totalBonus = effRank + mod + groupBonus;
+        const totalBonus = effRank + mod;
 
         document.getElementById(`spl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`spl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? (`(Rank ${effRank}, Passive, no stat mod` + (magePen ? ' (Mage -3)' : '') + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`) : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`);
+        document.getElementById(`spl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? (`(Rank ${effRank}, Passive, no stat mod` + (magePen ? ' (Mage -3)' : '') + (groupBonus ? ` (Group +${groupBonus} in rank)` : '') + `)`) : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + (groupBonus ? ` (Group +${groupBonus} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + `)`);
         renderRulebookSpell(id);
 
         toggleSpellUsedVisual(id);
@@ -3317,6 +3343,7 @@
             return;
         }
         delete cardGearGrants['spl-' + id];
+        delete cardGroupApplied['spl-' + id];
         const card = document.getElementById(`spell-card-${id}`);
         if (card) card.remove();
         updateSpellsSummary();
@@ -4050,6 +4077,33 @@
         const key = name.trim().toUpperCase();
         return SPELL_KEYWORDS[key] || [];
     }
+    function rankDamageDie(rank) {
+        // Book p.176, Table 37: Rank damage die, closest die without going over.
+        if (rank <= 1) return '+1';
+        if (rank <= 3) return '1d2';
+        if (rank <= 5) return '1d4';
+        if (rank <= 7) return '1d6';
+        if (rank <= 9) return '1d8';
+        if (rank <= 11) return '1d10';
+        if (rank <= 13) return '1d12';
+        if (rank <= 15) return '1d8 + 1d6';
+        if (rank <= 17) return '2d8';
+        if (rank <= 19) return '1d10 + 1d8';
+        return '2d10';
+    }
+    function naturesBreathHealFormula(rank) {
+        // Nature's Breath: heal a number of Health Bar slots equal to a Rank
+        // damage die roll. Upgrades add 1 to the die roll at Rank 5, 10 and
+        // 15, cumulative (each tier's +1 remains, as upgrades are additive
+        // unless they override). So Rank 5: die +1, Rank 10: die +2, Rank 15: die +3.
+        const die = rankDamageDie(rank);
+        let bonus = 0;
+        if (rank >= 5) bonus += 1;
+        if (rank >= 10) bonus += 1;
+        if (rank >= 15) bonus += 1;
+        if (die === '+1') return bonus ? ('+' + (1 + bonus) + ' slots') : '+1 slot';
+        return bonus ? (die + ' + ' + bonus + ' slots') : (die + ' slots');
+    }
     function getGroupSkillBonus(name, kind, statKey) {
         // Group bonuses, applied at display time so they follow the current
         // race/class and any card, old or new. Mappings are stated plainly:
@@ -4094,6 +4148,7 @@
         const isMage = [race, cls].some(e => e && e.name === 'Boring Ol\u2019 Mage');
         return (isMage && (statKey === 'dex' || statKey === 'str')) ? 3 : 0;
     }
+    let cardGroupApplied = {}; // key 'skl-<id>' or 'spl-<id>' -> group bonus amount currently in the Rank field
     function raceClassFloorForSkill(skillName, kind) {
         if (!Array.isArray(raceClassSkillApplied)) return 0;
         const key = (skillName || '').trim().toLowerCase();
@@ -4243,11 +4298,22 @@
                 const rankEl = document.getElementById((a.kind === 'spell' ? 'spl-rank-' : 'skl-rank-') + id);
                 if (rankEl) {
                     const cur = parseInt(rankEl.value, 10) || 1;
-                    const next = Math.max(a.ownRankBefore, cur - a.amount);
+                    // cur now includes any group bonus in Rank. Account for
+                    // the group change on this race/class removal, so a
+                    // bonus-created card like Lifebringer's Nature's Breath
+                    // (own 0 + fixed 2 + group 1 = 3) correctly reaches 0
+                    // and is removed, not clamped to 1 by the group update.
+                    const key = (a.kind === 'spell' ? 'spl-' : 'skl-') + id;
+                    const storedGroup = cardGroupApplied[key] || 0;
+                    const statEl = document.getElementById((a.kind === 'spell' ? 'spl-stat-' : 'skl-stat-') + id);
+                    const newGroup = (typeof getGroupSkillBonus === 'function') ? getGroupSkillBonus(a.skillName, a.kind, statEl ? statEl.value : 'int') : 0;
+                    const next = Math.max(a.ownRankBefore, cur - a.amount) - storedGroup + newGroup;
                     if (a.createdByBonus && next <= 0) {
                         const card = document.getElementById((a.kind === 'spell' ? 'spell-card-' : 'skill-card-') + id);
                         if (card) card.remove();
+                        delete cardGroupApplied[key];
                     } else {
+                        cardGroupApplied[key] = newGroup;
                         ensureRankOption(rankEl, next); rankEl.value = next;
                         if (a.kind === 'spell') updateSpellCard(id); else updateSkillCard(id);
                     }
@@ -4756,7 +4822,8 @@
                 checkType: document.getElementById(`skl-check-${id}`).value,
                 effect: document.getElementById(`skl-effect-${id}`).value,
                 used: document.getElementById(`skl-used-${id}`)?.checked || false,
-                gearGrants: cardGearGrants['skl-' + id] || {}
+                gearGrants: cardGearGrants['skl-' + id] || {},
+                groupBonus: cardGroupApplied['skl-' + id] || 0
             });
         });
 
@@ -4771,7 +4838,8 @@
                 checkType: document.getElementById(`spl-check-${id}`).value,
                 effect: document.getElementById(`spl-effect-${id}`).value,
                 used: document.getElementById(`spl-used-${id}`)?.checked || false,
-                gearGrants: cardGearGrants['spl-' + id] || {}
+                gearGrants: cardGearGrants['spl-' + id] || {},
+                groupBonus: cardGroupApplied['spl-' + id] || 0
             });
         });
 
