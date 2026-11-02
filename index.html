@@ -1120,11 +1120,13 @@
                     <div id="class-rulebook-box" class="rulebook-box" style="display: none;"></div>
                 </div>
             </div>
+            <div id="race-class-benefits-box" class="rulebook-box" style="display: none;"></div>
         </div>
 
         <!-- Core Attributes Card -->
         <div class="card">
             <h2>Core Attributes</h2>
+            <p class="cloud-note">Base = your own base + race/class bonuses. Base is not typed directly: set it once at character creation, add to it from the banked Stat Points screen, and assign split pools in the Choices tab.</p>
             <div class="stats-grid">
                 <!-- STR -->
                 <div class="stat-card">
@@ -1135,7 +1137,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-str-base" value="1" min="1" onchange="calculateSheet()">
+                            <input type="number" id="stat-str-base" value="1" min="1" readonly title="Derived: own base + race/class bonuses">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1161,7 +1163,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-con-base" value="1" min="1" onchange="calculateSheet()">
+                            <input type="number" id="stat-con-base" value="1" min="1" readonly title="Derived: own base + race/class bonuses">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1187,7 +1189,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-dex-base" value="1" min="1" onchange="calculateSheet()">
+                            <input type="number" id="stat-dex-base" value="1" min="1" readonly title="Derived: own base + race/class bonuses">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1213,7 +1215,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-int-base" value="1" min="1" onchange="calculateSheet()">
+                            <input type="number" id="stat-int-base" value="1" min="1" readonly title="Derived: own base + race/class bonuses">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1239,7 +1241,7 @@
                     <div class="stat-rows">
                         <div class="stat-row-item">
                             <label>Base</label>
-                            <input type="number" id="stat-cha-base" value="1" min="1" onchange="calculateSheet()">
+                            <input type="number" id="stat-cha-base" value="1" min="1" readonly title="Derived: own base + race/class bonuses">
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
@@ -1326,6 +1328,7 @@
             <button type="button" class="tab-btn" data-tab="spells" onclick="showTab('spells')">Spells</button>
             <button type="button" class="tab-btn" data-tab="items" onclick="showTab('items')">Inventory</button>
             <button type="button" class="tab-btn" data-tab="campaign" onclick="showTab('campaign')">Campaign</button>
+            <button type="button" class="tab-btn" data-tab="choices" onclick="showTab('choices')" id="choices-tab-btn" style="display: none;">Choices</button>
             <button type="button" class="tab-btn" data-tab="dm" onclick="showTab('dm')">DM Dashboard</button>
             <button type="button" class="tab-btn" data-tab="sendbox" onclick="showTab('sendbox')">Send Box</button>
             <button type="button" class="tab-btn" data-tab="sendach" onclick="showTab('sendach')">Send Achievement</button>
@@ -1547,6 +1550,11 @@
             <div id="cloud-parties"></div>
             <div id="cloud-dm-tools"></div>
         </div>
+        <div class="card" id="panel-choices" style="display: none;">
+            <h2>Choices</h2>
+            <p class="cloud-note">Choices granted by your race or class. Each choice shows the race or class that grants it. Removing that race or class removes its choices.</p>
+            <div id="choices-content"></div>
+        </div>
         <div class="card" id="panel-dm" style="display: none;">
             <h2><span>DM Dashboard</span></h2>
             <p class="cloud-note">Campaigns you control, with their players and parties. HP and mana here update live as players change, and your HP/mana buttons here update players live. Party creation, buffs and debuffs are still in the Campaign tab.</p>
@@ -1626,6 +1634,9 @@
     <div class="modal-card" id="rc-modal-content"></div>
 </div>
 
+<div class="modal-overlay" id="creationModal" style="display: none;">
+    <div class="modal-content" id="creation-modal-content"></div>
+</div>
 <div class="modal-overlay" id="levelUpModal" style="display: none;">
     <div class="modal-card" id="level-up-modal-content"></div>
 </div>
@@ -1777,10 +1788,7 @@
 
     function calculateAttribute(id) {
         let base = parseInt(document.getElementById(`stat-${id}-base`).value) || 0;
-        if (base < 1) {
-            base = 1;
-            document.getElementById(`stat-${id}-base`).value = 1;
-        }
+        if (base < 1) base = 1;
         if (ownEnh[id] === undefined) ownEnh[id] = Math.max(0, (parseInt(document.getElementById(`stat-${id}-enh`).value) || 0));
         const gear = getEquippedItemBonuses().stat[id] || 0;
         const enh = ownEnh[id] + gear;
@@ -1844,11 +1852,13 @@
         const armorVal = ownArmor + gearDR;
         document.getElementById('armor-val').value = armorVal;
         const drBuffs = parseInt(document.getElementById('dr-buffs').value) || 0;
-        const totalDR = armorVal + drBuffs;
+        const raceClassDR = (typeof raceClassDRTotal === 'function') ? raceClassDRTotal() : 0;
+        const totalDR = armorVal + drBuffs + raceClassDR;
         document.getElementById('dr-total-disp').innerText = `${totalDR} DR`;
         // Gear DR is already inside the Armor number above, so listing it
-        // again would show the same number twice. Formula is Armor + Buffs only.
+        // again would show the same number twice. Formula is Armor + Buffs + Race/Class.
         const drParts = [{ num: String(armorVal), label: 'Armor' }, { num: signed(drBuffs), label: 'Buffs' }];
+        if (raceClassDR !== 0) drParts.push({ num: signed(raceClassDR), label: 'Race/Class' });
         document.getElementById('dr-subtext').innerHTML = formulaBreakdown(drParts);
 
         updateAllAttacks();
@@ -1871,7 +1881,7 @@
 
         activeTab = tab;
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-        ['vitals', 'attacks', 'gear', 'skills', 'spells', 'items', 'campaign', 'dm', 'loot', 'achievements', 'sendbox', 'sendach'].forEach(p => {
+        ['vitals', 'attacks', 'gear', 'skills', 'spells', 'items', 'campaign', 'choices', 'dm', 'loot', 'achievements', 'sendbox', 'sendach'].forEach(p => {
             const el = document.getElementById('panel-' + p);
             if (el) el.style.display = (tab === 'all' || tab === p) ? 'block' : 'none';
         });
@@ -1879,6 +1889,7 @@
         if (tab === 'loot') refreshLoot();
         if (tab === 'sendbox' || tab === 'sendach') refreshAchCampaigns();
         if (tab === 'achievements') { refreshAchPlayerList(); checkUnviewedAchievements(); }
+        if (typeof renderChoicesTab === 'function') renderChoicesTab();
         saveDataSilently();
     }
 
@@ -3782,6 +3793,250 @@
         if (!name) return null;
         return RACE_CLASS_LIBRARY.find(function (e) { return e.kind === kind && e.name.toLowerCase() === name.trim().toLowerCase(); }) || null;
     }
+
+    // ---- Race / class benefits (derived Base, Choices tab, skill bonuses) ----
+    // Best-design note (Antony, 2026-11-02, "do what is best" after saying he
+    // will reset): a fresh sheet goes through the creation prompt, so its
+    // own base is clean. An existing sheet is migrated by keeping its current
+    // Base as its own base, and race/class bonuses are only added when the
+    // race or class is next changed (picker), so nothing double counts.
+    let ownBase = { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
+    let bonusesAlreadyInBase = false; // true only for migrated sheets, until first race/class change
+    let raceClassChoices = {}; // choiceId -> value (split: {str:..,..}, skill/spell: {name, kind, amount})
+    let raceClassSkillApplied = []; // {source, sourceName, skillName, kind, amount, ownRankBefore, createdByBonus}
+    let creationPromptPending = false;
+    const RC_STAT_KEYS = ['str', 'con', 'dex', 'int', 'cha'];
+    const RC_STAT_NAMES = { str: 'Strength', con: 'Constitution', dex: 'Dexterity', int: 'Intelligence', cha: 'Charisma' };
+    const RC_STAT_ABBR = { Strength: 'str', Constitution: 'con', Dexterity: 'dex', Intelligence: 'int', Charisma: 'cha' };
+    function parseRaceClassStats(entry) {
+        const out = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+        if (!entry) return out;
+        const b = entry.benefits || '';
+        if (entry.name === 'Human') { RC_STAT_KEYS.forEach(k => out[k] += 2); return out; }
+        if (entry.name === 'Primal') { RC_STAT_KEYS.forEach(k => out[k] -= 1); return out; }
+        const re = /([+-])(\d+) (Strength|Dexterity|Constitution|Intelligence|Charisma)\b/g;
+        let m;
+        while ((m = re.exec(b)) !== null) {
+            // Skip the split-pool wording ("+6 split...") which is not a fixed bonus;
+            // split pools are handled separately in parseRaceClassSplit.
+            out[RC_STAT_ABBR[m[3]]] += (m[1] === '+' ? 1 : -1) * parseInt(m[2], 10);
+        }
+        return out;
+    }
+    function parseRaceClassSplit(entry) {
+        if (!entry) return [];
+        const b = entry.benefits || '';
+        const out = [];
+        const re = /\+(\d+) split (?:as you please )?between ([A-Z][a-z]+(?:, [A-Z][a-z]+)*(?:,? and [A-Z][a-z]+)?)/g;
+        let m;
+        while ((m = re.exec(b)) !== null) {
+            const parts = m[2].split(/,| and /).map(s => s.trim()).filter(Boolean);
+            const stats = parts.map(p => RC_STAT_ABBR[p]).filter(Boolean);
+            if (stats.length) out.push({ pool: parseInt(m[1], 10), stats: stats });
+        }
+        return out;
+    }
+    function parseRaceClassDR(entry) {
+        if (!entry) return 0;
+        const b = entry.benefits || '';
+        let total = 0;
+        const re = /\+(\d+) DR(?: Buff)?\b/g;
+        let m;
+        while ((m = re.exec(b)) !== null) {
+            const after = b.slice(m.index, m.index + 40);
+            if (/DR Upgrade/.test(after) || /breastplate/.test(b.slice(0, m.index + 60))) continue;
+            total += parseInt(m[1], 10);
+        }
+        // Grulke's +2 DR is a breastplate item, not a flat bonus; exclude it.
+        if (entry.name === 'Grulke') total = Math.max(0, total - 2);
+        // Cat Girl/Cat Boy's +5 DR is a Catcher upgrade for allies, not a flat bonus.
+        if (entry.name === 'Cat Girl/Cat Boy') total = Math.max(0, total - 5);
+        return total;
+    }
+    function raceClassFixedStats() {
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        const out = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+        [race, cls].forEach(e => { const s = parseRaceClassStats(e); RC_STAT_KEYS.forEach(k => out[k] += s[k]); });
+        return out;
+    }
+    function raceClassSplitAssignments() {
+        const out = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+        Object.keys(raceClassChoices).forEach(id => {
+            const v = raceClassChoices[id];
+            if (v && v.split) RC_STAT_KEYS.forEach(k => out[k] += parseInt(v.split[k], 10) || 0);
+        });
+        return out;
+    }
+    function renderBaseStats() {
+        if (bonusesAlreadyInBase) {
+            RC_STAT_KEYS.forEach(k => { const el = document.getElementById('stat-' + k + '-base'); if (el) el.value = Math.max(1, ownBase[k] || 1); });
+            return;
+        }
+        const fixed = raceClassFixedStats();
+        const split = raceClassSplitAssignments();
+        RC_STAT_KEYS.forEach(k => {
+            const el = document.getElementById('stat-' + k + '-base');
+            if (el) el.value = Math.max(1, (ownBase[k] || 1) + fixed[k] + split[k]);
+        });
+    }
+    function raceClassDRTotal() {
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        return parseRaceClassDR(race) + parseRaceClassDR(cls);
+    }
+    function renderRaceClassBenefitsBox() {
+        const box = document.getElementById('race-class-benefits-box');
+        if (!box) return;
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        if (!race && !cls) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        let parts = [];
+        [race, cls].forEach(e => { if (e) parts.push('<strong>' + escapeHtml(e.name) + ':</strong> ' + escapeHtml(e.benefits)); });
+        const fixed = raceClassFixedStats();
+        const fixedTxt = RC_STAT_KEYS.filter(k => fixed[k] !== 0).map(k => (fixed[k] > 0 ? '+' : '') + fixed[k] + ' ' + k.toUpperCase()).join(', ');
+        const dr = raceClassDRTotal();
+        let auto = [];
+        if (fixedTxt) auto.push('Stats: ' + fixedTxt);
+        if (dr) auto.push('DR: +' + dr + ' (in Damage Resistance, as Race/Class)');
+        if (raceClassSkillApplied.length) auto.push('Skill/Spell ranks: ' + raceClassSkillApplied.map(a => a.skillName + ' +' + a.amount + ' (' + a.sourceName + ')').join(', '));
+        box.style.display = 'block';
+        box.innerHTML = parts.join('<br><br>') + (auto.length ? '<br><br><em>Auto-applied:</em> ' + escapeHtml(auto.join(' | ')) + '<br><span style="color: var(--text-muted);">Other benefits (Advantage, vision, tables, clubs, etc.) are shown here as text; they are not numbers the sheet can calculate.</span>' : '');
+    }
+    function findSkillOrSpellCard(name, kind) {
+        const listId = kind === 'spell' ? 'spells-list' : 'skills-list';
+        const list = document.getElementById(listId);
+        if (!list) return null;
+        const cards = list.querySelectorAll(kind === 'spell' ? '.spell-card' : '.skill-card');
+        for (const card of cards) {
+            const id = card.id.replace(kind === 'spell' ? 'spell-card-' : 'skill-card-', '');
+            const el = document.getElementById((kind === 'spell' ? 'spl-name-' : 'skl-name-') + id);
+            if (el && el.value.trim().toLowerCase() === name.trim().toLowerCase()) return parseInt(id, 10);
+        }
+        return null;
+    }
+    function applyRaceClassSkillBonus(source, sourceName, skillName, kind, amount) {
+        // Selection-time apply (book p.128): if you do not have the skill you
+        // gain it at the bonus rank; if you have it, add the bonus, capped at
+        // Rank 10 during selection. The applied amount is recorded so a later
+        // race/class change can reverse exactly what was applied.
+        const existingId = findSkillOrSpellCard(skillName, kind);
+        let ownBefore = 0, created = false, id = existingId;
+        if (id === null) {
+            const data = { name: skillName, rank: 1, effect: '' };
+            if (kind === 'spell') { data.stat = 'int'; addSpell(data); } else { data.stat = 'str'; addSkill(data); }
+            id = findSkillOrSpellCard(skillName, kind);
+            created = true;
+        } else {
+            const rankEl = document.getElementById((kind === 'spell' ? 'spl-rank-' : 'skl-rank-') + id);
+            ownBefore = rankEl ? (parseInt(rankEl.value, 10) || 1) : 1;
+        }
+        if (id === null) return;
+        const rankEl = document.getElementById((kind === 'spell' ? 'spl-rank-' : 'skl-rank-') + id);
+        const cur = rankEl ? (parseInt(rankEl.value, 10) || 1) : 1;
+        const applied = Math.max(0, Math.min(amount, 10 - cur));
+        if (applied <= 0 && !created) return;
+        if (created) {
+            // New card: rank is the bonus itself, capped at 10.
+            const want = Math.min(amount, 10);
+            if (rankEl) { ensureRankOption(rankEl, want); rankEl.value = want; }
+            raceClassSkillApplied.push({ source: source, sourceName: sourceName, skillName: skillName, kind: kind, amount: want, ownRankBefore: 0, createdByBonus: true });
+        } else {
+            if (rankEl) { ensureRankOption(rankEl, cur + applied); rankEl.value = cur + applied; }
+            raceClassSkillApplied.push({ source: source, sourceName: sourceName, skillName: skillName, kind: kind, amount: applied, ownRankBefore: ownBefore, createdByBonus: false });
+        }
+        if (kind === 'spell') updateSpellCard(id); else updateSkillCard(id);
+    }
+    function reverseRaceClassSkillBonuses(source, sourceName) {
+        const keep = [];
+        raceClassSkillApplied.forEach(a => {
+            if (a.source === source && (!sourceName || a.sourceName === sourceName)) {
+                const id = findSkillOrSpellCard(a.skillName, a.kind);
+                if (id !== null) {
+                    const rankEl = document.getElementById((a.kind === 'spell' ? 'spl-rank-' : 'skl-rank-') + id);
+                    if (rankEl) {
+                        const cur = parseInt(rankEl.value, 10) || 1;
+                        const next = Math.max(a.ownRankBefore, cur - a.amount);
+                        if (a.createdByBonus && next <= 0) {
+                            const card = document.getElementById((a.kind === 'spell' ? 'spell-card-' : 'skill-card-') + id);
+                            if (card) card.remove();
+                        } else {
+                            ensureRankOption(rankEl, next); rankEl.value = next;
+                            if (a.kind === 'spell') updateSpellCard(id); else updateSkillCard(id);
+                        }
+                    }
+                }
+            } else keep.push(a);
+        });
+        raceClassSkillApplied = keep;
+    }
+    function parseFixedSkillBonuses(entry) {
+        // Grouped-list parser: "+2 Bow, Endurance, and Pugilism Skills" means
+        // +2 to each name in the list. Skips choice/group/category grants,
+        // which are handled in the Choices tab or as text only.
+        const out = [];
+        if (!entry) return out;
+        const b = entry.benefits || '';
+        const re = /\+(\d+) ([^.;]+?) (?:Skills?|Spells?)\b/g;
+        let m;
+        while ((m = re.exec(b)) !== null) {
+            const listTxt = m[2];
+            if (/of choice|chosen|different|all |based|or\b/i.test(listTxt) && !/^(Bow|Endurance|Pugilism)/i.test(listTxt)) {
+                // "Catcher or Shield Block" and similar either/or choices are not fixed.
+                if (/\bor\b/i.test(listTxt)) continue;
+                if (/all |based|different|chosen|of choice/i.test(listTxt)) continue;
+            }
+            const amt = parseInt(m[1], 10);
+            listTxt.split(/,| and /).forEach(raw => {
+                let name = raw.trim().replace(/\([^)]*\)/g, '').trim();
+                name = name.replace(/^\+?\d+\s*/, '').trim();
+                name = name.replace(/^(a |an |the )/i, '').trim();
+                if (!name || /choice|chosen|different|all |based/i.test(name)) return;
+                if (/^(in |one |another )/i.test(name)) return;
+                const lib = findRulebookEntry(name, ['attack', 'utility', 'spell']);
+                out.push({ name: name, kind: lib ? lib.kind : 'utility', amount: amt });
+            });
+        }
+        return out;
+    }
+    function applyFixedSkillBonuses(source, entry) {
+        if (!entry) return;
+        parseFixedSkillBonuses(entry).forEach(s => {
+            // Skip names that are choice grants for this entry (handled in Choices).
+            applyRaceClassSkillBonus(source, entry.name, s.name, s.kind === 'spell' ? 'spell' : 'skill', s.amount);
+        });
+    }
+    function applyRaceClassBenefits(kind, isFirstChange) {
+        // kind: 'race' or 'class', called after the name field is set.
+        const nameEl = document.getElementById(kind === 'race' ? 'char-race' : 'char-class');
+        const entry = findRaceClass(nameEl ? nameEl.value : '', kind);
+        // Reverse old bonuses for this source first.
+        const oldName = kind === 'race' ? (window._lastRaceName || '') : (window._lastClassName || '');
+        if (oldName) reverseRaceClassSkillBonuses(kind, oldName);
+        // Clear choices for this source, reversing any skill bonus they applied.
+        Object.keys(raceClassChoices).forEach(id => {
+            if (id.indexOf(kind + ':') === 0) { reverseRaceClassSkillBonuses('choice', id); delete raceClassChoices[id]; }
+        });
+        // Migration conversion, once: current display already included the
+        // old bonuses, so back them out to get a clean own base.
+        if (bonusesAlreadyInBase) {
+            const oldRace = findRaceClass(window._lastRaceName || '', 'race');
+            const oldCls = findRaceClass(window._lastClassName || '', 'class');
+            [oldRace, oldCls].forEach(e => {
+                const s = parseRaceClassStats(e);
+                RC_STAT_KEYS.forEach(k => ownBase[k] = Math.max(1, (ownBase[k] || 1) - s[k]));
+            });
+            bonusesAlreadyInBase = false;
+        }
+        if (kind === 'race') window._lastRaceName = entry ? entry.name : (nameEl ? nameEl.value : '');
+        else window._lastClassName = entry ? entry.name : (nameEl ? nameEl.value : '');
+        applyFixedSkillBonuses(kind, entry);
+        renderBaseStats();
+        renderRaceClassBenefitsBox();
+        if (typeof renderChoicesTab === 'function') renderChoicesTab();
+        calculateSheet();
+        saveDataSilently();
+    }
     function renderRaceClassBox(kind) {
         const nameEl = document.getElementById(kind === 'race' ? 'char-race' : 'char-class');
         const selEl = document.getElementById(kind === 'race' ? 'char-race-lib' : 'char-class-lib');
@@ -3809,11 +4064,171 @@
         modal.style.display = 'flex';
     }
     function applyRaceClass(kind, selectedName) {
-        if (!selectedName) { renderRaceClassBox(kind); return; }
+        if (!selectedName) { renderRaceClassBox(kind); renderRaceClassBenefitsBox(); return; }
         const nameEl = document.getElementById(kind === 'race' ? 'char-race' : 'char-class');
         nameEl.value = selectedName;
         renderRaceClassBox(kind);
-        saveDataSilently();
+        applyRaceClassBenefits(kind);
+    }
+
+    // ---- Choices tab ----
+    function choiceIdFor(kind, entry, idx) { return kind + ':' + entry.name + ':' + idx; }
+    function getChoiceGrants(entry) {
+        // Hand list for the common choice patterns. Each grant: {amount, category, options, count, label}
+        // category: weapon | spell | crafting | skill | list (options are the only picks)
+        const b = (entry.benefits || '');
+        const grants = [];
+        const push = (amount, category, options, count, label) => grants.push({ amount: amount, category: category, options: options || null, count: count || 1, label: label });
+        // Split pools are handled separately, not as skill choices.
+        if (/in a weapon skill of choice/i.test(b)) push(parseInt((b.match(/\+(\d+) in a weapon skill of choice/i) || [0, 0])[1], 10) || 0, 'weapon', null, 1, 'weapon skill of choice');
+        if (/in one weapon skill of choice/i.test(b)) push(parseInt((b.match(/\+(\d+) in one weapon skill of choice/i) || [0, 0])[1], 10) || 0, 'weapon', null, 1, 'weapon skill of choice');
+        if (/in one Melee Weapon Skill of choice/i.test(b)) push(parseInt((b.match(/\+(\d+) in one Melee Weapon Skill of choice/i) || [0, 0])[1], 10) || 0, 'weapon', null, 1, 'Melee Weapon Skill of choice');
+        if (/in an Edged Weapon Skill of choice/i.test(b)) push(parseInt((b.match(/\+(\d+) in an Edged Weapon Skill of choice/i) || [0, 0])[1], 10) || 0, 'weapon', null, 1, 'Edged Weapon Skill of choice');
+        if (/in a spell of choice/i.test(b)) push(parseInt((b.match(/\+(\d+) in a spell of choice/i) || [0, 0])[1], 10) || 0, 'spell', null, 1, 'spell of choice');
+        if (/in another spell of choice/i.test(b)) push(parseInt((b.match(/\+(\d+) in another spell of choice/i) || [0, 0])[1], 10) || 0, 'spell', null, 1, 'another spell of choice');
+        if (/in one crafting Skill of choice/i.test(b)) push(parseInt((b.match(/\+(\d+) in one crafting Skill of choice/i) || [0, 0])[1], 10) || 0, 'crafting', null, 1, 'crafting Skill of choice');
+        if (/in another crafting Skill of choice/i.test(b)) push(parseInt((b.match(/\+(\d+) in another crafting Skill of choice/i) || [0, 0])[1], 10) || 0, 'crafting', null, 1, 'another crafting Skill of choice');
+        const twoCraft = b.match(/\+(\d+) in two different crafting Skills of your choice/i);
+        if (twoCraft) push(parseInt(twoCraft[1], 10), 'crafting', null, 2, 'crafting Skill of choice (two different)');
+        if (/in a Reach Weapon Skill of choice/i.test(b)) push(parseInt((b.match(/\+(\d+) in a Reach Weapon Skill of choice/i) || [0, 0])[1], 10) || 0, 'weapon', null, 1, 'Reach Weapon Skill of choice');
+        const either = b.match(/\+(\d+) in either ([A-Z][A-Za-z'’\- ]+?) or ([A-Z][A-Za-z'’\- ]+?) Skills?/i);
+        if (either) push(parseInt(either[1], 10), 'list', [either[2].trim(), either[3].trim()], 1, 'either ' + either[2].trim() + ' or ' + either[3].trim());
+        const orPair = b.match(/\+(\d+) ([A-Z][A-Za-z'’\- ]+?) or ([A-Z][A-Za-z'’\- ]+?)(?:;|,|\.)/);
+        if (orPair && /Catcher|Shield Block/.test(orPair[0])) push(parseInt(orPair[1], 10), 'list', [orPair[2].trim(), orPair[3].trim()], 1, orPair[2].trim() + ' or ' + orPair[3].trim());
+        const twoList = b.match(/\+(\d+) to two chosen skills from ([^.;]+)/i);
+        if (twoList) {
+            const opts = twoList[2].split(/,| or /).map(s => s.trim()).filter(Boolean);
+            push(parseInt(twoList[1], 10), 'list', opts, 2, 'chosen skill from the list (two)');
+        }
+        const rapier = b.match(/\+(\d+) Rapier or Longsword Skill/i);
+        if (rapier) push(parseInt(rapier[1], 10), 'list', ['Rapier', 'Longsword'], 1, 'Rapier or Longsword');
+        return grants.filter(g => g.amount > 0);
+    }
+    function choiceCandidates(category, options) {
+        if (options) return options;
+        if (category === 'weapon') return RULEBOOK_LIBRARY.filter(e => e.kind === 'attack').map(e => e.name);
+        if (category === 'spell') return RULEBOOK_LIBRARY.filter(e => e.kind === 'spell').map(e => e.name);
+        if (category === 'crafting') return RULEBOOK_LIBRARY.filter(e => e.kind === 'utility').map(e => e.name);
+        return RULEBOOK_LIBRARY.map(e => e.name);
+    }
+    function renderChoicesTab() {
+        const btn = document.getElementById('choices-tab-btn');
+        const panel = document.getElementById('panel-choices');
+        const content = document.getElementById('choices-content');
+        if (!btn || !panel || !content) return;
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        let sections = [];
+        [{ kind: 'race', entry: race }, { kind: 'class', entry: cls }].forEach(pair => {
+            const entry = pair.entry; if (!entry) return;
+            const splits = parseRaceClassSplit(entry);
+            splits.forEach((sp, si) => {
+                const cid = choiceIdFor(pair.kind, entry, 'split' + si);
+                const cur = raceClassChoices[cid] || { split: {} };
+                let rows = '';
+                sp.stats.forEach(k => {
+                    const v = parseInt(cur.split[k], 10) || 0;
+                    rows += '<p>' + k.toUpperCase() + ': <button type="button" onclick="choiceSplitStep(\'' + cid + '\', \'' + k + '\', -1, ' + sp.pool + ')">-</button> ' + v + ' <button type="button" onclick="choiceSplitStep(\'' + cid + '\', \'' + k + '\', 1, ' + sp.pool + ')">+</button></p>';
+                });
+                const total = sp.stats.reduce((s, k) => s + (parseInt(cur.split[k], 10) || 0), 0);
+                sections.push('<div class="form-group"><strong>Source: ' + escapeHtml(entry.name) + ' (' + pair.kind + ') &mdash; +' + sp.pool + ' split between ' + sp.stats.map(k => k.toUpperCase()).join(', ') + '</strong><p>Assigned ' + total + ' / ' + sp.pool + '. ' + (entry.name === 'Elf, City' ? 'Reassignable once per floor on a Long Rest, per the book.' : '') + '</p>' + rows + '</div>');
+            });
+            const grants = getChoiceGrants(entry);
+            grants.forEach((g, gi) => {
+                for (let n = 0; n < g.count; n++) {
+                    const cid = choiceIdFor(pair.kind, entry, 'choice' + gi + '-' + n);
+                    const cur = raceClassChoices[cid];
+                    const cands = choiceCandidates(g.category, g.options);
+                    let opts = '<option value="">-- Pick --</option>' + cands.map(c => '<option value="' + escapeHtml(c) + '"' + (cur && cur.name === c ? ' selected' : '') + '>' + escapeHtml(c) + '</option>').join('');
+                    sections.push('<div class="form-group"><strong>Source: ' + escapeHtml(entry.name) + ' (' + pair.kind + ') &mdash; +' + g.amount + ' ' + escapeHtml(g.label) + '</strong><br><select onchange="choiceSkillPick(\'' + cid + '\', \'' + pair.kind + '\', \'' + escapeHtml(entry.name.replace(/'/g, "\\'")) + '\', ' + g.amount + ', this.value)">' + opts + '</select> <input type="text" placeholder="or custom name" value="' + escapeHtml(cur && cur.custom ? cur.name : '') + '" onchange="choiceSkillCustom(\'' + cid + '\', \'' + pair.kind + '\', \'' + escapeHtml(entry.name.replace(/'/g, "\\'")) + '\', ' + g.amount + ', this.value)"></div>');
+                }
+            });
+        });
+        if (!sections.length) {
+            btn.style.display = 'none';
+            if (activeTab === 'choices') { panel.style.display = 'none'; }
+            content.innerHTML = '<p class="cloud-note">No choices from your current race or class.</p>';
+            return;
+        }
+        btn.style.display = '';
+        content.innerHTML = sections.join('<hr>');
+    }
+    function choiceSplitStep(cid, key, delta, pool) {
+        const cur = raceClassChoices[cid] || { split: {} };
+        const total = ['str', 'con', 'dex', 'int', 'cha'].reduce((s, k) => s + (parseInt(cur.split[k], 10) || 0), 0);
+        const v = parseInt(cur.split[key], 10) || 0;
+        const next = v + delta;
+        if (next < 0) return;
+        if (delta > 0 && total >= pool) return;
+        cur.split[key] = next;
+        raceClassChoices[cid] = cur;
+        renderBaseStats(); renderChoicesTab(); calculateSheet(); saveDataSilently();
+    }
+    function choiceSkillApply(cid, kind, sourceName, amount, name) {
+        // Reverse the old pick for this choice, then apply the new one.
+        const old = raceClassChoices[cid];
+        if (old && old.name) reverseRaceClassSkillBonuses('choice', cid);
+        if (!name || !name.trim()) { delete raceClassChoices[cid]; renderChoicesTab(); saveDataSilently(); return; }
+        const lib = findRulebookEntry(name, ['attack', 'utility', 'spell']);
+        const skind = lib ? (lib.kind === 'spell' ? 'spell' : 'skill') : 'skill';
+        // Track under source 'choice' with sourceName = choice id, so reversing
+        // this choice alone does not touch fixed race/class bonuses.
+        raceClassChoices[cid] = { name: name.trim(), kind: skind, amount: amount };
+        // Apply with a choice-specific source key: temporarily map it through
+        // the applied list using source 'choice' and sourceName cid.
+        const existingId = findSkillOrSpellCard(name, skind);
+        let ownBefore = 0, created = false;
+        let id = existingId;
+        if (id === null) {
+            const data = { name: name.trim(), rank: 1, effect: '' };
+            if (skind === 'spell') { data.stat = 'int'; addSpell(data); } else { data.stat = 'str'; addSkill(data); }
+            id = findSkillOrSpellCard(name, skind); created = true;
+        } else {
+            const rankEl = document.getElementById((skind === 'spell' ? 'spl-rank-' : 'skl-rank-') + id);
+            ownBefore = rankEl ? (parseInt(rankEl.value, 10) || 1) : 1;
+        }
+        if (id !== null) {
+            const rankEl = document.getElementById((skind === 'spell' ? 'spl-rank-' : 'skl-rank-') + id);
+            const cur = rankEl ? (parseInt(rankEl.value, 10) || 1) : 1;
+            if (created) {
+                const want = Math.min(amount, 10);
+                if (rankEl) { ensureRankOption(rankEl, want); rankEl.value = want; }
+                raceClassSkillApplied.push({ source: 'choice', sourceName: cid, skillName: name.trim(), kind: skind, amount: want, ownRankBefore: 0, createdByBonus: true });
+            } else {
+                const applied = Math.max(0, Math.min(amount, 10 - cur));
+                if (applied > 0) {
+                    if (rankEl) { ensureRankOption(rankEl, cur + applied); rankEl.value = cur + applied; }
+                    raceClassSkillApplied.push({ source: 'choice', sourceName: cid, skillName: name.trim(), kind: skind, amount: applied, ownRankBefore: ownBefore, createdByBonus: false });
+                }
+            }
+            if (skind === 'spell') updateSpellCard(id); else updateSkillCard(id);
+        }
+        renderChoicesTab(); calculateSheet(); saveDataSilently();
+    }
+    function choiceSkillPick(cid, kind, sourceName, amount, value) { choiceSkillApply(cid, kind, sourceName, amount, value); }
+    function choiceSkillCustom(cid, kind, sourceName, amount, value) { choiceSkillApply(cid, kind, sourceName, amount, value); }
+    // ---- Creation prompt ----
+    function openCreationPrompt() {
+        creationPromptPending = true;
+        const content = document.getElementById('creation-modal-content');
+        if (!content) return;
+        let rows = '';
+        [['str', 'STR'], ['con', 'CON'], ['dex', 'DEX'], ['int', 'INT'], ['cha', 'CHA']].forEach(pair => {
+            rows += '<p>' + pair[1] + ': <input type="number" id="create-stat-' + pair[0] + '" value="1" min="1" style="width: 80px;"></p>';
+        });
+        content.innerHTML = '<h3>New Crawler &mdash; Level 1 Base Stats</h3><p>Every crawler starts at Level 1 with all base stats at 1. Set your Level 1 base stats here. This prompt appears only once for this character; it will not come back on reload.</p>' + rows + '<div class="modal-actions"><button type="button" onclick="confirmCreationStats()">Confirm Base Stats</button></div>';
+        document.getElementById('creationModal').style.display = 'flex';
+    }
+    function confirmCreationStats() {
+        [['str', 'con', 'dex', 'int', 'cha']].forEach(() => {});
+        ['str', 'con', 'dex', 'int', 'cha'].forEach(k => {
+            const el = document.getElementById('create-stat-' + k);
+            ownBase[k] = Math.max(1, el ? (parseInt(el.value, 10) || 1) : 1);
+        });
+        bonusesAlreadyInBase = false;
+        creationPromptPending = false;
+        document.getElementById('creationModal').style.display = 'none';
+        renderBaseStats(); calculateSheet(); saveDataSilently();
     }
     function getStatBank() {
         const el = document.getElementById('stat-bank');
@@ -3962,8 +4377,8 @@
         distributeStats.forEach(function (pair) {
             const key = pair[0], amount = distributePreview[key] || 0;
             if (!amount) return;
-            const baseEl = document.getElementById('stat-' + key + '-base');
-            if (baseEl) baseEl.value = (parseInt(baseEl.value, 10) || 1) + amount;
+            ownBase[key] = (ownBase[key] || 1) + amount;
+            if (typeof renderBaseStats === 'function') renderBaseStats();
             total += amount;
         });
         if (total > 0) {
@@ -3979,6 +4394,7 @@
 
     function saveDataSilently() {
         if (isInitialLoad) return;
+        if (typeof creationPromptPending !== 'undefined' && creationPromptPending) return;
         try { if (typeof scheduleCloudAutosave === 'function') scheduleCloudAutosave(); } catch (e) {}
 
         const attacks = [];
@@ -4112,6 +4528,10 @@
             chaBase: document.getElementById('stat-cha-base').value,
             chaEnh: ownEnh.cha,
 
+            ownBase: (typeof ownBase !== 'undefined' ? ownBase : undefined),
+            raceClassChoices: (typeof raceClassChoices !== 'undefined' ? raceClassChoices : undefined),
+            raceClassSkillApplied: (typeof raceClassSkillApplied !== 'undefined' ? raceClassSkillApplied : undefined),
+            bonusesAlreadyInBase: (typeof bonusesAlreadyInBase !== 'undefined' ? bonusesAlreadyInBase : undefined),
             maxHpSlots: 10,
             hpCurrent: hpCurrentSlots,
             manaCurrent: manaCurrent,
@@ -4234,6 +4654,12 @@
             document.getElementById('char-number').value = data.number || '';
             document.getElementById('char-race').value = data.race || '';
             document.getElementById('char-class').value = data.class || '';
+            window._lastRaceName = data.race || '';
+            window._lastClassName = data.class || '';
+            if (data.ownBase) { ownBase = { str: parseInt(data.ownBase.str, 10) || 1, con: parseInt(data.ownBase.con, 10) || 1, dex: parseInt(data.ownBase.dex, 10) || 1, int: parseInt(data.ownBase.int, 10) || 1, cha: parseInt(data.ownBase.cha, 10) || 1 }; bonusesAlreadyInBase = false; }
+            else { ownBase = { str: parseInt(data.strBase, 10) || 1, con: parseInt(data.conBase, 10) || 1, dex: parseInt(data.dexBase, 10) || 1, int: parseInt(data.intBase, 10) || 1, cha: parseInt(data.chaBase, 10) || 1 }; bonusesAlreadyInBase = true; }
+            if (data.raceClassChoices) raceClassChoices = data.raceClassChoices;
+            if (data.raceClassSkillApplied) raceClassSkillApplied = data.raceClassSkillApplied;
             if (document.getElementById('stat-points-spent')) document.getElementById('stat-points-spent').value = data.statPointsSpent || 0;
             renderRaceClassBox('race'); renderRaceClassBox('class'); updateLevelPoints();
             document.getElementById('char-level').value = data.level || '1';
@@ -4262,6 +4688,9 @@
             document.getElementById('stat-cha-base').value = data.chaBase || 1;
             document.getElementById('stat-cha-enh').value = data.chaEnh || 0;
             ownEnh = { str: parseInt(data.strEnh, 10) || 0, con: parseInt(data.conEnh, 10) || 0, dex: parseInt(data.dexEnh, 10) || 0, int: parseInt(data.intEnh, 10) || 0, cha: parseInt(data.chaEnh, 10) || 0 };
+            if (typeof renderBaseStats === 'function') renderBaseStats();
+            if (typeof renderRaceClassBenefitsBox === 'function') renderRaceClassBenefitsBox();
+            if (typeof renderChoicesTab === 'function') renderChoicesTab();
 
             maxHpSlots = 10;
             hpCurrentSlots = data.hpCurrent || 0;
@@ -4341,6 +4770,7 @@
         } else {
             initHotlistAndGear();
             isFreshCrawler = true;
+            creationPromptPending = true;
         }
 
         ensureUnarmedCombat();
@@ -4357,7 +4787,9 @@
             manaCurrent = maxMana;
             renderTrackers();
             renderManaBar();
-            saveDataSilently();
+            ownBase = { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
+            bonusesAlreadyInBase = false;
+            if (typeof openCreationPrompt === 'function') openCreationPrompt();
         }
 
         applySectionVisibility('attacks');
@@ -4411,6 +4843,13 @@
         ownEnh = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
         ownArmor = 0;
         cardGearGrants = {};
+        ownBase = { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
+        raceClassChoices = {};
+        raceClassSkillApplied = [];
+        bonusesAlreadyInBase = false;
+        creationPromptPending = true;
+        window._lastRaceName = '';
+        window._lastClassName = '';
         accessoryCounter = 0;
 
         bodySlotCategories.forEach(cat => {
@@ -4472,7 +4911,6 @@
         manaCurrent = maxMana;
         renderTrackers();
         renderManaBar();
-        saveDataSilently();
 
         applySectionVisibility('attacks');
         applySectionVisibility('hotlist');
@@ -4486,6 +4924,7 @@
         showTab('vitals');
 
         closeResetModal();
+        if (typeof openCreationPrompt === 'function') openCreationPrompt();
     }
 
 
