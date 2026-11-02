@@ -4047,6 +4047,9 @@
         if (document.getElementById('tracker-step')) document.getElementById('tracker-step').value = 10;
         if (document.getElementById('tracker-boss')) document.getElementById('tracker-boss').value = 0;
         if (document.getElementById('tracker-pk')) document.getElementById('tracker-pk').value = 0;
+        if (document.getElementById('stat-points-spent')) document.getElementById('stat-points-spent').value = 0;
+        setStatBank(0);
+        updateLevelPoints();
         renderHeaderCounters();
         
         document.getElementById('avatar-img').style.display = 'none';
