@@ -182,6 +182,13 @@
             align-items: center;
             justify-content: center;
             background: var(--input-bg);
+            cursor: pointer;
+        }
+        .avatar-box .avatar-silhouette {
+            width: 55%;
+            height: 70%;
+            color: var(--text-muted);
+            opacity: 0.55;
         }
 
         .avatar-box img {
@@ -1065,13 +1072,15 @@
             <input type="hidden" id="char-floor" value="1">
             <input type="hidden" id="stat-points-spent" value="0">
             <input type="hidden" id="stat-bank" value="0">
-            <div class="avatar-box">
-                <img id="avatar-img" src="" alt="Portrait Preview" style="display: none;">
-                <span id="avatar-placeholder" style="color: var(--text-muted); font-size: 0.8rem;">No Image Loaded</span>
+            <div class="avatar-box" onclick="document.getElementById('avatar-file').click()" title="Click to choose an avatar image" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('avatar-file').click(); }">
+                <img id="avatar-img" src="" alt="Portrait Preview" style="display: none;" onerror="this.style.display='none'; document.getElementById('avatar-placeholder').style.display='block';">
+                <span id="avatar-placeholder"><svg class="avatar-silhouette" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="No avatar image"><circle cx="50" cy="32" r="18" fill="currentColor"/><path d="M18 92 Q50 52 82 92 Z" fill="currentColor"/></svg></span>
             </div>
+            <input type="file" id="avatar-file" accept="image/*" style="display: none;" onchange="updateAvatarFile(this)">
             <div class="form-group">
                 <label>Avatar Image URL</label>
-                <input type="text" id="avatar-url" onchange="updateAvatar()" placeholder="Paste image link...">
+                <input type="text" id="avatar-url" onchange="updateAvatar()" placeholder="Paste image link, or click the silhouette above to upload an image...">
+                <button type="button" class="btn-reset" onclick="clearAvatar()">Remove image</button>
             </div>
             <div class="form-group">
                 <label>Crawler</label>
@@ -3389,6 +3398,23 @@
             placeholder.style.display = 'block';
         }
         saveDataSilently();
+    }
+
+    function updateAvatarFile(input) {
+        const file = input && input.files && input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function () {
+            document.getElementById('avatar-url').value = reader.result;
+            updateAvatar();
+        };
+        reader.readAsDataURL(file);
+        input.value = '';
+    }
+
+    function clearAvatar() {
+        document.getElementById('avatar-url').value = '';
+        updateAvatar();
     }
 
     function saveData() {
