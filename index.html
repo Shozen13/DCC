@@ -3374,7 +3374,7 @@
         const selEl = document.getElementById(kind === 'race' ? 'char-race-lib' : 'char-class-lib');
         const box = document.getElementById(kind === 'race' ? 'race-rulebook-box' : 'class-rulebook-box');
         if (!nameEl || !box) return;
-        if (selEl && !selEl.options.length) selEl.innerHTML = raceClassOptions(kind);
+        if (selEl && selEl.options.length <= 1) selEl.innerHTML = raceClassOptions(kind);
         const entry = findRaceClass(nameEl.value, kind);
         if (selEl) selEl.value = entry ? entry.name : '';
         if (!entry) {
