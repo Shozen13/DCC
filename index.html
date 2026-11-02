@@ -1109,13 +1109,13 @@
             <div class="form-row-2">
                 <div class="form-group">
                     <label>Race</label>
-                    <input type="text" id="char-race" placeholder="Race" oninput="saveDataSilently(); renderRaceClassBox('race')">
+                    <input type="text" id="char-race" placeholder="Race" oninput="saveDataSilently(); renderRaceClassBox('race')" onchange="onRaceClassNameChange('race')">
                     <select id="char-race-lib" onchange="applyRaceClass('race', this.value)"><option value="">-- Pick from book / Custom --</option></select><button type="button" id="race-info-btn" class="info-btn" style="display: none;" onclick="showRaceClassPopup('race')" title="Show race information">?</button>
                     <div id="race-rulebook-box" class="rulebook-box" style="display: none;"></div>
                 </div>
                 <div class="form-group">
                     <label>Class</label>
-                    <input type="text" id="char-class" placeholder="Class" oninput="saveDataSilently(); renderRaceClassBox('class')">
+                    <input type="text" id="char-class" placeholder="Class" oninput="saveDataSilently(); renderRaceClassBox('class')" onchange="onRaceClassNameChange('class')">
                     <select id="char-class-lib" onchange="applyRaceClass('class', this.value)"><option value="">-- Pick from book / Custom --</option></select><button type="button" id="class-info-btn" class="info-btn" style="display: none;" onclick="showRaceClassPopup('class')" title="Show class information">?</button>
                     <div id="class-rulebook-box" class="rulebook-box" style="display: none;"></div>
                 </div>
@@ -3860,13 +3860,32 @@
         [race, cls].forEach(e => { const s = parseRaceClassStats(e); RC_STAT_KEYS.forEach(k => out[k] += s[k]); });
         return out;
     }
+    function choiceSourceMatches(cid) {
+        const parts = cid.split(':');
+        if (parts.length < 2) return false;
+        const kind = parts[0], name = parts[1];
+        const cur = kind === 'race' ? (document.getElementById('char-race') ? document.getElementById('char-race').value : '') : (document.getElementById('char-class') ? document.getElementById('char-class').value : '');
+        return name === cur;
+    }
     function raceClassSplitAssignments() {
         const out = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
         Object.keys(raceClassChoices).forEach(id => {
             const v = raceClassChoices[id];
-            if (v && v.split) RC_STAT_KEYS.forEach(k => out[k] += parseInt(v.split[k], 10) || 0);
+            if (v && v.split && choiceSourceMatches(id)) RC_STAT_KEYS.forEach(k => out[k] += parseInt(v.split[k], 10) || 0);
         });
         return out;
+    }
+    function pruneStaleRaceClassChoices() {
+        // A race/class cleared by typing (or an old saved choice whose source
+        // is gone) must not keep its split points or skill ranks. Run after
+        // skill/spell cards exist, before calculateSheet on load.
+        Object.keys(raceClassChoices).forEach(id => {
+            if (!choiceSourceMatches(id)) { reverseRaceClassSkillBonuses('choice', id); delete raceClassChoices[id]; }
+        });
+        const curRace = document.getElementById('char-race') ? document.getElementById('char-race').value : '';
+        const curCls = document.getElementById('char-class') ? document.getElementById('char-class').value : '';
+        const stale = raceClassSkillApplied.filter(a => (a.source === 'race' && a.sourceName !== curRace) || (a.source === 'class' && a.sourceName !== curCls));
+        stale.forEach(a => reverseRaceClassSkillBonuses(a.source, a.sourceName));
     }
     function renderBaseStats() {
         if (bonusesAlreadyInBase) {
@@ -4008,6 +4027,7 @@
     }
     function applyRaceClassBenefits(kind, isFirstChange) {
         // kind: 'race' or 'class', called after the name field is set.
+        renderRaceClassBox(kind);
         const nameEl = document.getElementById(kind === 'race' ? 'char-race' : 'char-class');
         const entry = findRaceClass(nameEl ? nameEl.value : '', kind);
         // Reverse old bonuses for this source first.
@@ -4064,9 +4084,16 @@
         modal.style.display = 'flex';
     }
     function applyRaceClass(kind, selectedName) {
-        if (!selectedName) { renderRaceClassBox(kind); renderRaceClassBenefitsBox(); return; }
         const nameEl = document.getElementById(kind === 'race' ? 'char-race' : 'char-class');
+        if (!selectedName) { if (nameEl) nameEl.value = ''; renderRaceClassBox(kind); applyRaceClassBenefits(kind); return; }
         nameEl.value = selectedName;
+        renderRaceClassBox(kind);
+        applyRaceClassBenefits(kind);
+    }
+    function onRaceClassNameChange(kind) {
+        const nameEl = document.getElementById(kind === 'race' ? 'char-race' : 'char-class');
+        const last = kind === 'race' ? (window._lastRaceName || '') : (window._lastClassName || '');
+        if (!nameEl || nameEl.value === last) { renderRaceClassBox(kind); return; }
         renderRaceClassBox(kind);
         applyRaceClassBenefits(kind);
     }
@@ -4775,6 +4802,8 @@
 
         ensureUnarmedCombat();
         syncGrantedSkills();
+        if (typeof pruneStaleRaceClassChoices === 'function') pruneStaleRaceClassChoices();
+        if (typeof renderBaseStats === 'function') renderBaseStats();
         calculateSheet();
 
         if (saved && savedPopularity === undefined && document.getElementById('tracker-popularity')) {
