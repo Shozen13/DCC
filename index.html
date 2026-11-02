@@ -3060,6 +3060,20 @@
             cardGroupApplied['skl-' + id] = groupBonus;
         }
 
+        // Combined given floor: gear grants + race/class fixed + group.
+        // Nature's Breath with Lifebringer is fixed 2 + group 1 = 3, so
+        // lowering it to 2 must snap back to 3, not stay at 2. This matches
+        // the existing floor model (floor = sum of given amounts, not
+        // own + given): a card with own ranks can still be lowered down
+        // to, but not below, the total given amount.
+        const combinedFloor = grantFloor + raceFloor + groupBonus;
+        if (combinedFloor > 0 && rank < combinedFloor) {
+            rank = combinedFloor;
+            const rankEl4 = document.getElementById(`skl-rank-${id}`);
+            ensureRankOption(rankEl4, rank);
+            rankEl4.value = rank;
+        }
+
         const mod = (bookEntry && !bookEntry.stat) ? 0 : (currentMods[statKey] || 0);
         const magePen = (typeof mageRankPenalty === 'function') ? mageRankPenalty(cardName, 'skill', statKey) : 0;
         const effRank = magePen ? Math.max(1, rank - magePen) : rank;
@@ -3283,6 +3297,14 @@
             ensureRankOption(rankEl3, rank);
             rankEl3.value = rank;
             cardGroupApplied['spl-' + id] = groupBonus;
+        }
+
+        const combinedFloor = grantFloor + raceFloor + groupBonus;
+        if (combinedFloor > 0 && rank < combinedFloor) {
+            rank = combinedFloor;
+            const rankEl4 = document.getElementById(`spl-rank-${id}`);
+            ensureRankOption(rankEl4, rank);
+            rankEl4.value = rank;
         }
 
         const mod = (bookEntry && !bookEntry.stat) ? 0 : (currentMods[statKey] || 0);
