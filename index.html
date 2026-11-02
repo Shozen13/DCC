@@ -783,7 +783,7 @@
             margin-bottom: 20px;
         }
 
-        .info-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #888; background: #222; color: #fff; font-weight: bold; cursor: pointer; margin-top: 4px; }
+        .info-btn { width: 28px; height: 28px; min-width: 28px; border-radius: 50%; border: 1px solid #888; background: #222; color: #fff; font-weight: bold; font-size: 16px; line-height: 1; padding: 0; cursor: pointer; margin-top: 4px; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
         .modal-actions {
             display: flex;
             gap: 12px;
@@ -3384,12 +3384,12 @@
         if (selEl) selEl.value = entry ? entry.name : '';
         const infoBtn = document.getElementById(kind === 'race' ? 'race-info-btn' : 'class-info-btn');
         if (!entry) {
-            if (nameEl.value.trim()) { box.style.display = 'none'; box.innerHTML = '<strong>Custom ' + kind + ':</strong> ' + escapeHtml(nameEl.value) + ' - no book entry, use your own notes for its benefits.'; if (infoBtn) infoBtn.style.display = 'inline-block'; }
+            if (nameEl.value.trim()) { box.style.display = 'none'; box.innerHTML = '<strong>Custom ' + kind + ':</strong> ' + escapeHtml(nameEl.value) + ' - no book entry, use your own notes for its benefits.'; if (infoBtn) infoBtn.style.display = 'inline-flex'; }
             else { box.style.display = 'none'; if (infoBtn) infoBtn.style.display = 'none'; }
             return;
         }
         box.style.display = 'none';
-        if (infoBtn) infoBtn.style.display = 'inline-block';
+        if (infoBtn) infoBtn.style.display = 'inline-flex';
         box.innerHTML = '<strong>' + escapeHtml(entry.name) + '</strong> (Chapter 3, p. ' + entry.source_book_page + ')' + (entry.class_type ? ' - Class Type: ' + escapeHtml(entry.class_type) : '') + '<br>' + escapeHtml(entry.benefits) + (entry.prerequisites ? '<br><em>Prerequisites:</em> ' + escapeHtml(entry.prerequisites) : '') + (entry.uncertain ? '<br><em>Note: this entry was flagged uncertain in extraction, check the printed rulebook.</em>' : '');
     }
     function showRaceClassPopup(kind) {
