@@ -3035,6 +3035,13 @@
         }
         const statKey = document.getElementById(`skl-stat-${id}`).value;
         const cardName = document.getElementById(`skl-name-${id}`) ? document.getElementById(`skl-name-${id}`).value : '';
+        const raceFloor = (typeof raceClassFloorForSkill === 'function') ? raceClassFloorForSkill(cardName, 'skill') : 0;
+        if (raceFloor > 0 && rank < raceFloor) {
+            rank = raceFloor;
+            const rankEl2 = document.getElementById(`skl-rank-${id}`);
+            ensureRankOption(rankEl2, rank);
+            rankEl2.value = rank;
+        }
 
         const mod = (bookEntry && !bookEntry.stat) ? 0 : (currentMods[statKey] || 0);
         const groupBonus = (typeof getGroupSkillBonus === 'function') ? getGroupSkillBonus(cardName, 'skill', statKey) : 0;
@@ -3243,6 +3250,13 @@
         }
         const statKey = document.getElementById(`spl-stat-${id}`).value;
         const cardName = document.getElementById(`spl-name-${id}`) ? document.getElementById(`spl-name-${id}`).value : '';
+        const raceFloor = (typeof raceClassFloorForSkill === 'function') ? raceClassFloorForSkill(cardName, 'spell') : 0;
+        if (raceFloor > 0 && rank < raceFloor) {
+            rank = raceFloor;
+            const rankEl2 = document.getElementById(`spl-rank-${id}`);
+            ensureRankOption(rankEl2, rank);
+            rankEl2.value = rank;
+        }
 
         const mod = (bookEntry && !bookEntry.stat) ? 0 : (currentMods[statKey] || 0);
         const groupBonus = (typeof getGroupSkillBonus === 'function') ? getGroupSkillBonus(cardName, 'spell', statKey) : 0;
@@ -4080,6 +4094,15 @@
         const isMage = [race, cls].some(e => e && e.name === 'Boring Ol\u2019 Mage');
         return (isMage && (statKey === 'dex' || statKey === 'str')) ? 3 : 0;
     }
+    function raceClassFloorForSkill(skillName, kind) {
+        if (!Array.isArray(raceClassSkillApplied)) return 0;
+        const key = (skillName || '').trim().toLowerCase();
+        let total = 0;
+        raceClassSkillApplied.forEach(a => {
+            if (a.kind === kind && (a.skillName || '').trim().toLowerCase() === key) total += a.amount || 0;
+        });
+        return total;
+    }
     function raceClassEvadeDice() {
         // "add 1d4 to your Evade Checks" - Elf, High and Obsidian Butterfly.
         // Counts each race/class entry that grants it (normally at most one).
@@ -4205,27 +4228,32 @@
         if (kind === 'spell') updateSpellCard(id); else updateSkillCard(id);
     }
     function reverseRaceClassSkillBonuses(source, sourceName) {
+        // Remove matching entries first, so updateSkillCard/updateSpellCard
+        // enforces only the remaining sources' floor, not the removed bonus.
+        const matching = [];
         const keep = [];
         raceClassSkillApplied.forEach(a => {
-            if (a.source === source && (!sourceName || a.sourceName === sourceName)) {
-                const id = findSkillOrSpellCard(a.skillName, a.kind);
-                if (id !== null) {
-                    const rankEl = document.getElementById((a.kind === 'spell' ? 'spl-rank-' : 'skl-rank-') + id);
-                    if (rankEl) {
-                        const cur = parseInt(rankEl.value, 10) || 1;
-                        const next = Math.max(a.ownRankBefore, cur - a.amount);
-                        if (a.createdByBonus && next <= 0) {
-                            const card = document.getElementById((a.kind === 'spell' ? 'spell-card-' : 'skill-card-') + id);
-                            if (card) card.remove();
-                        } else {
-                            ensureRankOption(rankEl, next); rankEl.value = next;
-                            if (a.kind === 'spell') updateSpellCard(id); else updateSkillCard(id);
-                        }
-                    }
-                }
-            } else keep.push(a);
+            if (a.source === source && (!sourceName || a.sourceName === sourceName)) matching.push(a);
+            else keep.push(a);
         });
         raceClassSkillApplied = keep;
+        matching.forEach(a => {
+            const id = findSkillOrSpellCard(a.skillName, a.kind);
+            if (id !== null) {
+                const rankEl = document.getElementById((a.kind === 'spell' ? 'spl-rank-' : 'skl-rank-') + id);
+                if (rankEl) {
+                    const cur = parseInt(rankEl.value, 10) || 1;
+                    const next = Math.max(a.ownRankBefore, cur - a.amount);
+                    if (a.createdByBonus && next <= 0) {
+                        const card = document.getElementById((a.kind === 'spell' ? 'spell-card-' : 'skill-card-') + id);
+                        if (card) card.remove();
+                    } else {
+                        ensureRankOption(rankEl, next); rankEl.value = next;
+                        if (a.kind === 'spell') updateSpellCard(id); else updateSkillCard(id);
+                    }
+                }
+            }
+        });
     }
     function pruneBogusRaceClassCards() {
         // Remove cards the old parser created from stat/group wording.
