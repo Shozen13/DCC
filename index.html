@@ -193,6 +193,7 @@
         }
         .avatar-box .avatar-silhouette {
             display: block;
+            margin: auto;
             width: 120px;
             height: 140px;
             color: var(--text-muted);
@@ -1081,7 +1082,7 @@
             <input type="hidden" id="stat-points-spent" value="0">
             <input type="hidden" id="stat-bank" value="0">
             <div class="avatar-box" onclick="document.getElementById('avatar-file').click()" title="Click to choose an avatar image" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('avatar-file').click(); }">
-                <img id="avatar-img" src="" alt="Portrait Preview" style="display: none;" onerror="this.style.display='none'; document.getElementById('avatar-placeholder').style.display='block';">
+                <img id="avatar-img" src="" alt="Portrait Preview" style="display: none;" onerror="this.style.display='none'; document.getElementById('avatar-placeholder').style.display='flex';">
                 <span id="avatar-placeholder"><svg class="avatar-silhouette" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="No avatar image"><circle cx="50" cy="32" r="18" fill="currentColor"/><path d="M18 92 Q50 52 82 92 Z" fill="currentColor"/></svg></span>
             </div>
             <input type="file" id="avatar-file" accept="image/*" style="display: none;" onchange="updateAvatarFile(this)">
@@ -3403,7 +3404,7 @@
             placeholder.style.display = 'none';
         } else {
             img.style.display = 'none';
-            placeholder.style.display = 'block';
+            placeholder.style.display = 'flex';
         }
         saveDataSilently();
     }
@@ -4098,7 +4099,7 @@
         renderHeaderCounters();
         
         document.getElementById('avatar-img').style.display = 'none';
-        document.getElementById('avatar-placeholder').style.display = 'block';
+        document.getElementById('avatar-placeholder').style.display = 'flex';
         
         initHotlistAndGear();
         ensureUnarmedCombat();
