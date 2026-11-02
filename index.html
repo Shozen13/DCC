@@ -4933,6 +4933,36 @@
         revealLootBox();
     }
 
+    async function leaveCampaign(campaignId) {
+        if (!needLogin()) return;
+        const id = campaignId || cloudCampaignId;
+        if (!id) return cloudStatus('Select a campaign first.');
+        if (!cloudCharacterId) return cloudStatus('Load a crawler first, then leave with that crawler.');
+        if (!confirm('Remove this crawler from the campaign? Your crawler will NOT be deleted, and it will also leave any parties in this campaign. You can rejoin later with the campaign code.')) return;
+        const res = await sb.rpc('leave_campaign_by_character', { p_campaign_id: id, p_character_id: cloudCharacterId });
+        if (res.error) return cloudStatus('Leave failed: ' + res.error.message + ' (if this is a new site version, run supabase_leave_campaign.sql in Supabase first.)');
+        if (id === cloudCampaignId) {
+            cloudCampaignId = null;
+            localStorage.removeItem('cloud_campaign_id');
+        }
+        cloudStatus('Left the campaign. Your crawler was not deleted.');
+        loadMyCampaigns();
+        refreshCampaign();
+    }
+    async function deleteCampaign(id) {
+        if (!needLogin()) return;
+        if (!confirm('Delete this campaign? Players will be removed from the campaign, but their crawlers will NOT be deleted. Parties in this campaign will be removed. This cannot be undone.')) return;
+        const res = await sb.from('campaigns').delete().eq('id', id);
+        if (res.error) { dmStatus('Delete failed: ' + res.error.message); return cloudStatus('Delete failed: ' + res.error.message); }
+        if (id === cloudCampaignId) {
+            cloudCampaignId = null;
+            localStorage.removeItem('cloud_campaign_id');
+        }
+        dmStatus('Campaign deleted. Players were removed from it, their crawlers were not deleted.');
+        refreshDmDashboard();
+        loadMyCampaigns();
+        refreshCampaign();
+    }
     function afterLoadMode() {
         applyModeClass();
         if (crawlerMode) {
