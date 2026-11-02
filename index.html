@@ -666,6 +666,11 @@
             align-items: center;
         }
 
+        .stat-bank-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; width: 100%; }
+        .stat-bank-row label { margin-bottom: 0; }
+        .stat-bank-row button { padding: 6px 10px; flex: none; }
+        .stat-bank-row button#stat-bank-btn { flex: 1; min-width: 48px; }
+
         .summary-tag {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--panel-border);
@@ -1078,8 +1083,8 @@
                         <span id="level-points-text"></span>
                         <input type="hidden" id="stat-points-spent" value="0">
                         <input type="hidden" id="stat-bank" value="0">
-                        <div style="margin: 6px 0;">
-                            <label>Stat Bank</label>
+                        <label style="margin: 6px 0 0 0;">Stat Bank</label>
+                        <div class="stat-bank-row">
                             <button type="button" onclick="adjustStatBank(-1)">-</button>
                             <button type="button" id="stat-bank-btn" onclick="openDistributeStatPoints()">0</button>
                             <button type="button" onclick="adjustStatBank(1)">+</button>
