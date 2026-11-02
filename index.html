@@ -3869,6 +3869,10 @@
     }
 
     function loadData() {
+        const focusEl = document.activeElement;
+        const focusId = (focusEl && focusEl.id) ? focusEl.id : null;
+        let focusStart = null, focusEnd = null;
+        try { if (focusEl && (focusEl.tagName === 'INPUT' || focusEl.tagName === 'TEXTAREA')) { focusStart = focusEl.selectionStart; focusEnd = focusEl.selectionEnd; } } catch (e) {}
         const saved = localStorage.getItem('crawler_split_attrs_data');
         let savedActiveTab = 'vitals';
         let isFreshCrawler = false;
@@ -4023,6 +4027,19 @@
         applySectionVisibility('buffs');
 
         showTab(savedActiveTab);
+
+        if (focusId) {
+            const restored = document.getElementById(focusId);
+            if (restored && (restored.tagName === 'INPUT' || restored.tagName === 'TEXTAREA' || restored.tagName === 'SELECT')) {
+                restored.focus();
+                try {
+                    if (focusStart !== null && restored.setSelectionRange) {
+                        const len = restored.value ? restored.value.length : 0;
+                        restored.setSelectionRange(Math.min(focusStart, len), Math.min(focusEnd, len));
+                    }
+                } catch (e) {}
+            }
+        }
 
         isInitialLoad = false;
     }
@@ -4498,6 +4515,7 @@
     let realtimeChannel = null;
     let applyingRemote = false;
     let autosaveTimer = null;
+    let lastOwnAutosaveAt = null;
 
     function landingStatus(msg) {
         const el = document.getElementById('landing-status');
@@ -4620,7 +4638,9 @@
                 const raw = localStorage.getItem('crawler_split_attrs_data');
                 if (!raw) return;
                 const data = JSON.parse(raw);
-                await sb.from('characters').update({ name: data.name || 'Unnamed Crawler', level: parseInt(data.level, 10) || 1, data: data, updated_at: new Date().toISOString() }).eq('id', cloudCharacterId);
+                const sentAt = new Date().toISOString();
+                lastOwnAutosaveAt = Date.parse(sentAt);
+                await sb.from('characters').update({ name: data.name || 'Unnamed Crawler', level: parseInt(data.level, 10) || 1, data: data, updated_at: sentAt }).eq('id', cloudCharacterId);
             } catch (e) {}
         }, 800);
     }
@@ -4639,6 +4659,10 @@
                 const row = payload.new;
                 if (!row) return;
                 if (crawlerMode === 'player' && cloudCharacterId && row.id === cloudCharacterId && !applyingRemote) {
+                    if (lastOwnAutosaveAt && row.updated_at && Date.parse(row.updated_at) === lastOwnAutosaveAt) {
+                        lastOwnAutosaveAt = null;
+                        return;
+                    }
                     applyingRemote = true;
                     try {
                         localStorage.setItem('crawler_split_attrs_data', JSON.stringify(row.data));
