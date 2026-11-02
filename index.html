@@ -3969,18 +3969,68 @@
         }
     }
     // Spell keywords from the Chapter 4 Type line (e.g. Intimate Touches:
-    // "Heal, Passive, Favored: Cleric & Paladin"). Only Heal-keyword spells
-    // are entered so far, verified complete by searching the Spells section
-    // for "Heal," Type lines (6 spells). Other spells' keywords are not
-    // guessed; add them from the book Type line when extracted.
+    // "Heal, Passive, Favored: Cleric & Paladin"). All 54 spells, extracted
+    // from the Spells section (book pp.202-214) and stored in
+    // ~/workspace/crawler-rpg/keywords_extracted.json. Skills have no
+    // spell-style keyword list in the book (attack skills show only
+    // "<Melee|Ranged> Attack, <stat>", utility skills show only a stat and
+    // a check type in the text), so no keywords are invented for them.
     const SPELL_KEYWORDS = {
+        "AIR BUDDY": ["Passive", "Favored: Mage"],
+        "ASTRAL PAW (ASTRAL HAND, ASTRAL CLAW)": ["Passive"],
+        "BAD FAITH": ["Attack", "Necrotic", "Charisma", "Favored: Cleric"],
+        "BANG BRO": ["Passive"],
+        "CLOCKWORK TRIPLICATE": ["Passive"],
+        "CONFUSING FOG": ["Passive"],
+        "DIRT CLOD": ["Attack", "Bludgeoning"],
+        "DRAIN LIFE": ["Attack", "Necrotic"],
+        "EARWORM": ["Attack", "Sonic", "Charisma", "Favored: Bard"],
+        "FEAR": ["Attack", "Mind Control"],
+        "FIRE FINGERS": ["Attack", "Fire"],
+        "FIREBALL": ["Attack", "Fire", "Area of Effect"],
+        "FROST SCAR": ["Attack", "Ice"],
+        "GRAND ILLUSION": ["Intelligence"],
         "HEAL": ["Heal", "Interrupt", "Passive"],
         "HEAL CRITTER": ["Heal", "Interrupt", "Passive"],
         "HEAL OTHERS": ["Heal", "Interrupt", "Passive"],
         "HEAL SELF": ["Heal", "Interrupt", "Passive"],
+        "HOLE": ["Passive"],
+        "HOLY AURA": ["Attack", "Holy", "Area of Effect", "Charisma", "Favored: Cleric & Paladin"],
+        "HOT STUFF AURA": ["Passive", "Area of Effect", "Favored: Bard"],
+        "ICE BLAST": ["Attack", "Ice"],
+        "ICICLES": ["Attack", "Ice"],
         "INTIMATE TOUCHES": ["Heal", "Passive", "Favored: Cleric & Paladin"],
-        "NATURE'S BREATH": ["Heal", "Interrupt", "Passive", "Favored: Druid"]
-    };
+        "LIGHTNING BOLT": ["Attack", "Electric"],
+        "MAGIC MISSILE": ["Attack", "Force"],
+        "MIND TICKLE": ["Attack", "Psychic", "Charisma", "Favored: Cleric"],
+        "MINION ARMY": ["Intelligence", "Area of Effect", "Mind Control"],
+        "NATURE'S BREATH": ["Heal", "Interrupt", "Passive", "Favored: Druid"],
+        "OAKHIDE": ["Passive", "Favored: Druid"],
+        "PALADIN'S SMITE": ["Attack", "Holy", "Charisma", "Favored: Paladin"],
+        "PANTY DROPPER": ["Charisma", "Mind Control", "Favored: Bard"],
+        "PING": ["Passive", "Area of Effect"],
+        "PROTECTIVE SHELL": ["Interrupt", "Passive", "Area of Effect"],
+        "PUDDLE JUMPER": ["Passive"],
+        "RISE, DEAD MINION!": ["Attack", "Favored: Necromancer"],
+        "ROOTFOOT": ["Attack", "Favored: Druid"],
+        "SECOND CHANCE": ["Passive"],
+        "SHIELD": ["Interrupt", "Passive"],
+        "SHOCK TREATMENT": ["Attack", "Electric"],
+        "SOLSPLASH": ["Attack", "Fire", "Constitution", "Favored: Druid"],
+        "SOUL COLLECTOR": ["Attack", "Necrotic"],
+        "THUNDERLASH": ["Attack", "Sonic"],
+        "TORCH": ["Passive"],
+        "TRIPPER": ["Passive", "Area of Effect"],
+        "TURN UNDEAD": ["Attack", "Area of Effect", "Favored: Bard, Cleric, & Paladin"],
+        "TWINKLE TOES": ["Intelligence", "Passive"],
+        "UNNECESSARY FORCE": ["Attack", "Force"],
+        "VINE PORN": ["Attack", "Piercing", "Constitution", "Favored: Druid"],
+        "WALL OF FIRE": ["Passive", "Fire"],
+        "WATER BREATHING": ["Intelligence", "Passive"],
+        "WEB": ["Attack", "Intelligence"],
+        "WILBUR'S SLOW-BUILD FIREBLAST": ["Attack", "Fire"],
+        "WISP ARMOR": ["Passive"],
+    }
     function getSpellKeywords(name) {
         if (!name) return [];
         const key = name.trim().toUpperCase();
