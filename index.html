@@ -1125,7 +1125,7 @@
         <!-- Core Attributes Card -->
         <div class="card">
             <h2>Core Attributes</h2>
-            <p class="cloud-note">Base = your own base + race/class bonuses. Base is not typed directly: set it once at character creation, add to it from the banked Stat Points screen, and assign split pools in the Choices tab.</p>
+            <p class="cloud-note">Base = your own base + positive race/class bonuses. Base is not typed directly: set it once at character creation, add to it from the banked Stat Points screen, and assign split pools in the Choices tab. Race/class penalties are subtracted from the Total, not the Base, with a minimum Total of 1. The Race/Class line on each stat card shows that stat's race/class bonus, like the Gear line.</p>
             <div class="stats-grid">
                 <!-- STR -->
                 <div class="stat-card">
@@ -1150,6 +1150,10 @@
                     <div class="stat-total-bar" id="stat-str-gear-row" style="display: none; margin-top: 6px;">
                         <span>Gear bonus:</span>
                         <strong id="stat-str-gear">+0</strong>
+                    </div>
+                    <div class="stat-total-bar" id="stat-str-race-row" style="display: none; margin-top: 6px;">
+                        <span>Race/Class:</span>
+                        <strong id="stat-str-race">-0</strong>
                     </div>
                 </div>
 
@@ -1177,6 +1181,10 @@
                         <span>Gear bonus:</span>
                         <strong id="stat-con-gear">+0</strong>
                     </div>
+                    <div class="stat-total-bar" id="stat-con-race-row" style="display: none; margin-top: 6px;">
+                        <span>Race/Class:</span>
+                        <strong id="stat-con-race">-0</strong>
+                    </div>
                 </div>
 
                 <!-- DEX -->
@@ -1202,6 +1210,10 @@
                     <div class="stat-total-bar" id="stat-dex-gear-row" style="display: none; margin-top: 6px;">
                         <span>Gear bonus:</span>
                         <strong id="stat-dex-gear">+0</strong>
+                    </div>
+                    <div class="stat-total-bar" id="stat-dex-race-row" style="display: none; margin-top: 6px;">
+                        <span>Race/Class:</span>
+                        <strong id="stat-dex-race">-0</strong>
                     </div>
                 </div>
 
@@ -1229,6 +1241,10 @@
                         <span>Gear bonus:</span>
                         <strong id="stat-int-gear">+0</strong>
                     </div>
+                    <div class="stat-total-bar" id="stat-int-race-row" style="display: none; margin-top: 6px;">
+                        <span>Race/Class:</span>
+                        <strong id="stat-int-race">-0</strong>
+                    </div>
                 </div>
 
                 <!-- CHA -->
@@ -1254,6 +1270,10 @@
                     <div class="stat-total-bar" id="stat-cha-gear-row" style="display: none; margin-top: 6px;">
                         <span>Gear bonus:</span>
                         <strong id="stat-cha-gear">+0</strong>
+                    </div>
+                    <div class="stat-total-bar" id="stat-cha-race-row" style="display: none; margin-top: 6px;">
+                        <span>Race/Class:</span>
+                        <strong id="stat-cha-race">-0</strong>
                     </div>
                 </div>
             </div>
@@ -1792,7 +1812,13 @@
         const gear = getEquippedItemBonuses().stat[id] || 0;
         const enh = ownEnh[id] + gear;
         document.getElementById(`stat-${id}-enh`).value = enh;
-        const total = Math.max(1, base + enh);
+        const racePenalty = (typeof raceClassNegativeStats === 'function') ? (raceClassNegativeStats()[id] || 0) : 0;
+        const raceBonusFull = ((typeof raceClassFixedStats === 'function') ? (raceClassFixedStats()[id] || 0) : 0) + ((typeof raceClassSplitAssignments === 'function') ? (raceClassSplitAssignments()[id] || 0) : 0);
+        const raceEl = document.getElementById(`stat-${id}-race`);
+        const raceRow = document.getElementById(`stat-${id}-race-row`);
+        if (raceEl) raceEl.innerText = raceBonusFull >= 0 ? '+' + raceBonusFull : String(raceBonusFull);
+        if (raceRow) raceRow.style.display = raceBonusFull !== 0 ? 'flex' : 'none';
+        const total = Math.max(1, base + enh + racePenalty);
         
         document.getElementById(`stat-${id}-total`).innerText = total;
         const gearEl = document.getElementById(`stat-${id}-gear`);
@@ -1814,9 +1840,11 @@
         const int = calculateAttribute('int');
         const cha = calculateAttribute('cha');
 
-        // HP Calculations
+        // HP Calculations: Obsidian Butterfly uses Cha Mod instead of Con Mod
+        // in the Health Bar, so the per-slot value follows that rule.
         maxHpSlots = 10;
-        const totalHp = maxHpSlots * con.mod;
+        const hpMod = (typeof healthBarUsesCha === 'function' && healthBarUsesCha()) ? cha.mod : con.mod;
+        const totalHp = maxHpSlots * hpMod;
         document.getElementById('hp-total-text').innerText = totalHp;
         
         // Mana calculations
@@ -1836,13 +1864,17 @@
         if (hpCurrentSlots > maxHpSlots) hpCurrentSlots = maxHpSlots;
         if (manaCurrent > maxMana) manaCurrent = maxMana;
 
-        // Evade Calculation: d20 + Dex Mod + Buffs + Gear
+        // Evade Calculation: d20 + (1d4 from race/class, if any) + Dex Mod + Buffs + Gear
         const evadeBuffs = parseInt(document.getElementById('evade-buffs').value) || 0;
         const gearEvade = getEquippedItemBonuses().evade || 0;
         const totalEvadeMod = dex.mod + evadeBuffs + gearEvade;
-        const evadeDispStr = totalEvadeMod >= 0 ? `d20 + ${totalEvadeMod}` : `d20 - ${Math.abs(totalEvadeMod)}`;
+        const evadeDiceCount = (typeof raceClassEvadeDice === 'function') ? raceClassEvadeDice() : 0;
+        const evadeDiceStr = evadeDiceCount > 0 ? (evadeDiceCount + 'd4') : '';
+        const evadeDispStr = (evadeDiceStr ? 'd20 + ' + evadeDiceStr + ' + ' : 'd20 + ') + (totalEvadeMod >= 0 ? String(totalEvadeMod) : '- ' + Math.abs(totalEvadeMod));
         document.getElementById('evade-total-disp').innerText = evadeDispStr;
-        const evadeParts = [{ num: 'd20', label: 'Die' }, { num: signed(dex.mod), label: 'DEX' }, { num: signed(evadeBuffs), label: 'Buffs' }];
+        const evadeParts = [{ num: 'd20', label: 'Die' }];
+        if (evadeDiceCount > 0) evadeParts.push({ num: evadeDiceStr, label: 'Race/Class' });
+        evadeParts.push({ num: signed(dex.mod), label: 'DEX' }, { num: signed(evadeBuffs), label: 'Buffs' });
         if (gearEvade !== 0) evadeParts.push({ num: signed(gearEvade), label: 'Gear' });
         document.getElementById('evade-subtext').innerHTML = formulaBreakdown(evadeParts);
 
@@ -1897,7 +1929,7 @@
         if (nameEl) nameEl.innerText = document.getElementById('char-name').value || 'Unnamed Crawler';
         const numEl = document.getElementById('ph-number');
         if (numEl) numEl.innerText = document.getElementById('char-number').value || '';
-        const conMod = currentMods.con || 0;
+        const conMod = ((typeof healthBarUsesCha === 'function' && healthBarUsesCha()) ? (currentMods.cha || 0) : (currentMods.con || 0));
         const hpEl = document.getElementById('ph-hp');
         if (hpEl) hpEl.innerText = `${hpCurrentSlots * conMod} / ${maxHpSlots * conMod}`;
         const manaEl = document.getElementById('ph-mana');
@@ -1949,7 +1981,7 @@
     function renderTrackers() {
         const hpContainer = document.getElementById('hp-tracker');
         hpContainer.innerHTML = '';
-        const conMod = currentMods.con || 0;
+        const conMod = ((typeof healthBarUsesCha === 'function' && healthBarUsesCha()) ? (currentMods.cha || 0) : (currentMods.con || 0));
         const currentHp = hpCurrentSlots * conMod;
         const totalHp = maxHpSlots * conMod;
         const hpPct = totalHp > 0 ? Math.round((currentHp / totalHp) * 100) : 0;
@@ -3859,6 +3891,32 @@
         [race, cls].forEach(e => { const s = parseRaceClassStats(e); RC_STAT_KEYS.forEach(k => out[k] += s[k]); });
         return out;
     }
+    function raceClassPositiveStats() {
+        const f = raceClassFixedStats();
+        const out = {};
+        RC_STAT_KEYS.forEach(k => out[k] = Math.max(0, f[k]));
+        return out;
+    }
+    function raceClassNegativeStats() {
+        const f = raceClassFixedStats();
+        const out = {};
+        RC_STAT_KEYS.forEach(k => out[k] = Math.min(0, f[k]));
+        return out;
+    }
+    function raceClassEvadeDice() {
+        // "add 1d4 to your Evade Checks" - Elf, High and Obsidian Butterfly.
+        // Counts each race/class entry that grants it (normally at most one).
+        let count = 0;
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        [race, cls].forEach(e => { if (e && /add 1d4 to your Evade/i.test(e.benefits || '')) count += 1; });
+        return count;
+    }
+    function healthBarUsesCha() {
+        const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
+        const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
+        return [race, cls].some(e => e && /Cha Mod instead of Con Mod in your Health Bar/i.test(e.benefits || ''));
+    }
     function choiceSourceMatches(cid) {
         const parts = cid.split(':');
         if (parts.length < 2) return false;
@@ -3891,7 +3949,7 @@
             RC_STAT_KEYS.forEach(k => { const el = document.getElementById('stat-' + k + '-base'); if (el) el.value = Math.max(1, ownBase[k] || 1); });
             return;
         }
-        const fixed = raceClassFixedStats();
+        const fixed = raceClassPositiveStats();
         const split = raceClassSplitAssignments();
         RC_STAT_KEYS.forEach(k => {
             const el = document.getElementById('stat-' + k + '-base');
