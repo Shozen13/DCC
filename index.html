@@ -2824,6 +2824,10 @@
         if (entry.range) meta.push('Range ' + entry.range);
         if (entry.base_damage) meta.push('Damage ' + entry.base_damage);
         if (entry.source_book_page) meta.push('Book p. ' + entry.source_book_page);
+        if (entry.kind === 'spell' && typeof getSpellKeywords === 'function') {
+            const kws = getSpellKeywords(entry.name);
+            if (kws.length) meta.push('Keywords: ' + kws.join(', '));
+        }
         let tiers = `<div class="rulebook-tier"><b>Base:</b> ${escapeHtml(entry.base_effect || '')}</div>`;
         [5, 10, 15].forEach(t => {
             const txt = entry.upgrades && entry.upgrades[String(t)];
@@ -3352,6 +3356,10 @@
             let meta = [entry.kind, entry.source];
             if (entry.gear_slot) meta.push('Gear slot: ' + itemSlotHint(entry.gear_slot));
             if (entry.source_book_page) meta.push('Book p. ' + entry.source_book_page);
+        if (entry.kind === 'spell' && typeof getSpellKeywords === 'function') {
+            const kws = getSpellKeywords(entry.name);
+            if (kws.length) meta.push('Keywords: ' + kws.join(', '));
+        }
             const warn = entry.uncertain ? '<div class="rulebook-warn">Check this entry against the printed page: it was flagged as uncertain in extraction.</div>' : '';
             box.innerHTML = `<div class="rulebook-meta">Rulebook: ${escapeHtml(meta.join(' | '))}</div><div class="rulebook-tier">${escapeHtml(entry.effect || '')}</div>${warn}`;
         }
@@ -3960,6 +3968,24 @@
             raceClassMoveApplied = { sourceKind: 'race', sourceName: 'Tigran', amount: 10, ownBefore: ownBefore };
         }
     }
+    // Spell keywords from the Chapter 4 Type line (e.g. Intimate Touches:
+    // "Heal, Passive, Favored: Cleric & Paladin"). Only Heal-keyword spells
+    // are entered so far, verified complete by searching the Spells section
+    // for "Heal," Type lines (6 spells). Other spells' keywords are not
+    // guessed; add them from the book Type line when extracted.
+    const SPELL_KEYWORDS = {
+        "HEAL": ["Heal", "Interrupt", "Passive"],
+        "HEAL CRITTER": ["Heal", "Interrupt", "Passive"],
+        "HEAL OTHERS": ["Heal", "Interrupt", "Passive"],
+        "HEAL SELF": ["Heal", "Interrupt", "Passive"],
+        "INTIMATE TOUCHES": ["Heal", "Passive", "Favored: Cleric & Paladin"],
+        "NATURE'S BREATH": ["Heal", "Interrupt", "Passive", "Favored: Druid"]
+    };
+    function getSpellKeywords(name) {
+        if (!name) return [];
+        const key = name.trim().toUpperCase();
+        return SPELL_KEYWORDS[key] || [];
+    }
     function getGroupSkillBonus(name, kind, statKey) {
         // Group bonuses, applied at display time so they follow the current
         // race/class and any card, old or new. Mappings are stated plainly:
@@ -3969,7 +3995,9 @@
         // Incendiary Device Handling; Muscle movement = Running/Climbing/
         // Swimming/Jumping; DEX weapon = attack cards with DEX to-hit;
         // Electric/Fire/Ice spells = library spells whose damage/effect names
-        // those types; Heal spells = spells whose name contains Heal.
+        // those types; Heal spells = spells whose Keywords list includes Heal
+        // (e.g. Intimate Touches and Nature's Breath, which do not have Heal
+        // in their names), NOT spells whose name merely contains Heal.
         const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
         const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
         const key = (name || '').trim().toLowerCase();
@@ -3979,7 +4007,7 @@
         const isEdged = kind === 'skill' && lib && lib.kind === 'attack' && ((lib.base_damage || '').includes('Slashing') || ['dagger', 'rapier'].includes(key));
         const isMuscleMove = ['running', 'climbing', 'swimming', 'jumping'].includes(key);
         const isEfiSpell = kind === 'spell' && lib && /Electric|Fire|Ice/.test((lib.base_damage || '') + ' ' + (lib.effect || ''));
-        const isHealSpell = kind === 'spell' && key.includes('heal');
+        const isHealSpell = kind === 'spell' && getSpellKeywords(name).some(k => k.toLowerCase() === 'heal');
         let total = 0;
         [race, cls].forEach(e => {
             if (!e) return;
