@@ -1076,9 +1076,16 @@
                     <div id="level-points-box" class="summary-box">
                         <strong>Level-up Stat Points</strong>
                         <span id="level-points-text"></span>
-                        <label>Points spent</label>
-                        <input type="number" id="stat-points-spent" value="0" min="0" oninput="saveDataSilently(); updateLevelPoints();">
-                        <p class="cloud-note" style="margin: 0;">Book rule: 3 stat points per level gained, distributed in a saferoom after the Third Floor. Level cap 250. This tracker does not change your Base stats; edit those by hand and tick off the spent points here. Race and Class are selected on the Third Floor (Chapter 3); no lock is enforced in this sheet.</p>
+                        <input type="hidden" id="stat-points-spent" value="0">
+                        <input type="hidden" id="stat-bank" value="0">
+                        <div style="margin: 6px 0;">
+                            <label>Stat Bank</label>
+                            <button type="button" onclick="adjustStatBank(-1)">-</button>
+                            <button type="button" id="stat-bank-btn" onclick="openDistributeStatPoints()">0</button>
+                            <button type="button" onclick="adjustStatBank(1)">+</button>
+                        </div>
+                        <button type="button" onclick="openLevelUp()">Level Up</button>
+                        <p class="cloud-note" style="margin: 6px 0 0 0;">Book rule: 3 stat points per level gained, distributed in a saferoom after the Third Floor. Level cap 250. Level Up banks points; clicking the Stat Bank number distributes them to your Base stats. The -/+ buttons beside the bank are manual corrections only. Race and Class are selected on the Third Floor (Chapter 3); no lock is enforced in this sheet.</p>
                     </div>
                 </div>
                 <div class="form-group">
@@ -1573,6 +1580,14 @@
 
 <div class="modal-overlay" id="rcModal" style="display: none;">
     <div class="modal-card" id="rc-modal-content"></div>
+</div>
+
+<div class="modal-overlay" id="levelUpModal" style="display: none;">
+    <div class="modal-card" id="level-up-modal-content"></div>
+</div>
+
+<div class="modal-overlay" id="distributeModal" style="display: none;">
+    <div class="modal-card" id="distribute-modal-content"></div>
 </div>
 
 <!-- Reset Modal -->
@@ -3407,6 +3422,16 @@
         renderRaceClassBox(kind);
         saveDataSilently();
     }
+    function getStatBank() {
+        const el = document.getElementById('stat-bank');
+        return el ? (parseInt(el.value, 10) || 0) : 0;
+    }
+    function setStatBank(n) {
+        const el = document.getElementById('stat-bank');
+        if (el) el.value = Math.max(0, n);
+        const btn = document.getElementById('stat-bank-btn');
+        if (btn) { btn.innerText = getStatBank(); btn.disabled = getStatBank() <= 0; }
+    }
     function updateLevelPoints() {
         const levelEl = document.getElementById('char-level');
         const spentEl = document.getElementById('stat-points-spent');
@@ -3415,8 +3440,92 @@
         const level = parseInt(levelEl.value, 10) || 1;
         const earned = Math.max(0, (level - 1) * 3);
         const spent = spentEl ? (parseInt(spentEl.value, 10) || 0) : 0;
-        const unspent = earned - spent;
-        textEl.innerText = 'Level ' + level + ': earned ' + earned + ' points, spent ' + spent + ', unspent ' + unspent + (level > 250 ? ' (over the book level cap of 250)' : '') + '.';
+        const bank = getStatBank();
+        textEl.innerText = 'Level ' + level + ': earned ' + earned + ' points, spent ' + spent + ', banked ' + bank + (level > 250 ? ' (over the book level cap of 250)' : '') + '.';
+        setStatBank(bank);
+    }
+    let levelUpBankAmount = 3;
+    function renderLevelUpModal() {
+        const content = document.getElementById('level-up-modal-content');
+        if (!content) return;
+        content.innerHTML = '<h3>Level Up</h3><p>You gain 3 stat points. How many would you like to bank?</p><p>Points to Bank: <button type="button" onclick="levelUpStep(-1)">-</button> <span id="level-up-bank-amount">' + levelUpBankAmount + '</span> <button type="button" onclick="levelUpStep(1)">+</button></p>' + (levelUpBankAmount < 3 ? '<p><em>Points not banked will not be saved.</em></p>' : '') + '<div class="modal-actions"><button type="button" onclick="confirmLevelUp()">Bank Stat Points</button><button type="button" onclick="document.getElementById(\'levelUpModal\').style.display = \'none\'">Cancel</button></div>';
+    }
+    function openLevelUp() {
+        levelUpBankAmount = 3;
+        renderLevelUpModal();
+        document.getElementById('levelUpModal').style.display = 'flex';
+    }
+    function levelUpStep(delta) {
+        levelUpBankAmount = Math.max(0, Math.min(3, levelUpBankAmount + delta));
+        renderLevelUpModal();
+    }
+    function confirmLevelUp() {
+        const levelEl = document.getElementById('char-level');
+        if (!levelEl) return;
+        levelEl.value = (parseInt(levelEl.value, 10) || 1) + 1;
+        setStatBank(getStatBank() + levelUpBankAmount);
+        document.getElementById('levelUpModal').style.display = 'none';
+        updateLevelPoints();
+        saveDataSilently();
+    }
+    function adjustStatBank(delta) {
+        setStatBank(getStatBank() + delta);
+        updateLevelPoints();
+        saveDataSilently();
+    }
+    let distributePreview = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+    const distributeStats = [['str', 'STR'], ['con', 'CON'], ['dex', 'DEX'], ['int', 'INT'], ['cha', 'CHA']];
+    function renderDistributeModal() {
+        const content = document.getElementById('distribute-modal-content');
+        if (!content) return;
+        const bank = getStatBank();
+        const used = distributeStats.reduce(function (s, pair) { return s + (distributePreview[pair[0]] || 0); }, 0);
+        const available = bank - used;
+        let rows = '';
+        distributeStats.forEach(function (pair) {
+            const key = pair[0], label = pair[1];
+            const baseEl = document.getElementById('stat-' + key + '-base');
+            const base = baseEl ? (parseInt(baseEl.value, 10) || 1) : 1;
+            const preview = distributePreview[key] || 0;
+            rows += '<p>' + label + ' ' + base + (preview ? ' -> ' + (base + preview) : '') + ' <button type="button" ' + (available <= 0 ? 'disabled' : '') + ' onclick="distributeAdd(\'' + key + '\')">Add 1</button></p>';
+        });
+        content.innerHTML = '<h3>Distribute Banked Points</h3><p>You have ' + available + ' points available.</p><p><em>Nothing changes until you press Apply Distribution.</em></p>' + rows + '<div class="modal-actions"><button type="button" onclick="applyDistributeStatPoints()">Apply Distribution</button><button type="button" onclick="distributeUndo()">Undo</button><button type="button" onclick="document.getElementById(\'distributeModal\').style.display = \'none\'">Cancel</button></div>';
+    }
+    function openDistributeStatPoints() {
+        if (getStatBank() <= 0) return;
+        distributePreview = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+        renderDistributeModal();
+        document.getElementById('distributeModal').style.display = 'flex';
+    }
+    function distributeAdd(key) {
+        const bank = getStatBank();
+        const used = distributeStats.reduce(function (s, pair) { return s + (distributePreview[pair[0]] || 0); }, 0);
+        if (bank - used <= 0) return;
+        distributePreview[key] = (distributePreview[key] || 0) + 1;
+        renderDistributeModal();
+    }
+    function distributeUndo() {
+        distributePreview = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+        renderDistributeModal();
+    }
+    function applyDistributeStatPoints() {
+        let total = 0;
+        distributeStats.forEach(function (pair) {
+            const key = pair[0], amount = distributePreview[key] || 0;
+            if (!amount) return;
+            const baseEl = document.getElementById('stat-' + key + '-base');
+            if (baseEl) baseEl.value = (parseInt(baseEl.value, 10) || 1) + amount;
+            total += amount;
+        });
+        if (total > 0) {
+            const spentEl = document.getElementById('stat-points-spent');
+            if (spentEl) spentEl.value = (parseInt(spentEl.value, 10) || 0) + total;
+            setStatBank(getStatBank() - total);
+        }
+        document.getElementById('distributeModal').style.display = 'none';
+        if (typeof calculateSheet === 'function') calculateSheet();
+        updateLevelPoints();
+        saveDataSilently();
     }
 
     function saveDataSilently() {
@@ -3528,6 +3637,7 @@
             number: document.getElementById('char-number').value,
             race: document.getElementById('char-race').value,
             statPointsSpent: document.getElementById('stat-points-spent') ? document.getElementById('stat-points-spent').value : 0,
+            statBank: document.getElementById('stat-bank') ? document.getElementById('stat-bank').value : 0,
             class: document.getElementById('char-class').value,
             level: document.getElementById('char-level').value,
             floor: document.getElementById('char-floor').value,
@@ -3664,6 +3774,8 @@
             if (document.getElementById('stat-points-spent')) document.getElementById('stat-points-spent').value = data.statPointsSpent || 0;
             renderRaceClassBox('race'); renderRaceClassBox('class'); updateLevelPoints();
             document.getElementById('char-level').value = data.level || '1';
+            if (document.getElementById('stat-bank')) { if (data.statBank !== undefined && data.statBank !== null && data.statBank !== '') { document.getElementById('stat-bank').value = data.statBank; } else { const lvl = parseInt(data.level, 10) || 1; const earnedOld = Math.max(0, (lvl - 1) * 3); const spentOld = parseInt(data.statPointsSpent, 10) || 0; document.getElementById('stat-bank').value = Math.max(0, earnedOld - spentOld); } }
+            updateLevelPoints();
             document.getElementById('char-floor').value = data.floor || '1';
             document.getElementById('avatar-url').value = data.avatarUrl || '';
             
