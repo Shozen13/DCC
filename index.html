@@ -1827,8 +1827,9 @@
         const drBuffs = parseInt(document.getElementById('dr-buffs').value) || 0;
         const totalDR = armorVal + drBuffs;
         document.getElementById('dr-total-disp').innerText = `${totalDR} DR`;
+        // Gear DR is already inside the Armor number above, so listing it
+        // again would show the same number twice. Formula is Armor + Buffs only.
         const drParts = [{ num: String(armorVal), label: 'Armor' }, { num: signed(drBuffs), label: 'Buffs' }];
-        if (gearDR !== 0) drParts.push({ num: signed(gearDR), label: 'Gear in Armor' });
         document.getElementById('dr-subtext').innerHTML = formulaBreakdown(drParts);
 
         updateAllAttacks();
