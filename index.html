@@ -667,6 +667,21 @@
         }
 
         .stat-bank-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; width: 100%; }
+        .header-counters { flex-basis: 100%; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--panel-border); padding-top: 10px; }
+        .hc-strip { display: flex; align-items: center; gap: 10px; }
+        .hc-strip .hc-marks { flex: 1; font-size: 1.15rem; letter-spacing: 2px; }
+        .hc-mark { color: #facc15; }
+        .hc-mark.big { font-size: 1.6rem; text-shadow: 0 0 8px rgba(250,204,21,.9); }
+        .hc-marks.pk .hc-mark { color: #ef4444; }
+        .hc-marks.pk .hc-mark.big { text-shadow: 0 0 8px rgba(239,68,68,.9); }
+        .hc-strip button { padding: 4px 10px; }
+        .hc-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .hc-col { flex: 1 1 72px; text-align: center; min-width: 72px; }
+        .hc-col label { text-align: center; }
+        .hc-counter { display: flex; justify-content: center; align-items: center; gap: 4px; }
+        .hc-counter button { padding: 4px 8px; }
+        .hc-counter input { width: 52px; text-align: center; padding: 4px 2px; }
+        .hc-value { min-width: 28px; font-weight: bold; display: inline-block; text-align: center; }
         .stat-bank-row label { margin-bottom: 0; }
         .stat-bank-row button { padding: 6px 10px; flex: none; }
         .stat-bank-row button#stat-bank-btn { flex: 1; min-width: 48px; }
@@ -1077,7 +1092,13 @@
             <div class="form-row-2">
                 <div class="form-group">
                     <label>Level</label>
-                    <input type="number" id="char-level" value="1" min="1" oninput="saveDataSilently(); updateLevelPoints();">
+                    <input type="hidden" id="char-level" value="1">
+                    <div class="hc-counter" style="justify-content: flex-start;">
+                        <button type="button" onclick="adjustLevel(-1)">-</button>
+                        <span class="hc-value level-display">1</span>
+                        <button type="button" onclick="openLevelUp()">+</button>
+                    </div>
+                    <p class="cloud-note" style="margin: 4px 0 0 0;">Level + opens the Level Up dialog and banks your 3 points, like CrawlerCo; Level - is a manual correction only.</p>
                     <div id="level-points-box" class="summary-box">
                         <strong>Level-up Stat Points</strong>
                         <span id="level-points-text"></span>
@@ -1086,7 +1107,7 @@
                         <label style="margin: 6px 0 0 0;">Stat Bank</label>
                         <div class="stat-bank-row">
                             <button type="button" onclick="adjustStatBank(-1)">-</button>
-                            <button type="button" id="stat-bank-btn" onclick="openDistributeStatPoints()">0</button>
+                            <button type="button" id="stat-bank-btn" class="stat-bank-btn" onclick="openDistributeStatPoints()">0</button>
                             <button type="button" onclick="adjustStatBank(1)">+</button>
                         </div>
                         <button type="button" onclick="openLevelUp()">Level Up</button>
@@ -1095,7 +1116,12 @@
                 </div>
                 <div class="form-group">
                     <label>Current Floor</label>
-                    <input type="number" id="char-floor" value="1" min="1" oninput="saveDataSilently()">
+                    <input type="hidden" id="char-floor" value="1">
+                    <div class="hc-counter" style="justify-content: flex-start;">
+                        <button type="button" onclick="adjustFloor(-1)">-</button>
+                        <span class="hc-value floor-display">1</span>
+                        <button type="button" onclick="adjustFloor(1)">+</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1277,6 +1303,23 @@
             <span class="ph-stat">HP <strong id="ph-hp">0 / 0</strong> <button type="button" onclick="adjustHpSlots(-1)">-1</button> <button type="button" onclick="adjustHpSlots(1)">+1</button></span>
             <span class="ph-stat"><button type="button" onclick="showLanding()">Start screen</button></span>
             <span class="ph-stat">Mana <strong id="ph-mana">0 / 0</strong> <button type="button" onclick="adjustMana(-1)">-1</button> <button type="button" onclick="adjustMana(1)">+1</button></span>
+            <div class="header-counters" id="header-counters">
+                <input type="hidden" id="tracker-boss" value="0">
+                <input type="hidden" id="tracker-pk" value="0">
+                <div class="hc-strip"><strong>BOSS KILLS</strong><span id="boss-marks" class="hc-marks">No stars</span><span><button type="button" onclick="adjustTracker('boss', -1)">-</button> <button type="button" onclick="adjustTracker('boss', 1)">+</button></span></div>
+                <div class="hc-grid">
+                    <div class="hc-col"><label>Level</label><div class="hc-counter"><button type="button" onclick="adjustLevel(-1)">-</button><span class="hc-value level-display">1</span><button type="button" onclick="openLevelUp()">+</button></div></div>
+                    <div class="hc-col"><label>Floor</label><div class="hc-counter"><button type="button" onclick="adjustFloor(-1)">-</button><span class="hc-value floor-display">1</span><button type="button" onclick="adjustFloor(1)">+</button></div></div>
+                    <div class="hc-col"><label>Stat Bank</label><div class="hc-counter"><button type="button" onclick="adjustStatBank(-1)">-</button><button type="button" class="stat-bank-btn" onclick="openDistributeStatPoints()">0</button><button type="button" onclick="adjustStatBank(1)">+</button></div></div>
+                    <div class="hc-col"><label>Gold</label><div class="hc-counter"><button type="button" onclick="adjustTracker('gold', -1)">-</button><input type="number" id="tracker-gold" value="0" min="0" oninput="clampTracker('gold'); saveDataSilently();"><button type="button" onclick="adjustTracker('gold', 1)">+</button></div></div>
+                    <div class="hc-col"><label>Popularity</label><div class="hc-counter"><button type="button" onclick="adjustTracker('popularity', -1)">-</button><input type="number" id="tracker-popularity" value="1" min="0" oninput="clampTracker('popularity'); saveDataSilently();"><button type="button" onclick="adjustTracker('popularity', 1)">+</button></div></div>
+                    <div class="hc-col"><label>AI Favor</label><div class="hc-counter"><button type="button" onclick="adjustTracker('ai', -1)">-</button><input type="number" id="tracker-ai" value="0" min="0" oninput="clampTracker('ai'); saveDataSilently();"><button type="button" onclick="adjustTracker('ai', 1)">+</button></div></div>
+                    <div class="hc-col"><label>Move</label><div class="hc-counter"><input type="number" id="tracker-move" value="20" min="0" oninput="clampTracker('move'); saveDataSilently();"></div></div>
+                    <div class="hc-col"><label>Step</label><div class="hc-counter"><input type="number" id="tracker-step" value="10" min="0" oninput="clampTracker('step'); saveDataSilently();"></div></div>
+                </div>
+                <div class="hc-strip"><strong>PLAYER KILLER</strong><span id="pk-marks" class="hc-marks pk">No marks</span><span><button type="button" onclick="adjustTracker('pk', -1)">-</button> <button type="button" onclick="adjustTracker('pk', 1)">+</button></span></div>
+                <p class="cloud-note" style="margin: 0;">Book rules: Move defaults to 20 ft per Move Action; Step defaults to 10 ft, free with every Action, not an Action itself (both Actions moving = 60 ft). AI Favor: spend 1 to reroll a d20 once per Check (not a Natural 1), or once per round for an extra non-Attack Action. Popularity starts equal to your Cha modifier. Gold is dungeon currency, one Inventory slot, dropped by mobs from the Second Floor. Boss kills show as gold stars, player-killer kills as red skulls; every 5 of a kind condenses in the display to one bigger, shining mark, the count itself is unchanged.</p>
+            </div>
         </div>
         <div class="tab-bar" id="tab-bar">
             <button type="button" class="tab-btn active" data-tab="vitals" onclick="showTab('vitals')">Vitals</button>
@@ -3434,8 +3477,52 @@
     function setStatBank(n) {
         const el = document.getElementById('stat-bank');
         if (el) el.value = Math.max(0, n);
-        const btn = document.getElementById('stat-bank-btn');
-        if (btn) { btn.innerText = getStatBank(); btn.disabled = getStatBank() <= 0; }
+        document.querySelectorAll('.stat-bank-btn').forEach(function (btn) { btn.innerText = getStatBank(); btn.disabled = getStatBank() <= 0; });
+    }
+    function renderMarks(elId, count, symbol, emptyText) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        if (count <= 0) { el.innerText = emptyText; return; }
+        const big = Math.floor(count / 5), rem = count % 5;
+        let html = '';
+        for (let i = 0; i < big; i++) html += '<span class="hc-mark big">' + symbol + '</span>';
+        for (let i = 0; i < rem; i++) html += '<span class="hc-mark">' + symbol + '</span>';
+        el.innerHTML = html + ' (' + count + ')';
+    }
+    function renderHeaderCounters() {
+        const level = parseInt(document.getElementById('char-level').value, 10) || 1;
+        document.querySelectorAll('.level-display').forEach(function (el) { el.innerText = level; });
+        const floor = parseInt(document.getElementById('char-floor').value, 10) || 1;
+        document.querySelectorAll('.floor-display').forEach(function (el) { el.innerText = floor; });
+        renderMarks('boss-marks', parseInt(document.getElementById('tracker-boss').value, 10) || 0, '\u2605', 'No stars');
+        renderMarks('pk-marks', parseInt(document.getElementById('tracker-pk').value, 10) || 0, '\u2620', 'No marks');
+    }
+    function adjustLevel(delta) {
+        if (delta > 0) { openLevelUp(); return; }
+        const el = document.getElementById('char-level');
+        el.value = Math.max(1, (parseInt(el.value, 10) || 1) + delta);
+        updateLevelPoints();
+        saveDataSilently();
+    }
+    function adjustFloor(delta) {
+        const el = document.getElementById('char-floor');
+        el.value = Math.max(1, (parseInt(el.value, 10) || 1) + delta);
+        renderHeaderCounters();
+        saveDataSilently();
+    }
+    function trackerInputId(kind) {
+        return { gold: 'tracker-gold', popularity: 'tracker-popularity', ai: 'tracker-ai', move: 'tracker-move', step: 'tracker-step', boss: 'tracker-boss', pk: 'tracker-pk' }[kind];
+    }
+    function clampTracker(kind) {
+        const el = document.getElementById(trackerInputId(kind));
+        if (el) el.value = Math.max(0, parseInt(el.value, 10) || 0);
+    }
+    function adjustTracker(kind, delta) {
+        const el = document.getElementById(trackerInputId(kind));
+        if (!el) return;
+        el.value = Math.max(0, (parseInt(el.value, 10) || 0) + delta);
+        if (kind === 'boss' || kind === 'pk') renderHeaderCounters();
+        saveDataSilently();
     }
     function updateLevelPoints() {
         const levelEl = document.getElementById('char-level');
@@ -3448,6 +3535,7 @@
         const bank = getStatBank();
         textEl.innerText = 'Level ' + level + ': earned ' + earned + ' points, spent ' + spent + ', banked ' + bank + (level > 250 ? ' (over the book level cap of 250)' : '') + '.';
         setStatBank(bank);
+        renderHeaderCounters();
     }
     let levelUpBankAmount = 3;
     function renderLevelUpModal() {
@@ -3646,6 +3734,13 @@
             class: document.getElementById('char-class').value,
             level: document.getElementById('char-level').value,
             floor: document.getElementById('char-floor').value,
+            gold: document.getElementById('tracker-gold') ? document.getElementById('tracker-gold').value : 0,
+            popularity: document.getElementById('tracker-popularity') ? document.getElementById('tracker-popularity').value : 0,
+            aiFavor: document.getElementById('tracker-ai') ? document.getElementById('tracker-ai').value : 0,
+            moveVal: document.getElementById('tracker-move') ? document.getElementById('tracker-move').value : 20,
+            stepVal: document.getElementById('tracker-step') ? document.getElementById('tracker-step').value : 10,
+            bossKills: document.getElementById('tracker-boss') ? document.getElementById('tracker-boss').value : 0,
+            pkKills: document.getElementById('tracker-pk') ? document.getElementById('tracker-pk').value : 0,
             avatarUrl: document.getElementById('avatar-url').value,
             
             strBase: document.getElementById('stat-str-base').value,
@@ -3782,6 +3877,14 @@
             if (document.getElementById('stat-bank')) { if (data.statBank !== undefined && data.statBank !== null && data.statBank !== '') { document.getElementById('stat-bank').value = data.statBank; } else { const lvl = parseInt(data.level, 10) || 1; const earnedOld = Math.max(0, (lvl - 1) * 3); const spentOld = parseInt(data.statPointsSpent, 10) || 0; document.getElementById('stat-bank').value = Math.max(0, earnedOld - spentOld); } }
             updateLevelPoints();
             document.getElementById('char-floor').value = data.floor || '1';
+            if (document.getElementById('tracker-gold')) document.getElementById('tracker-gold').value = (data.gold !== undefined && data.gold !== null && data.gold !== '') ? data.gold : 0;
+            if (document.getElementById('tracker-popularity')) document.getElementById('tracker-popularity').value = (data.popularity !== undefined && data.popularity !== null && data.popularity !== '') ? data.popularity : 0;
+            if (document.getElementById('tracker-ai')) document.getElementById('tracker-ai').value = (data.aiFavor !== undefined && data.aiFavor !== null && data.aiFavor !== '') ? data.aiFavor : 0;
+            if (document.getElementById('tracker-move')) document.getElementById('tracker-move').value = (data.moveVal !== undefined && data.moveVal !== null && data.moveVal !== '') ? data.moveVal : 20;
+            if (document.getElementById('tracker-step')) document.getElementById('tracker-step').value = (data.stepVal !== undefined && data.stepVal !== null && data.stepVal !== '') ? data.stepVal : 10;
+            if (document.getElementById('tracker-boss')) document.getElementById('tracker-boss').value = (data.bossKills !== undefined && data.bossKills !== null && data.bossKills !== '') ? data.bossKills : 0;
+            if (document.getElementById('tracker-pk')) document.getElementById('tracker-pk').value = (data.pkKills !== undefined && data.pkKills !== null && data.pkKills !== '') ? data.pkKills : 0;
+            renderHeaderCounters();
             document.getElementById('avatar-url').value = data.avatarUrl || '';
             
             document.getElementById('stat-str-base').value = data.strBase || 1;
@@ -3877,6 +3980,11 @@
         ensureUnarmedCombat();
         calculateSheet();
 
+        if (saved && data.popularity === undefined && document.getElementById('tracker-popularity')) {
+            document.getElementById('tracker-popularity').value = currentMods.cha || 0;
+            renderHeaderCounters();
+        }
+
         if (isFreshCrawler) {
             hpCurrentSlots = maxHpSlots;
             manaCurrent = maxMana;
@@ -3956,6 +4064,16 @@
                 input.value = '';
             }
         });
+        document.getElementById('char-level').value = 1;
+        document.getElementById('char-floor').value = 1;
+        if (document.getElementById('tracker-gold')) document.getElementById('tracker-gold').value = 0;
+        if (document.getElementById('tracker-popularity')) document.getElementById('tracker-popularity').value = 1;
+        if (document.getElementById('tracker-ai')) document.getElementById('tracker-ai').value = 0;
+        if (document.getElementById('tracker-move')) document.getElementById('tracker-move').value = 20;
+        if (document.getElementById('tracker-step')) document.getElementById('tracker-step').value = 10;
+        if (document.getElementById('tracker-boss')) document.getElementById('tracker-boss').value = 0;
+        if (document.getElementById('tracker-pk')) document.getElementById('tracker-pk').value = 0;
+        renderHeaderCounters();
         
         document.getElementById('avatar-img').style.display = 'none';
         document.getElementById('avatar-placeholder').style.display = 'block';
