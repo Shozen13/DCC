@@ -783,6 +783,7 @@
             margin-bottom: 20px;
         }
 
+        .info-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #888; background: #222; color: #fff; font-weight: bold; cursor: pointer; margin-top: 4px; }
         .modal-actions {
             display: flex;
             gap: 12px;
@@ -1058,13 +1059,13 @@
                 <div class="form-group">
                     <label>Race</label>
                     <input type="text" id="char-race" placeholder="Race" oninput="saveDataSilently(); renderRaceClassBox('race')">
-                    <select id="char-race-lib" onchange="applyRaceClass('race', this.value)"><option value="">-- Pick from book / Custom --</option></select>
+                    <select id="char-race-lib" onchange="applyRaceClass('race', this.value)"><option value="">-- Pick from book / Custom --</option></select><button type="button" id="race-info-btn" class="info-btn" style="display: none;" onclick="showRaceClassPopup('race')" title="Show race information">?</button>
                     <div id="race-rulebook-box" class="rulebook-box" style="display: none;"></div>
                 </div>
                 <div class="form-group">
                     <label>Class</label>
                     <input type="text" id="char-class" placeholder="Class" oninput="saveDataSilently(); renderRaceClassBox('class')">
-                    <select id="char-class-lib" onchange="applyRaceClass('class', this.value)"><option value="">-- Pick from book / Custom --</option></select>
+                    <select id="char-class-lib" onchange="applyRaceClass('class', this.value)"><option value="">-- Pick from book / Custom --</option></select><button type="button" id="class-info-btn" class="info-btn" style="display: none;" onclick="showRaceClassPopup('class')" title="Show class information">?</button>
                     <div id="class-rulebook-box" class="rulebook-box" style="display: none;"></div>
                 </div>
             </div>
@@ -1568,6 +1569,9 @@
 
 <div class="modal-overlay" id="lootModal" style="display: none;">
     <div class="modal-card" id="loot-modal-content"></div>
+<div class="modal-overlay" id="rcModal" style="display: none;">
+    <div class="modal-card" id="rc-modal-content"></div>
+</div>
 </div>
 
 <!-- Reset Modal -->
@@ -3377,13 +3381,23 @@
         if (selEl && selEl.options.length <= 1) selEl.innerHTML = raceClassOptions(kind);
         const entry = findRaceClass(nameEl.value, kind);
         if (selEl) selEl.value = entry ? entry.name : '';
+        const infoBtn = document.getElementById(kind === 'race' ? 'race-info-btn' : 'class-info-btn');
         if (!entry) {
-            if (nameEl.value.trim()) { box.style.display = 'block'; box.innerHTML = '<strong>Custom ' + kind + ':</strong> ' + escapeHtml(nameEl.value) + ' - no book entry, use your own notes for its benefits.'; }
-            else box.style.display = 'none';
+            if (nameEl.value.trim()) { box.style.display = 'none'; box.innerHTML = '<strong>Custom ' + kind + ':</strong> ' + escapeHtml(nameEl.value) + ' - no book entry, use your own notes for its benefits.'; if (infoBtn) infoBtn.style.display = 'inline-block'; }
+            else { box.style.display = 'none'; if (infoBtn) infoBtn.style.display = 'none'; }
             return;
         }
-        box.style.display = 'block';
+        box.style.display = 'none';
+        if (infoBtn) infoBtn.style.display = 'inline-block';
         box.innerHTML = '<strong>' + escapeHtml(entry.name) + '</strong> (Chapter 3, p. ' + entry.source_book_page + ')' + (entry.class_type ? ' - Class Type: ' + escapeHtml(entry.class_type) : '') + '<br>' + escapeHtml(entry.benefits) + (entry.prerequisites ? '<br><em>Prerequisites:</em> ' + escapeHtml(entry.prerequisites) : '') + (entry.uncertain ? '<br><em>Note: this entry was flagged uncertain in extraction, check the printed rulebook.</em>' : '');
+    }
+    function showRaceClassPopup(kind) {
+        const box = document.getElementById(kind === 'race' ? 'race-rulebook-box' : 'class-rulebook-box');
+        const modal = document.getElementById('rcModal');
+        const content = document.getElementById('rc-modal-content');
+        if (!box || !modal || !content || !box.innerHTML) return;
+        content.innerHTML = box.innerHTML + '<div class="modal-actions"><button onclick="document.getElementById(\'rcModal\').style.display = \'none\'">Close</button></div>';
+        modal.style.display = 'flex';
     }
     function applyRaceClass(kind, selectedName) {
         if (!selectedName) { renderRaceClassBox(kind); return; }
