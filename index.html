@@ -932,6 +932,13 @@
         }
         .bonus-entry select, .bonus-entry input { flex: 1 1 110px; min-width: 0; }
         .bonus-entry input.bonus-skill { flex: 2 1 150px; }
+        .bonus-entry select.bonus-skill { flex: 2 1 150px; }
+        .bonus-amount-label { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; align-self: center; }
+        .formula-breakdown { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 10px; font-size: 0.85rem; }
+        .formula-part { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+        .formula-part b { font-size: 0.95rem; }
+        .formula-part small { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
+        .formula-plus { align-self: center; color: var(--text-muted); }
         .bonus-entry input.bonus-amount { flex: 0 1 80px; }
 
         .persistent-header {
@@ -1132,7 +1139,7 @@
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
-                            <input type="number" id="stat-str-enh" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-str-enh" value="0" onchange="onEnhChange('str')">
                         </div>
                     </div>
                     <div class="stat-total-bar">
@@ -1158,7 +1165,7 @@
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
-                            <input type="number" id="stat-con-enh" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-con-enh" value="0" onchange="onEnhChange('con')">
                         </div>
                     </div>
                     <div class="stat-total-bar">
@@ -1184,7 +1191,7 @@
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
-                            <input type="number" id="stat-dex-enh" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-dex-enh" value="0" onchange="onEnhChange('dex')">
                         </div>
                     </div>
                     <div class="stat-total-bar">
@@ -1210,7 +1217,7 @@
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
-                            <input type="number" id="stat-int-enh" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-int-enh" value="0" onchange="onEnhChange('int')">
                         </div>
                     </div>
                     <div class="stat-total-bar">
@@ -1236,7 +1243,7 @@
                         </div>
                         <div class="stat-row-item">
                             <label>Enhance</label>
-                            <input type="number" id="stat-cha-enh" value="0" onchange="calculateSheet()">
+                            <input type="number" id="stat-cha-enh" value="0" onchange="onEnhChange('cha')">
                         </div>
                     </div>
                     <div class="stat-total-bar">
@@ -1366,7 +1373,7 @@
                     <div class="defense-badge">
                         <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Evade Formula</span>
                         <span class="defense-badge-val" id="evade-total-disp">d20 + 0</span>
-                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="evade-subtext">(d20 + DEX +0 + Buffs +0)</span>
+                        <div style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="evade-subtext"></div>
                     </div>
                 </div>
 
@@ -1376,7 +1383,7 @@
                     <div class="form-row-2">
                         <div class="form-group">
                             <label>Armor</label>
-                            <input type="number" id="armor-val" value="0" min="0" oninput="calculateSheet()">
+                            <input type="number" id="armor-val" value="0" min="0" oninput="onArmorChange()">
                         </div>
                         <div class="form-group">
                             <label>DR Buffs</label>
@@ -1386,7 +1393,7 @@
                     <div class="defense-badge">
                         <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; display: block;">Total Resistance</span>
                         <span class="defense-badge-val" id="dr-total-disp">0 DR</span>
-                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="dr-subtext">(Armor 0 + Buffs 0)</span>
+                        <div style="font-size: 0.7rem; color: var(--text-muted); display: block;" id="dr-subtext"></div>
                     </div>
                 </div>
             </div>
@@ -1705,6 +1712,35 @@
     };
 
     const currentMods = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+    // Enhance / Armor inputs show the total including gear, so the user sees
+    // the gear bonus in the Enhance / Armor number itself. The gear-free
+    // values are kept here and are what gets saved, so unequipping never
+    // leaves gear baked into the saved character.
+    let ownEnh = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+    let ownArmor = 0;
+    function onEnhChange(id) {
+        const gear = getEquippedItemBonuses().stat[id] || 0;
+        const typed = parseInt(document.getElementById(`stat-${id}-enh`).value) || 0;
+        ownEnh[id] = Math.max(0, typed - gear);
+        calculateSheet();
+    }
+    function onArmorChange() {
+        const gear = getEquippedItemBonuses().dr || 0;
+        const typed = parseInt(document.getElementById('armor-val').value) || 0;
+        ownArmor = Math.max(0, typed - gear);
+        calculateSheet();
+    }
+    function formulaBreakdown(parts) {
+        // parts: [{num, label}, ...] -> numbers on top, source label underneath each.
+        let out = '<div class="formula-breakdown">';
+        parts.forEach((p, i) => {
+            if (i > 0) out += '<span class="formula-plus">+</span>';
+            out += `<span class="formula-part"><b>${escapeHtml(String(p.num))}</b><small>${escapeHtml(p.label)}</small></span>`;
+        });
+        out += '</div>';
+        return out;
+    }
+    function signed(n) { return n >= 0 ? '+' + n : String(n); }
 
     function getModifier(statValue) {
         if (!statValue || statValue < 1) return 0;
@@ -1726,9 +1762,11 @@
             base = 1;
             document.getElementById(`stat-${id}-base`).value = 1;
         }
-        const enh = parseInt(document.getElementById(`stat-${id}-enh`).value) || 0;
+        if (ownEnh[id] === undefined) ownEnh[id] = Math.max(0, (parseInt(document.getElementById(`stat-${id}-enh`).value) || 0));
         const gear = getEquippedItemBonuses().stat[id] || 0;
-        const total = Math.max(1, base + enh + gear);
+        const enh = ownEnh[id] + gear;
+        document.getElementById(`stat-${id}-enh`).value = enh;
+        const total = Math.max(1, base + enh);
         
         document.getElementById(`stat-${id}-total`).innerText = total;
         const gearEl = document.getElementById(`stat-${id}-gear`);
@@ -1778,15 +1816,20 @@
         const totalEvadeMod = dex.mod + evadeBuffs + gearEvade;
         const evadeDispStr = totalEvadeMod >= 0 ? `d20 + ${totalEvadeMod}` : `d20 - ${Math.abs(totalEvadeMod)}`;
         document.getElementById('evade-total-disp').innerText = evadeDispStr;
-        document.getElementById('evade-subtext').innerText = `(d20 + DEX +${dex.mod} + Buffs ${evadeBuffs >= 0 ? '+' + evadeBuffs : evadeBuffs}${gearEvade !== 0 ? ' + Gear ' + (gearEvade >= 0 ? '+' + gearEvade : gearEvade) : ''})`;
+        const evadeParts = [{ num: 'd20', label: 'Die' }, { num: signed(dex.mod), label: 'DEX' }, { num: signed(evadeBuffs), label: 'Buffs' }];
+        if (gearEvade !== 0) evadeParts.push({ num: signed(gearEvade), label: 'Gear' });
+        document.getElementById('evade-subtext').innerHTML = formulaBreakdown(evadeParts);
 
-        // Damage Resistance Calculation: Armor + Buffs + Gear
-        const armorVal = parseInt(document.getElementById('armor-val').value) || 0;
-        const drBuffs = parseInt(document.getElementById('dr-buffs').value) || 0;
+        // Damage Resistance Calculation: Armor (own + gear) + Buffs
         const gearDR = getEquippedItemBonuses().dr || 0;
-        const totalDR = armorVal + drBuffs + gearDR;
+        const armorVal = ownArmor + gearDR;
+        document.getElementById('armor-val').value = armorVal;
+        const drBuffs = parseInt(document.getElementById('dr-buffs').value) || 0;
+        const totalDR = armorVal + drBuffs;
         document.getElementById('dr-total-disp').innerText = `${totalDR} DR`;
-        document.getElementById('dr-subtext').innerText = `(Armor ${armorVal} + Buffs ${drBuffs >= 0 ? '+' + drBuffs : drBuffs}${gearDR !== 0 ? ' + Gear ' + (gearDR >= 0 ? '+' + gearDR : gearDR) : ''})`;
+        const drParts = [{ num: String(armorVal), label: 'Armor' }, { num: signed(drBuffs), label: 'Buffs' }];
+        if (gearDR !== 0) drParts.push({ num: signed(gearDR), label: 'Gear in Armor' });
+        document.getElementById('dr-subtext').innerHTML = formulaBreakdown(drParts);
 
         updateAllAttacks();
         updateAllSkills();
@@ -2865,11 +2908,11 @@
         const statKey = document.getElementById(`skl-stat-${id}`).value;
 
         const mod = currentMods[statKey] || 0;
-        const gearBonus = getSkillBonusFor(document.getElementById(`skl-name-${id}`).value);
-        const totalBonus = rank + mod + gearBonus;
+        const gearGrant = getSkillGrantFor(document.getElementById(`skl-name-${id}`).value);
+        const totalBonus = rank + gearGrant + mod;
 
         document.getElementById(`skl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`skl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod}${gearBonus !== 0 ? ' + Gear ' + (gearBonus >= 0 ? '+' + gearBonus : gearBonus) : ''})`;
+        document.getElementById(`skl-mod-subtext-${id}`).innerText = `(Rank ${rank}${gearGrant !== 0 ? ' + Gear +' + gearGrant : ''} + ${statKey.toUpperCase()} +${mod})`;
         renderRulebookSkill(id);
 
         toggleSkillUsedVisual(id);
@@ -3055,11 +3098,11 @@
         const statKey = document.getElementById(`spl-stat-${id}`).value;
 
         const mod = currentMods[statKey] || 0;
-        const gearBonus = getSkillBonusFor(document.getElementById(`spl-name-${id}`).value);
-        const totalBonus = rank + mod + gearBonus;
+        const gearGrant = getSkillGrantFor(document.getElementById(`spl-name-${id}`).value);
+        const totalBonus = rank + gearGrant + mod;
 
         document.getElementById(`spl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`spl-mod-subtext-${id}`).innerText = `(Rank ${rank} + ${statKey.toUpperCase()} +${mod}${gearBonus !== 0 ? ' + Gear ' + (gearBonus >= 0 ? '+' + gearBonus : gearBonus) : ''})`;
+        document.getElementById(`spl-mod-subtext-${id}`).innerText = `(Rank ${rank}${gearGrant !== 0 ? ' + Gear +' + gearGrant : ''} + ${statKey.toUpperCase()} +${mod})`;
         renderRulebookSpell(id);
 
         toggleSpellUsedVisual(id);
@@ -3176,31 +3219,112 @@
 
 
     /* Structured item bonuses, applied only while an item is equipped.
-       Types: stat, skill (bonus to an existing skill/spell), grant
-       (a skill/spell at a given rank), dr, evade. */
+       Types: stat, grant (ranks of a skill/spell), dr, evade.
+       A grant is ranks, not a separate bonus: if the crawler already has
+       the skill/spell as a card, its Rank stays the crawler's own rank and
+       the grant adds on top in the card total. If there is no card, the
+       skill shows in the granted box at the grant rank. Unequipping drops
+       the grant, so the card keeps exactly its own rank (or, with no card,
+       nothing is kept). Old 'skill' bonus entries are treated as grants. */
+    function grantSkillOptions() {
+        let out = '<option value="">-- Pick skill / spell --</option>';
+        const groups = [['attack', 'Attack Skills'], ['utility', 'Utility Skills'], ['spell', 'Spells']];
+        if (typeof RULEBOOK_LIBRARY !== 'undefined') {
+            groups.forEach(([kind, label]) => {
+                const items = RULEBOOK_LIBRARY.filter(e => e.kind === kind);
+                if (!items.length) return;
+                out += `<optgroup label="${label}">`;
+                items.forEach(e => { out += `<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`; });
+                out += '</optgroup>';
+            });
+        }
+        const known = new Set();
+        if (typeof RULEBOOK_LIBRARY !== 'undefined') RULEBOOK_LIBRARY.forEach(e => known.add(e.name.toLowerCase()));
+        const custom = [];
+        document.querySelectorAll('.skill-card, .spell-card').forEach(card => {
+            const isSkill = card.classList.contains('skill-card');
+            const id = card.id.replace(isSkill ? 'skill-card-' : 'spell-card-', '');
+            const el = document.getElementById(isSkill ? `skl-name-${id}` : `spl-name-${id}`);
+            const name = el ? el.value.trim() : '';
+            if (name && !known.has(name.toLowerCase())) { known.add(name.toLowerCase()); custom.push(name); }
+        });
+        if (custom.length) {
+            out += '<optgroup label="Your skills & spells">';
+            custom.forEach(n => { out += `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`; });
+            out += '</optgroup>';
+        }
+        return out;
+    }
+    function grantSkillOptionsLibraryOnly() {
+        let out = '<option value="">-- Pick skill / spell --</option>';
+        const groups = [['attack', 'Attack Skills'], ['utility', 'Utility Skills'], ['spell', 'Spells']];
+        if (typeof RULEBOOK_LIBRARY !== 'undefined') {
+            groups.forEach(([kind, label]) => {
+                const items = RULEBOOK_LIBRARY.filter(e => e.kind === kind);
+                if (!items.length) return;
+                out += `<optgroup label="${label}">`;
+                items.forEach(e => { out += `<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`; });
+                out += '</optgroup>';
+            });
+        }
+        return out;
+    }
+    function findSkillStat(name) {
+        if (!name) return null;
+        const key = name.trim().toLowerCase();
+        let found = null;
+        document.querySelectorAll('.skill-card, .spell-card').forEach(card => {
+            const isSkill = card.classList.contains('skill-card');
+            const id = card.id.replace(isSkill ? 'skill-card-' : 'spell-card-', '');
+            const nameEl = document.getElementById(isSkill ? `skl-name-${id}` : `spl-name-${id}`);
+            const statEl = document.getElementById(isSkill ? `skl-stat-${id}` : `spl-stat-${id}`);
+            if (nameEl && nameEl.value.trim().toLowerCase() === key && statEl) found = statEl.value;
+        });
+        if (found) return found;
+        if (typeof RULEBOOK_LIBRARY !== 'undefined') {
+            const entry = RULEBOOK_LIBRARY.find(e => e.name && e.name.toLowerCase() === key);
+            if (entry && entry.stat) return entry.stat;
+        }
+        return null;
+    }
+    function hasSkillCard(name) {
+        if (!name) return false;
+        const key = name.trim().toLowerCase();
+        let found = false;
+        document.querySelectorAll('.skill-card, .spell-card').forEach(card => {
+            const isSkill = card.classList.contains('skill-card');
+            const id = card.id.replace(isSkill ? 'skill-card-' : 'spell-card-', '');
+            const el = document.getElementById(isSkill ? `skl-name-${id}` : `spl-name-${id}`);
+            if (el && el.value.trim().toLowerCase() === key) found = true;
+        });
+        return found;
+    }
     function getEquippedItemBonuses() {
-        const out = { stat: { str: 0, con: 0, dex: 0, int: 0, cha: 0 }, skillBonus: {}, grants: [], dr: 0, evade: 0 };
+        const out = { stat: { str: 0, con: 0, dex: 0, int: 0, cha: 0 }, grantRank: {}, grants: [], dr: 0, evade: 0 };
         const equippedIds = [];
         document.querySelectorAll('.gear-select').forEach(select => {
             if (select.value) equippedIds.push(select.value);
         });
+        const grantMap = {};
         equippedIds.forEach(itemId => {
             const card = document.getElementById(`item-card-${itemId}`);
             if (!card) return;
             card.querySelectorAll('.bonus-entry').forEach(entry => {
-                const type = entry.querySelector('.bonus-type')?.value || 'stat';
+                const rawType = entry.querySelector('.bonus-type')?.value || 'stat';
+                const type = rawType === 'skill' ? 'grant' : rawType;
                 const stat = (entry.querySelector('.bonus-stat')?.value || 'str').toLowerCase();
                 const skill = (entry.querySelector('.bonus-skill')?.value || '').trim();
                 const amount = parseInt(entry.querySelector('.bonus-amount')?.value) || 0;
                 if (type === 'stat') {
                     if (out.stat.hasOwnProperty(stat)) out.stat[stat] += amount;
-                } else if (type === 'skill') {
-                    if (skill) {
-                        const key = skill.toLowerCase();
-                        out.skillBonus[key] = (out.skillBonus[key] || 0) + amount;
-                    }
                 } else if (type === 'grant') {
-                    if (skill && amount > 0) out.grants.push({ name: skill, rank: amount, stat: stat });
+                    if (skill && amount > 0) {
+                        const key = skill.toLowerCase();
+                        out.grantRank[key] = (out.grantRank[key] || 0) + amount;
+                        if (!grantMap[key]) grantMap[key] = { name: skill, rank: 0, stat: findSkillStat(skill) };
+                        grantMap[key].rank += amount;
+                        if (!grantMap[key].stat) grantMap[key].stat = findSkillStat(skill);
+                    }
                 } else if (type === 'dr') {
                     out.dr += amount;
                 } else if (type === 'evade') {
@@ -3208,29 +3332,49 @@
                 }
             });
         });
+        out.grants = Object.values(grantMap);
         return out;
     }
 
-    function getSkillBonusFor(name) {
+    function getSkillGrantFor(name) {
         if (!name) return 0;
-        return getEquippedItemBonuses().skillBonus[name.trim().toLowerCase()] || 0;
+        return getEquippedItemBonuses().grantRank[name.trim().toLowerCase()] || 0;
     }
+    // Kept for any older caller: a grant is now the gear contribution.
+    function getSkillBonusFor(name) { return getSkillGrantFor(name); }
 
     function updateGrantedSkills() {
         const box = document.getElementById('granted-skills-box');
         if (!box) return;
-        const grants = getEquippedItemBonuses().grants;
+        // Grants for skills the crawler already has as a card are already
+        // in that card's total, so the granted box only lists the rest.
+        const grants = getEquippedItemBonuses().grants.filter(g => !hasSkillCard(g.name));
         if (!grants.length) {
             box.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No skills granted by equipped gear.</span>';
             return;
         }
-        let tagsHtml = '';
+        let tagsHtml = '<div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 6px;">To level a granted skill, add it as a skill/spell card with your own rank; gear ranks add on top and drop off when unequipped, leaving your own rank.</div>';
         grants.forEach(g => {
-            const mod = currentMods[g.stat] || 0;
-            const bonus = g.rank + mod + getSkillBonusFor(g.name);
-            tagsHtml += `<div class="summary-tag ger"><span>${escapeHtml(g.name)}</span><span class="badge">Granted Rank ${g.rank} | Mod +${bonus}</span></div>`;
+            const mod = g.stat ? (currentMods[g.stat] || 0) : null;
+            const badge = mod === null ? `Granted Rank ${g.rank}` : `Granted Rank ${g.rank} | Mod +${g.rank + mod}`;
+            tagsHtml += `<div class="summary-tag ger"><span>${escapeHtml(g.name)}</span><span class="badge">${badge}</span></div>`;
         });
         box.innerHTML = tagsHtml;
+    }
+
+    function updateBonusEntryVisibility(entry) {
+        const type = entry.querySelector('.bonus-type')?.value || 'stat';
+        const statEl = entry.querySelector('.bonus-stat');
+        const skillEl = entry.querySelector('.bonus-skill');
+        const labelEl = entry.querySelector('.bonus-amount-label');
+        if (statEl) statEl.style.display = type === 'stat' ? '' : 'none';
+        if (skillEl) skillEl.style.display = type === 'grant' ? '' : 'none';
+        if (labelEl) labelEl.innerText = type === 'grant' ? 'Rank' : 'Amount';
+    }
+    function onBonusTypeChange(select) {
+        const entry = select.closest('.bonus-entry');
+        if (entry) updateBonusEntryVisibility(entry);
+        calculateSheet();
     }
 
     function addBonusEntry(itemId, data = null) {
@@ -3240,9 +3384,8 @@
         const entry = document.createElement('div');
         entry.className = 'bonus-entry';
         entry.innerHTML = `
-            <select class="bonus-type" onchange="calculateSheet()">
+            <select class="bonus-type" onchange="onBonusTypeChange(this)">
                 <option value="stat">Stat bonus</option>
-                <option value="skill">Skill bonus</option>
                 <option value="grant">Skill grant</option>
                 <option value="dr">Damage Resistance</option>
                 <option value="evade">Evade</option>
@@ -3254,17 +3397,29 @@
                 <option value="int">INT</option>
                 <option value="cha">CHA</option>
             </select>
-            <input type="text" class="bonus-skill" placeholder="Skill name (skill bonus / grant)" oninput="calculateSheet()">
+            <select class="bonus-skill" onchange="calculateSheet()">${grantSkillOptions()}</select>
+            <span class="bonus-amount-label">Amount</span>
             <input type="number" class="bonus-amount" value="0" oninput="calculateSheet()">
             <button type="button" class="btn-remove-die" onclick="removeBonusEntry(this)">✕</button>
         `;
         container.appendChild(entry);
         if (data) {
-            entry.querySelector('.bonus-type').value = data.type || 'stat';
+            const type = data.type === 'skill' ? 'grant' : (data.type || 'stat');
+            entry.querySelector('.bonus-type').value = type;
             entry.querySelector('.bonus-stat').value = data.stat || 'str';
-            entry.querySelector('.bonus-skill').value = data.skill || '';
+            const skillSel = entry.querySelector('.bonus-skill');
+            if (data.skill) {
+                const exists = Array.from(skillSel.options).some(o => o.value.toLowerCase() === data.skill.toLowerCase());
+                if (!exists) {
+                    const opt = document.createElement('option');
+                    opt.value = data.skill; opt.innerText = data.skill;
+                    skillSel.appendChild(opt);
+                }
+                skillSel.value = data.skill;
+            }
             entry.querySelector('.bonus-amount').value = data.amount !== undefined ? data.amount : 0;
         }
+        updateBonusEntryVisibility(entry);
     }
 
     function removeBonusEntry(btn) {
@@ -3326,7 +3481,7 @@
                     <button type="button" class="btn-small-add" onclick="addBonusEntry(${id})">+ Add Bonus</button>
                 </div>
                 <div id="item-bonuses-${id}"></div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">Stat: use Stat + Amount. Skill bonus: use Skill name + Amount. Skill grant: use Skill name + Amount as Rank + Stat. DR / Evade: use Amount only. Max 5 bonuses per item. Bonuses apply only while this item is selected in Equipped Gear.</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">Stat: pick a stat + amount; it goes into that stat's Enhance number, with the gear portion shown under the stat total. Skill grant: pick a skill/spell + rank; it adds ranks on top of your own card rank, or appears as granted if you have no card for it. DR / Evade: amount only; DR goes into the Armor number, Evade into the Evade formula. Max 5 bonuses per item. Bonuses apply only while this item is selected in Equipped Gear.</div>
             </div>
         `;
 
@@ -3762,15 +3917,15 @@
             avatarUrl: document.getElementById('avatar-url').value,
             
             strBase: document.getElementById('stat-str-base').value,
-            strEnh: document.getElementById('stat-str-enh').value,
+            strEnh: ownEnh.str,
             conBase: document.getElementById('stat-con-base').value,
-            conEnh: document.getElementById('stat-con-enh').value,
+            conEnh: ownEnh.con,
             dexBase: document.getElementById('stat-dex-base').value,
-            dexEnh: document.getElementById('stat-dex-enh').value,
+            dexEnh: ownEnh.dex,
             intBase: document.getElementById('stat-int-base').value,
-            intEnh: document.getElementById('stat-int-enh').value,
+            intEnh: ownEnh.int,
             chaBase: document.getElementById('stat-cha-base').value,
-            chaEnh: document.getElementById('stat-cha-enh').value,
+            chaEnh: ownEnh.cha,
 
             maxHpSlots: 10,
             hpCurrent: hpCurrentSlots,
@@ -3778,7 +3933,7 @@
             activeTab: activeTab,
             
             evadeBuffs: document.getElementById('evade-buffs').value,
-            armorVal: document.getElementById('armor-val').value,
+            armorVal: ownArmor,
             drBuffs: document.getElementById('dr-buffs').value,
 
             bodySlotCounts: bodySlotCounts,
@@ -3921,6 +4076,7 @@
             document.getElementById('stat-int-enh').value = data.intEnh || 0;
             document.getElementById('stat-cha-base').value = data.chaBase || 1;
             document.getElementById('stat-cha-enh').value = data.chaEnh || 0;
+            ownEnh = { str: parseInt(data.strEnh, 10) || 0, con: parseInt(data.conEnh, 10) || 0, dex: parseInt(data.dexEnh, 10) || 0, int: parseInt(data.intEnh, 10) || 0, cha: parseInt(data.chaEnh, 10) || 0 };
 
             maxHpSlots = 10;
             hpCurrentSlots = data.hpCurrent || 0;
@@ -3929,6 +4085,7 @@
             document.getElementById('evade-buffs').value = data.evadeBuffs || 0;
             document.getElementById('armor-val').value = data.armorVal || 0;
             document.getElementById('dr-buffs').value = data.drBuffs || 0;
+            ownArmor = parseInt(data.armorVal, 10) || 0;
 
             if (data.collapsedState) {
                 collapsedState.attacks = !!data.collapsedState.attacks;
@@ -4065,6 +4222,8 @@
         hpCurrentSlots = 0;
         manaCurrent = 0;
         maxMana = 0;
+        ownEnh = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+        ownArmor = 0;
         accessoryCounter = 0;
 
         bodySlotCategories.forEach(cat => {
@@ -4813,12 +4972,17 @@
         if (bonuses.querySelectorAll('.bonus-entry').length >= 5) return;
         const entry = document.createElement('div');
         entry.className = 'bonus-entry';
-        entry.innerHTML = '<select class="bonus-type"><option value="stat">Stat bonus</option><option value="skill">Skill bonus</option><option value="grant">Skill grant</option><option value="dr">Damage Resistance</option><option value="evade">Evade</option></select>'
+        entry.innerHTML = '<select class="bonus-type" onchange="onBonusTypeChange(this)"><option value="stat">Stat bonus</option><option value="grant">Skill grant</option><option value="dr">Damage Resistance</option><option value="evade">Evade</option></select>'
             + '<select class="bonus-stat"><option value="str">STR</option><option value="con">CON</option><option value="dex">DEX</option><option value="int">INT</option><option value="cha">CHA</option></select>'
-            + '<input type="text" class="bonus-skill" placeholder="Skill name (skill bonus / grant)">'
-            + '<input type="number" class="bonus-amount" value="0">'
-            + '<button type="button" class="btn-remove-die" onclick="this.closest(\'.bonus-entry\').remove()">\u2715</button>';
+            + '<select class="bonus-skill">' + grantSkillOptionsLibraryOnly() + '</select>'
+            + '<span class="bonus-amount-label">Amount</span>'
+            + '<input type="number" class="bonus-amount" value="0">';
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button'; removeBtn.className = 'btn-remove-die'; removeBtn.innerText = '✕';
+        removeBtn.onclick = function () { entry.remove(); };
+        entry.appendChild(removeBtn);
         bonuses.appendChild(entry);
+        updateBonusEntryVisibility(entry);
     }
     function addDmItemRow(containerId) {
         dmItemCounter++;
