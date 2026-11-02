@@ -3510,24 +3510,35 @@
         renderHeaderCounters();
     }
     let levelUpBankAmount = 3;
+    let levelUpLevels = 1;
     function renderLevelUpModal() {
         const content = document.getElementById('level-up-modal-content');
         if (!content) return;
-        content.innerHTML = '<h3>Level Up</h3><p>You gain 3 stat points. How many would you like to bank?</p><p>Points to Bank: <button type="button" onclick="levelUpStep(-1)">-</button> <span id="level-up-bank-amount">' + levelUpBankAmount + '</span> <button type="button" onclick="levelUpStep(1)">+</button></p>' + (levelUpBankAmount < 3 ? '<p><em>Points not banked will not be saved.</em></p>' : '') + '<div class="modal-actions"><button type="button" onclick="confirmLevelUp()">Bank Stat Points</button><button type="button" onclick="document.getElementById(\'levelUpModal\').style.display = \'none\'">Cancel</button></div>';
+        const levelEl = document.getElementById('char-level');
+        const fromLevel = levelEl ? (parseInt(levelEl.value, 10) || 1) : 1;
+        const toLevel = fromLevel + levelUpLevels;
+        const pointsGained = levelUpLevels * 3;
+        content.innerHTML = '<h3>Level Up</h3><p>Level ' + fromLevel + ' \u2192 Level ' + toLevel + (toLevel > 250 ? ' (over the book level cap of 250)' : '') + '</p><p>Levels to gain: <button type="button" onclick="levelUpLevelsStep(-1)">-</button> <span id="level-up-levels">' + levelUpLevels + '</span> <button type="button" onclick="levelUpLevelsStep(1)">+</button></p><p>You gain ' + pointsGained + ' stat points (' + levelUpLevels + ' ' + (levelUpLevels === 1 ? 'level' : 'levels') + ' \u00d7 3). How many would you like to bank?</p><p>Points to Bank: <button type="button" onclick="levelUpStep(-1)">-</button> <span id="level-up-bank-amount">' + levelUpBankAmount + '</span> <button type="button" onclick="levelUpStep(1)">+</button></p>' + (levelUpBankAmount < pointsGained ? '<p><em>Points not banked will not be saved.</em></p>' : '') + '<div class="modal-actions"><button type="button" onclick="confirmLevelUp()">Bank Stat Points</button><button type="button" onclick="document.getElementById(\'levelUpModal\').style.display = \'none\'">Cancel</button></div>';
     }
     function openLevelUp() {
+        levelUpLevels = 1;
         levelUpBankAmount = 3;
         renderLevelUpModal();
         document.getElementById('levelUpModal').style.display = 'flex';
     }
+    function levelUpLevelsStep(delta) {
+        levelUpLevels = Math.max(1, levelUpLevels + delta);
+        levelUpBankAmount = levelUpLevels * 3;
+        renderLevelUpModal();
+    }
     function levelUpStep(delta) {
-        levelUpBankAmount = Math.max(0, Math.min(3, levelUpBankAmount + delta));
+        levelUpBankAmount = Math.max(0, Math.min(levelUpLevels * 3, levelUpBankAmount + delta));
         renderLevelUpModal();
     }
     function confirmLevelUp() {
         const levelEl = document.getElementById('char-level');
         if (!levelEl) return;
-        levelEl.value = (parseInt(levelEl.value, 10) || 1) + 1;
+        levelEl.value = (parseInt(levelEl.value, 10) || 1) + levelUpLevels;
         setStatBank(getStatBank() + levelUpBankAmount);
         document.getElementById('levelUpModal').style.display = 'none';
         updateLevelPoints();
