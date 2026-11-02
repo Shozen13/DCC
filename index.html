@@ -3043,7 +3043,7 @@
         const totalBonus = effRank + mod + groupBonus;
 
         document.getElementById(`skl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`skl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? `(Rank ${rank}, Passive, no stat mod)` : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`);
+        document.getElementById(`skl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? (`(Rank ${effRank}, Passive, no stat mod` + (magePen ? ' (Mage -3)' : '') + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`) : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`);
         renderRulebookSkill(id);
 
         toggleSkillUsedVisual(id);
@@ -3251,7 +3251,7 @@
         const totalBonus = effRank + mod + groupBonus;
 
         document.getElementById(`spl-total-bonus-${id}`).innerText = '+' + totalBonus;
-        document.getElementById(`spl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? `(Rank ${rank}, Passive, no stat mod)` : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`);
+        document.getElementById(`spl-mod-subtext-${id}`).innerText = (bookEntry && !bookEntry.stat) ? (`(Rank ${effRank}, Passive, no stat mod` + (magePen ? ' (Mage -3)' : '') + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`) : (`(Rank ${effRank}` + (magePen ? ' (Mage -3)' : '') + (grantFloor ? ` (Gear +${grantFloor} in rank)` : '') + ` + ${statKey.toUpperCase()} +${mod}` + (groupBonus ? ` + Group +${groupBonus}` : '') + `)`);
         renderRulebookSpell(id);
 
         toggleSpellUsedVisual(id);
