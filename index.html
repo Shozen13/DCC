@@ -3854,6 +3854,7 @@
         const saved = localStorage.getItem('crawler_split_attrs_data');
         let savedActiveTab = 'vitals';
         let isFreshCrawler = false;
+        let savedPopularity;
         if (saved) {
             const data = JSON.parse(saved);
             if (data.activeTab) savedActiveTab = data.activeTab;
@@ -3879,6 +3880,7 @@
             document.getElementById('char-floor').value = data.floor || '1';
             if (document.getElementById('tracker-gold')) document.getElementById('tracker-gold').value = (data.gold !== undefined && data.gold !== null && data.gold !== '') ? data.gold : 0;
             if (document.getElementById('tracker-popularity')) document.getElementById('tracker-popularity').value = (data.popularity !== undefined && data.popularity !== null && data.popularity !== '') ? data.popularity : 0;
+            savedPopularity = data.popularity;
             if (document.getElementById('tracker-ai')) document.getElementById('tracker-ai').value = (data.aiFavor !== undefined && data.aiFavor !== null && data.aiFavor !== '') ? data.aiFavor : 0;
             if (document.getElementById('tracker-move')) document.getElementById('tracker-move').value = (data.moveVal !== undefined && data.moveVal !== null && data.moveVal !== '') ? data.moveVal : 20;
             if (document.getElementById('tracker-step')) document.getElementById('tracker-step').value = (data.stepVal !== undefined && data.stepVal !== null && data.stepVal !== '') ? data.stepVal : 10;
@@ -3980,7 +3982,7 @@
         ensureUnarmedCombat();
         calculateSheet();
 
-        if (saved && data.popularity === undefined && document.getElementById('tracker-popularity')) {
+        if (saved && savedPopularity === undefined && document.getElementById('tracker-popularity')) {
             document.getElementById('tracker-popularity').value = currentMods.cha || 0;
             renderHeaderCounters();
         }
