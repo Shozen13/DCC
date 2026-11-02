@@ -1120,7 +1120,6 @@
                     <div id="class-rulebook-box" class="rulebook-box" style="display: none;"></div>
                 </div>
             </div>
-            <div id="race-class-benefits-box" class="rulebook-box" style="display: none;"></div>
         </div>
 
         <!-- Core Attributes Card -->
@@ -3905,8 +3904,12 @@
         return parseRaceClassDR(race) + parseRaceClassDR(cls);
     }
     function renderRaceClassBenefitsBox() {
+        // Intentionally no visible box: race/class breakdowns live behind the
+        // ? bubble only. Auto-applied effects are visible in the Base lines,
+        // the Choices tab, and the skill/spell cards themselves.
         const box = document.getElementById('race-class-benefits-box');
         if (!box) return;
+        box.style.display = 'none'; box.innerHTML = ''; return;
         const race = findRaceClass(document.getElementById('char-race') ? document.getElementById('char-race').value : '', 'race');
         const cls = findRaceClass(document.getElementById('char-class') ? document.getElementById('char-class').value : '', 'class');
         if (!race && !cls) { box.style.display = 'none'; box.innerHTML = ''; return; }
