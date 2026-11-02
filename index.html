@@ -4149,32 +4149,63 @@
         });
         raceClassSkillApplied = keep;
     }
+    function pruneBogusRaceClassCards() {
+        // Remove cards the old parser created from stat/group wording.
+        // Only touches cards recorded as created by a race/class bonus whose
+        // name is not a Chapter 4 library entry; user-created custom cards
+        // are never touched.
+        if (!Array.isArray(raceClassSkillApplied)) return;
+        const keep = [];
+        raceClassSkillApplied.forEach(a => {
+            const isBogus = a.createdByBonus && !findRulebookEntry(a.skillName, ['attack', 'utility', 'spell']);
+            if (isBogus) {
+                const id = findSkillOrSpellCard(a.skillName, a.kind);
+                if (id !== null) {
+                    const card = document.getElementById((a.kind === 'spell' ? 'spell-card-' : 'skill-card-') + id);
+                    if (card) card.remove();
+                }
+            } else keep.push(a);
+        });
+        const removed = raceClassSkillApplied.length - keep.length;
+        raceClassSkillApplied = keep;
+        if (typeof updateSkillsSummary === 'function') updateSkillsSummary();
+        if (typeof updateSpellsSummary === 'function') updateSpellsSummary();
+        if (removed > 0 && typeof saveDataSilently === 'function') saveDataSilently();
+    }
     function parseFixedSkillBonuses(entry) {
-        // Grouped-list parser: "+2 Bow, Endurance, and Pugilism Skills" means
-        // +2 to each name in the list. Skips choice/group/category grants,
-        // which are handled in the Choices tab or as text only.
+        // Fixed-skill parser, rewritten 2026-11-02 after Lifebringer created
+        // bogus cards named "Rank in all", "Intelligence" and "Constitution".
+        // Old bug: the regex crossed "+" boundaries and stat bonuses to reach
+        // the next "Skills"/"Spells" word, so stat names and group wording
+        // became skill names, and "all" at end of a list escaped the guard
+        // (it required a trailing space). New rules: each "+N ..." segment
+        // ends at the next "+" or "." or ";", so stat bonuses never leak
+        // into a skill list, and a name is only kept if it matches a Chapter 4
+        // library entry (with Intimidation->Intimidate and Smite->Paladin's
+        // Smite aliases, and "Rise, Dead Minion!" protected from comma split).
+        // Anything else (stats, DR, Earth Boxes, group/choice wording) is
+        // dropped, never turned into a card.
         const out = [];
         if (!entry) return out;
-        const b = entry.benefits || '';
-        const re = /\+(\d+) ([^.;]+?) (?:Skills?|Spells?)\b/g;
+        let b = (entry.benefits || '').replace(/Rise, Dead Minion!/g, 'RISEDEADMINION');
+        const re = /\+(\d+)\s+([^.;+]+)/g;
         let m;
         while ((m = re.exec(b)) !== null) {
-            const listTxt = m[2];
-            if (/of choice|chosen|different|all |based|or\b/i.test(listTxt) && !/^(Bow|Endurance|Pugilism)/i.test(listTxt)) {
-                // "Catcher or Shield Block" and similar either/or choices are not fixed.
-                if (/\bor\b/i.test(listTxt)) continue;
-                if (/all |based|different|chosen|of choice/i.test(listTxt)) continue;
-            }
             const amt = parseInt(m[1], 10);
-            listTxt.split(/,| and /).forEach(raw => {
+            let txt = m[2].replace(/\bSkills?\b|\bSpells?\b/gi, '').trim().replace(/,$/, '').trim().replace(/\s+and\s*$/, '').trim();
+            if (!txt) continue;
+            txt.split(/,|\s+and\s+/).forEach(raw => {
                 let name = raw.trim().replace(/\([^)]*\)/g, '').trim();
-                if (name.toLowerCase() === 'intimidation') name = 'Intimidate';
                 name = name.replace(/^\+?\d+\s*/, '').trim();
-                name = name.replace(/^(a |an |the )/i, '').trim();
-                if (!name || /choice|chosen|different|all |based/i.test(name)) return;
-                if (/^(in |one |another )/i.test(name)) return;
+                name = name.replace(/^(a |an |the |one |in )/i, '').trim();
+                name = name.replace(/\s+with\s+.*$/i, '').trim();
+                if (name === 'RISEDEADMINION') name = 'Rise, Dead Minion!';
+                if (name.toLowerCase() === 'intimidation') name = 'Intimidate';
+                if (name.toLowerCase() === 'smite') name = "Paladin's Smite";
+                if (!name) return;
                 const lib = findRulebookEntry(name, ['attack', 'utility', 'spell']);
-                out.push({ name: name, kind: lib ? lib.kind : 'utility', amount: amt });
+                if (!lib) return;
+                out.push({ name: name, kind: lib.kind, amount: amt });
             });
         }
         return out;
@@ -4850,6 +4881,7 @@
             else { ownBase = { str: parseInt(data.strBase, 10) || 1, con: parseInt(data.conBase, 10) || 1, dex: parseInt(data.dexBase, 10) || 1, int: parseInt(data.intBase, 10) || 1, cha: parseInt(data.chaBase, 10) || 1 }; bonusesAlreadyInBase = true; }
             if (data.raceClassChoices) raceClassChoices = data.raceClassChoices;
             if (data.raceClassSkillApplied) raceClassSkillApplied = data.raceClassSkillApplied;
+            if (typeof pruneBogusRaceClassCards === 'function') setTimeout(pruneBogusRaceClassCards, 0);
             if (data.raceClassMoveApplied) raceClassMoveApplied = data.raceClassMoveApplied;
             if (document.getElementById('stat-points-spent')) document.getElementById('stat-points-spent').value = data.statPointsSpent || 0;
             renderRaceClassBox('race'); renderRaceClassBox('class'); updateLevelPoints();
