@@ -458,14 +458,22 @@
 
   /* ---------------- rendering: sidebar / counters ---------------- */
   var activeTab = 'vitals';
+  function killMarks(kind, n) {
+    if (!n) return kind === 'pk' ? 'No marks' : 'No stars';
+    var big = Math.floor(n / 5), small = n % 5, icon = kind === 'pk' ? '💀' : '⭐';
+    var out = '';
+    if (big) out += '<span class="mark-big ' + kind + '">' + icon + '</span> ×' + big;
+    if (small) out += (out ? ' ' : '') + '<span class="mark-small ' + kind + '">' + icon + '</span> ×' + small;
+    return out;
+  }
   function renderSidebar() {
     $('profile-name').textContent = state.name || 'Unnamed Crawler';
     $('profile-number').textContent = 'Crawler #' + (state.number ? String(state.number).replace(/^#/, '') : '—');
     $('profile-sub').textContent = (state.race || '—') + ' • ' + (state.class || 'Unassigned') + ' • Floor ' + state.floor;
     $('pk-count').textContent = state.pkKills;
     $('boss-count').textContent = state.bossKills;
-    $('pk-marks').textContent = state.pkKills ? '💀 ×' + state.pkKills : 'No marks';
-    $('boss-marks').textContent = state.bossKills ? '⭐ ×' + state.bossKills : 'No stars';
+    $('pk-marks').innerHTML = killMarks('pk', state.pkKills);
+    $('boss-marks').innerHTML = killMarks('boss', state.bossKills);
     setVal('f-name', state.name);
     setVal('f-number', state.number);
     setVal('f-level', state.level);
@@ -534,9 +542,9 @@
     R.STAT_KEYS.forEach(function (k) {
       var s = stats[k];
       cards += '<div class="stat-card"><h3>' + k.toUpperCase() + ' — ' + R.STAT_NAMES[k] + '</h3>'
+        + '<p class="stat-total">Total: <strong>' + s.total + '</strong> &nbsp; Modifier: <strong>+' + s.mod + '</strong></p>'
         + '<label>Base (edit to set) <input type="number" min="1" value="' + s.derived + '" onchange="DCC.setOwnBase(\'' + k + '\', this.value)"></label>'
         + '<p>Derived Base: <strong>' + s.derived + '</strong> (own + positive race/class + split)</p>'
-        + '<p class="stat-total">Total: <strong>' + s.total + '</strong> &nbsp; Modifier: <strong>+' + s.mod + '</strong></p>'
         + '<label>Enhance (own) <input type="number" min="0" value="' + (state.ownEnh[k] || 0) + '" onchange="DCC.setOwnEnh(\'' + k + '\', this.value)"></label>'
         + '<p>Gear: +' + s.gear + ' &nbsp; Race/Class: ' + (s.fixed + s.split >= 0 ? '+' : '') + (s.fixed + s.split) + '</p>'
         + (s.penalty < 0 ? '<p>Race/Class penalty: ' + s.penalty + ' (subtracted from Total)</p>' : '') + '</div>';
@@ -553,7 +561,7 @@
     $('buff-list').innerHTML = listHtml(state.buffs, 'buff');
     $('debuff-list').innerHTML = listHtml(state.debuffs, 'debuff');
     setVal('t-gold', state.gold); setVal('t-pop', state.popularity); setVal('t-favor', state.aiFavor);
-    setVal('t-move', state.moveVal); setVal('t-step', state.stepVal); setVal('t-boss', state.bossKills); setVal('t-pk', state.pkKills);
+    setVal('t-move', state.moveVal); setVal('t-step', state.stepVal);
     $('hotlist').innerHTML = state.hotlist.map(function (x, i) {
       return '<div class="card"><span>' + esc(x) + '</span> <button type="button" onclick="DCC.delHotlist(' + i + ')">Remove</button></div>';
     }).join('') || '<p class="hint">Hotlist is empty.</p>';
@@ -1421,6 +1429,14 @@
       if (open) state.cardOpen[id] = true; else delete state.cardOpen[id];
       saveSoon();
     },
+    levelDelta: function (delta) {
+      state.level = Math.max(1, Math.min(250, state.level + delta));
+      saveSoon(); renderAll();
+    },
+    floorDelta: function (delta) {
+      state.floor = Math.max(1, state.floor + delta);
+      saveSoon(); renderAll();
+    },
     killDelta: function (which, delta) {
       // Boss/Player kills are raised one at a time (a kill is an event,
       // not a number to type); the number input stays for corrections.
@@ -1706,8 +1722,6 @@
     onChange('t-favor', function (v) { state.aiFavor = num(v, 0); });
     onChange('t-move', function (v) { state.moveVal = Math.max(0, num(v, 20)); });
     onChange('t-step', function (v) { state.stepVal = Math.max(0, num(v, 10)); });
-    onChange('t-boss', function (v) { state.bossKills = Math.max(0, num(v, 0)); });
-    onChange('t-pk', function (v) { state.pkKills = Math.max(0, num(v, 0)); });
     function click(id, fn) { var el = $(id); if (el) el.addEventListener('click', fn); }
     click('btn-export', exportJSON);
     click('btn-export-orig', exportOriginalJSON);

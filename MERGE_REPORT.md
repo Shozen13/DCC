@@ -180,6 +180,29 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Kill dedup, Level/Floor buttons, stat totals, condensed marks (2026-11-03, ?v=21, built locally)
+
+1. **Kills no longer duplicated in Trackers.** Boss/Player Kills inputs
+   and their buttons are removed from the Vitals Trackers grid; the
+   sidebar profile rows next to the name are now the only kill
+   controls (the header strip still shows the plain numbers, as
+   before — that is the persistent header, not the Trackers section).
+2. **Level/Floor −/+ buttons in the sidebar**, same clamps as typing
+   (Level 1–250, Floor 1+). Level taps bank points by the book rule
+   automatically: Stat Bank = (Level−1)×3 − spent, so +1 Level = +3
+   banked, spendable in the existing Distribute dialog. No separate
+   level-up flow was added; the buttons reuse the typed-input rules.
+3. **Stat Total/Modifier directly under the stat name** on each stat
+   card (order now: name, Total/Modifier, Base input, Derived Base,
+   Enhance, Gear/Race, penalty).
+4. **Condensed kill marks in the sidebar rows.** Every 5 marks combine
+   into one bigger shining mark: big = floor(n/5), small = n%5. Player
+   kills: big skull shining red, small skull white — 23 kills shows a
+   big red skull ×4 and a small white skull ×3. Boss kills: big star
+   glowing gold, small star yellow — 47 kills shows a big glowing star
+   ×9 and a small yellow star ×2. Zero still shows "No marks"/"No
+   stars"; exactly 5 shows one big mark and no small one.
+
 ## Profile crawler number (2026-11-03, ?v=20, built locally)
 
 Under the name in the sidebar profile header, a "Crawler #N" line from

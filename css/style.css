@@ -145,3 +145,10 @@ body:not(.dm-mode) #panel-dm, body:not(.dm-mode) #panel-sendbox, body:not(.dm-mo
 #mana-fill { height:100%; background:var(--teal); width:0%; }
 details.card summary { cursor:pointer; font-weight:bold; font-size:1.05rem; margin-bottom:2px; }
 details.card summary::-webkit-details-marker { color:var(--teal); }
+
+/* ---- Condensed kill marks (2026-11-03): every 5 combine into one big shining mark ---- */
+.mark-big { font-size:1.35em; }
+.mark-big.pk { color:#ff4d5e; text-shadow:0 0 6px #ff4d5e, 0 0 12px #ff2e3e; }
+.mark-big.boss { color:var(--yellow); text-shadow:0 0 6px var(--yellow), 0 0 12px #ffd700; }
+.mark-small.pk { color:#fff; }
+.mark-small.boss { color:var(--yellow); }

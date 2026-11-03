@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=20">
+<link rel="stylesheet" href="css/style.css?v=21">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -44,8 +44,8 @@
     <div class="kill-row"><span class="kill-label">⭐ Boss Kills</span><span class="kill-marks" id="boss-marks">No stars</span><span class="btn-row kill-btns"><button type="button" onclick="DCC.killDelta('boss',-1)">−</button><strong id="boss-count">0</strong><button type="button" onclick="DCC.killDelta('boss',1)">+</button></span></div>
     <label>Name <input type="text" id="f-name" placeholder="Crawler name"></label>
     <label>Number <input type="text" id="f-number" placeholder="Crawler number"></label>
-    <label>Level <input type="number" id="f-level" min="1" max="250" value="1"></label>
-    <label>Floor <input type="number" id="f-floor" min="1" value="1"></label>
+    <label>Level <span class="btn-row kill-btns"><button type="button" onclick="DCC.levelDelta(-1)">−</button><input type="number" id="f-level" min="1" max="250" value="1"><button type="button" onclick="DCC.levelDelta(1)">+</button></span></label>
+    <label>Floor <span class="btn-row kill-btns"><button type="button" onclick="DCC.floorDelta(-1)">−</button><input type="number" id="f-floor" min="1" value="1"><button type="button" onclick="DCC.floorDelta(1)">+</button></span></label>
     <div class="raceclass-row">
       <span>Race: <strong id="race-name">—</strong></span>
       <button type="button" id="race-pick">Pick</button>
@@ -174,8 +174,6 @@
         <label>AI Favor <input type="number" id="t-favor" value="0"></label>
         <label>Move (ft) <input type="number" id="t-move" value="20"></label>
         <label>Step (ft) <input type="number" id="t-step" value="10"></label>
-        <label>Boss Kills <span class="btn-row"><button type="button" onclick="DCC.killDelta('boss',-1)">−</button><input type="number" id="t-boss" min="0" value="0"><button type="button" onclick="DCC.killDelta('boss',1)">+</button></span></label>
-        <label>Player Kills <span class="btn-row"><button type="button" onclick="DCC.killDelta('pk',-1)">−</button><input type="number" id="t-pk" min="0" value="0"><button type="button" onclick="DCC.killDelta('pk',1)">+</button></span></label>
       </div>
       <p>Stat Bank: <strong id="bank-text">0</strong> points available.
         <button type="button" id="btn-distribute">Distribute stat points</button></p>
@@ -586,10 +584,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=20"></script>
-<script src="js/convert.js?v=20"></script>
-<script src="js/app.js?v=20"></script>
-<script src="js/wizard.js?v=20"></script>
-<script src="js/cloud.js?v=20"></script>
+<script src="js/rules.js?v=21"></script>
+<script src="js/convert.js?v=21"></script>
+<script src="js/app.js?v=21"></script>
+<script src="js/wizard.js?v=21"></script>
+<script src="js/cloud.js?v=21"></script>
 </body>
 </html>
