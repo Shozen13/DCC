@@ -1063,6 +1063,7 @@
         <div id="landing-choices">
             <div class="btn-group">
                 <button type="button" onclick="chooseGuest()">Continue as Guest</button>
+                <button type="button" onclick="chooseSignUp()">Sign up</button>
                 <button type="button" onclick="chooseRole('player')">Log in as Player</button>
                 <button type="button" onclick="chooseRole('dm')">Log in as DM</button>
             </div>
@@ -1080,7 +1081,7 @@
         </div>
         <div id="landing-signedin" style="display: none;">
             <p class="cloud-note" id="landing-signedin-text"></p>
-            <div class="btn-group">
+            <div class="btn-group" id="landing-signedin-btns">
                 <button type="button" onclick="chooseRole('player')">Continue as Player</button>
                 <button type="button" onclick="chooseRole('dm')">Continue as DM</button>
                 <button type="button" class="btn-reset" onclick="landingSignOut()">Sign out</button>
@@ -5779,17 +5780,32 @@
         const el = document.getElementById('landing-screen');
         if (el) el.style.display = 'none';
     }
+    let signupWithoutRole = false;
+    function renderSignedInButtons() {
+        const box = document.getElementById('landing-signedin-btns');
+        if (!box) return;
+        const signOut = '<button type="button" class="btn-reset" onclick="landingSignOut()">Sign out</button>';
+        if (crawlerMode === 'player') {
+            box.innerHTML = '<button type="button" onclick="chooseRole(\'dm\')">Switch to DM</button> ' + signOut;
+        } else if (crawlerMode === 'dm') {
+            box.innerHTML = '<button type="button" onclick="chooseRole(\'player\')">Switch to Player</button> ' + signOut;
+        } else {
+            box.innerHTML = '<button type="button" onclick="chooseRole(\'player\')">Continue as Player</button> <button type="button" onclick="chooseRole(\'dm\')">Continue as DM</button> ' + signOut;
+        }
+    }
     function showLanding() {
         const el = document.getElementById('landing-screen');
         if (!el) return;
         el.style.display = 'flex';
-        document.getElementById('landing-choices').style.display = 'block';
         document.getElementById('landing-auth').style.display = 'none';
         const signed = document.getElementById('landing-signedin');
         if (cloudUser) {
+            document.getElementById('landing-choices').style.display = 'none';
             document.getElementById('landing-signedin-text').innerText = 'Signed in as ' + cloudUser.email;
+            renderSignedInButtons();
             signed.style.display = 'block';
         } else {
+            document.getElementById('landing-choices').style.display = 'block';
             signed.style.display = 'none';
         }
         document.getElementById('landing-close-wrap').style.display = crawlerMode ? 'block' : 'none';
@@ -5804,7 +5820,16 @@
         hideLanding();
         maybeOpenCreationPrompt();
     }
+    function chooseSignUp() {
+        signupWithoutRole = true;
+        pendingRole = null;
+        document.getElementById('landing-choices').style.display = 'none';
+        document.getElementById('landing-signedin').style.display = 'none';
+        document.getElementById('landing-auth').style.display = 'block';
+        landingStatus('Create an account, then pick Player or DM.');
+    }
     function chooseRole(role) {
+        signupWithoutRole = false;
         pendingRole = role;
         if (cloudUser) { afterRoleLogin(role); return; }
         document.getElementById('landing-choices').style.display = 'none';
@@ -5813,8 +5838,8 @@
         landingStatus('Log in as ' + (role === 'dm' ? 'DM' : 'player') + ', or sign up if you do not have an account yet.');
     }
     function landingBack() {
-        document.getElementById('landing-auth').style.display = 'none';
-        document.getElementById('landing-choices').style.display = 'block';
+        signupWithoutRole = false;
+        showLanding();
     }
     async function landingSignUp() {
         if (!sb) return landingStatus('Supabase library failed to load. Reload the page and try again.');
@@ -5825,6 +5850,7 @@
         if (res.error) return landingStatus('Sign up failed: ' + res.error.message);
         if (!res.data.session) return landingStatus('Account created. Check your email to confirm it, then log in.');
         cloudUser = res.data.session.user;
+        if (signupWithoutRole) { signupWithoutRole = false; showLanding(); return; }
         afterRoleLogin(pendingRole || 'player');
     }
     async function landingLogIn() {
@@ -5835,6 +5861,7 @@
         const res = await sb.auth.signInWithPassword({ email: email, password: password });
         if (res.error) return landingStatus('Log in failed: ' + res.error.message);
         cloudUser = res.data.session.user;
+        if (signupWithoutRole) { signupWithoutRole = false; showLanding(); return; }
         afterRoleLogin(pendingRole || 'player');
     }
     async function landingSignOut() {
