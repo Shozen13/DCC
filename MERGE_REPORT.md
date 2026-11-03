@@ -180,6 +180,14 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Profile crawler number (2026-11-03, ?v=20, built locally)
+
+Under the name in the sidebar profile header, a "Crawler #N" line from
+the sheet's Number field (a leading "#" in the field is stripped, so
+"#1" and "1" both display as "Crawler #1"; blank sheets show
+"Crawler #—"). Order under the name: name, Crawler #N, then the
+Race • Class • Floor line.
+
 ## Profile class line (2026-11-03, ?v=19, built locally)
 
 Antony's correction to the v18 profile header: the line under the name
