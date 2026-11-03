@@ -45,6 +45,8 @@
       skills: [], spells: [], attacks: [], items: [], pendingDamage: null,
       story: { quests: [], journal: [], pets: [], mounts: [], sponsors: [], faith: { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] }, crafting: [], bio: { appearance: '', personality: '', backstory: '', notes: '' } },
       raceClassApplied: [], raceClassChoices: {}, raceClassMoveApplied: null, backgrounds: null, cardOpen: {},
+      loadouts: [{ id: 'loadout-1', name: 'Loadout 1', placements: {} }, { id: 'loadout-2', name: 'Loadout 2', placements: {} }],
+      activeLoadoutId: null,
       activeTab: 'vitals'
     };
   }
@@ -146,7 +148,7 @@
     R.STAT_KEYS.forEach(function (k) {
       var penalty = Math.min(0, fixed[k]);
       var total = R.statTotal(derived[k], state.ownEnh[k] || 0, gear[k] || 0, penalty, R.statCapFor(state.race, state.class, k));
-      out[k] = { derived: derived[k], fixed: fixed[k], split: splits[k], penalty: penalty, gear: gear[k] || 0, total: total, mod: R.getModifier(total) };
+      out[k] = { derived: derived[k], fixed: fixed[k], split: splits[k], penalty: penalty, gear: gear[k] || 0, ownEnh: state.ownEnh[k] || 0, total: total, mod: R.getModifier(total) };
     });
     return out;
   }
@@ -1110,20 +1112,54 @@
       + '<label>Amount <input type="number" value="' + num(b.amount, 0) + '" onchange="DCC.setBonusAmount(\'' + item.id + '\',' + bi + ',this.value)"></label>'
       + '<button type="button" onclick="DCC.delBonus(\'' + item.id + '\',' + bi + ')">Remove bonus</button></div>';
   }
+  function kindLabel(kind) {
+    return kind === 'gear' ? 'Gear' : kind === 'consumable' ? 'Consumable' : kind === 'coupon' ? 'Coupon' : 'Material/Misc';
+  }
+  function bonusSummary(it) {
+    return (it.bonuses || []).map(function (b) {
+      if (b.type === 'stat') return '+' + num(b.amount, 0) + ' ' + String(b.stat || 'str').toUpperCase();
+      if (b.type === 'grant') return esc(b.skillName || '') + ' +' + num(b.amount, 0);
+      if (b.type === 'dr') return '+' + num(b.amount, 0) + ' DR';
+      if (b.type === 'evade') return '+' + num(b.amount, 0) + ' Evade';
+      return '';
+    }).filter(Boolean).join(', ');
+  }
   function itemHtml(it) {
     var lib = null;
     if (cache.items) {
       var n = R.normName(it.name);
       lib = cache.items.find(function (e) { return R.normName(e.name) === n; }) || null;
     }
-    var html = '<div class="card"><h4>' + esc(it.name) + (it.equipped ? ' — EQUIPPED' : '') + '</h4>'
+    var meta = kindLabel(it.kind)
+      + (it.kind === 'gear' && it.slot ? ' · ' + it.slot : '')
+      + (it.kind === 'gear' && !it.slot ? ' · No slot assigned' : '')
+      + (it.kind === 'consumable' && it.subtype ? ' · ' + it.subtype : '')
+      + ((it.kind === 'coupon' || it.kind === 'material') && it.subtype ? ' · ' + it.subtype : '');
+    var kindOpts = [['gear', 'Gear'], ['consumable', 'Consumable'], ['coupon', 'Coupon'], ['material', 'Material/Misc']];
+    var html = '<div class="card"><h4>' + esc(it.name) + (it.equipped ? ' — EQUIPPED' + (it.placement ? ' (' + it.placement + ')' : '') : '') + '</h4>'
       + '<p>' + esc(it.effect || '') + '</p>'
+      + '<p class="hint">' + esc(meta) + '</p>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(it.name) + '" onchange="DCC.renameItem(\'' + it.id + '\',this.value)"></label>'
-      + '<label>Slot <select onchange="DCC.setItemSlot(\'' + it.id + '\',this.value)">'
-      + (function () { var slots = ['Head', 'Torso', 'Hands', 'Legs', 'Feet', 'Accessory', 'Weapon', 'Other']; if (slots.indexOf(it.slot) < 0) slots.unshift(it.slot); return slots.map(function (s) { return '<option' + (it.slot === s ? ' selected' : '') + '>' + s + '</option>'; }).join(''); })() + '</select></label>'
-      + (it.equipped
-        ? '<button type="button" onclick="DCC.setEquipped(\'' + it.id + '\',false)">Unequip</button>'
-        : '<button type="button" onclick="DCC.setEquipped(\'' + it.id + '\',true)">Equip</button>')
+      + '<label>Kind <select onchange="DCC.setItemKind(\'' + it.id + '\',this.value)">'
+      + kindOpts.map(function (k) { return '<option value="' + k[0] + '"' + (it.kind === k[0] ? ' selected' : '') + '>' + k[1] + '</option>'; }).join('') + '</select></label>'
+      + (it.kind === 'gear'
+        ? '<label>Slot <select onchange="DCC.setItemSlot(\'' + it.id + '\',this.value)">'
+          + '<option value="">Choose a slot…</option>'
+          + R.GEAR_SLOT_LABELS.map(function (s) { return '<option' + (it.slot === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></label>'
+        : '')
+      + (it.kind === 'consumable'
+        ? '<label>Type <select onchange="DCC.setItemSubtype(\'' + it.id + '\',this.value)">'
+          + '<option value="">Choose a type…</option>'
+          + R.CONSUMABLE_SUBTYPES.map(function (s) { return '<option' + (it.subtype === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></label>'
+        : '')
+      + ((it.kind === 'coupon' || it.kind === 'material')
+        ? '<label>Type <input type="text" value="' + esc(it.subtype || '') + '" placeholder="Free form, e.g. Tavern coupon" onchange="DCC.setItemSubtype(\'' + it.id + '\',this.value)"></label>'
+        : '')
+      + (it.kind === 'gear'
+        ? (it.equipped
+          ? '<button type="button" onclick="DCC.setEquipped(\'' + it.id + '\',false)">Unequip</button>'
+          : '<button type="button" onclick="DCC.setEquipped(\'' + it.id + '\',true)">Equip</button>')
+        : '')
       + '<button type="button" onclick="DCC.delItem(\'' + it.id + '\')">Delete</button></div>';
     if (lib) html += '<div class="rulebook"><strong>Rulebook:</strong> ' + esc(lib.effect || '') + (lib.source ? ' — ' + esc(lib.source) : '') + (lib.source_book_page ? ' (p.' + lib.source_book_page + ')' : '') + '</div>';
     html += '<p><strong>Bonuses (apply only while equipped, up to 5):</strong></p>'
@@ -1132,12 +1168,129 @@
       + '</div>';
     return html;
   }
+  var invKindFilter = 'all';
   function renderItems() {
-    $('item-list').innerHTML = state.items.map(itemHtml).join('') || '<p class="hint">Inventory is empty.</p>';
+    var filters = [['all', 'All'], ['gear', 'Gear'], ['consumable', 'Consumables'], ['coupon', 'Coupons'], ['material', 'Material/Misc']];
+    $('item-filters').innerHTML = filters.map(function (f) {
+      return '<button type="button"' + (invKindFilter === f[0] ? ' class="active-filter"' : '') + ' onclick="DCC.setInvKindFilter(\'' + f[0] + '\')">' + f[1] + '</button>';
+    }).join('');
+    var list = state.items.filter(function (it) { return invKindFilter === 'all' || it.kind === invKindFilter; });
+    $('item-list').innerHTML = list.map(itemHtml).join('') || '<p class="hint">Nothing in this category yet.</p>';
+  }
+  /* ---------------- Gear tab: loadouts, slot board, bonuses, catalog ---------------- */
+  function clearActiveLoadout() { state.activeLoadoutId = null; }
+  function gearOptionsCount(slotLabel) {
+    return state.items.filter(function (it) {
+      if (it.kind !== 'gear' || it.equipped) return false;
+      if (slotLabel === 'Hands/Holding') return R.slotFamily(it.slot) === 'Hands/Holding';
+      return it.slot === slotLabel;
+    }).length;
+  }
+  function gearSlotBox(placement, label, placed, occupantOverride) {
+    var occupant = occupantOverride || null;
+    if (!occupant) Object.keys(placed).forEach(function (id) { if (placed[id] === placement) occupant = state.items.find(function (it) { return it.id === id; }); });
+    var fam = R.placementFamily(placement);
+    var opts = gearOptionsCount(fam);
+    var html = '<div class="gear-slot' + (occupant ? ' filled' : '') + '"><div class="gear-slot-head"><strong>' + label.toUpperCase() + '</strong><span class="hint">' + opts + ' options</span></div>';
+    if (occupant) {
+      html += '<p>' + esc(occupant.name) + (placed[occupant.id] === 'Both Hands' ? ' — 2 Hand' : '') + '</p><button type="button" onclick="DCC.setEquipped(\'' + occupant.id + '\',false)">Unequip</button>';
+    } else {
+      html += '<button type="button" onclick="DCC.openSlotPicker(\'' + placement + '\')">+ Equip ' + label + '</button>';
+    }
+    return html + '</div>';
+  }
+  function gearBoardHtml(placed) {
+    var eqCount = state.items.filter(function (it) { return it.equipped; }).length;
+    var accFree = 10 - R.slotOccupants(state.items, 'Accessories').length;
+    var overflow = state.items.filter(function (it) { return it.equipped && !placed[it.id]; });
+    var center = state.avatarUrl
+      ? '<img src="' + esc(state.avatarUrl) + '" alt="Crawler avatar">'
+      : '<div class="avatar-placeholder">?</div>';
+    // A 2 Hand weapon shows in BOTH hand boxes (it occupies both).
+    var rightItem = null, leftItem = null, bothHandsItem = null;
+    Object.keys(placed).forEach(function (id) {
+      var it = state.items.find(function (x) { return x.id === id; });
+      if (!it) return;
+      if (placed[id] === 'Both Hands') bothHandsItem = it;
+      else if (placed[id] === 'Right Hand') rightItem = it;
+      else if (placed[id] === 'Left Hand') leftItem = it;
+    });
+    var html = '<div class="gear-head"><div><strong>Active Loadout</strong><br><span class="hint">' + eqCount + ' equipped · ' + accFree + ' accessory slots free</span></div></div>'
+      + '<div class="gear-board"><div class="gear-col">'
+      + gearSlotBox('Head', 'Head', placed) + gearSlotBox('Arms', 'Arms', placed) + gearSlotBox('Right Hand', 'Right Hand', placed, rightItem || bothHandsItem) + gearSlotBox('Legs', 'Legs', placed)
+      + '</div><div class="gear-center">' + center + '<p><strong>' + esc(state.name || 'Unnamed Crawler') + '</strong></p></div><div class="gear-col">'
+      + gearSlotBox('Torso', 'Torso', placed) + gearSlotBox('Hands/Gloves', 'Hands / Gloves', placed) + gearSlotBox('Left Hand', 'Left Hand', placed, leftItem || bothHandsItem) + gearSlotBox('Feet', 'Feet', placed)
+      + '</div></div>';
+    html += '<div class="gear-acc-head"><strong>Accessories</strong><span class="hint">' + (10 - accFree) + ' / 10 equipped</span></div><div class="gear-acc-grid">';
+    for (var i = 1; i <= 10; i++) html += gearSlotBox('Accessory ' + i, 'Accessory ' + i, placed);
+    html += '</div>';
+    if (overflow.length) {
+      html += '<div class="gear-overflow"><strong>Equipped, no slot to show:</strong><span class="hint"> These keep their bonuses until unequipped. Give each one a slot in Inventory (or unequip it) to place it on the board.</span>'
+        + overflow.map(function (it) { return '<div class="cloud-row"><span>' + esc(it.name) + ' — ' + esc(kindLabel(it.kind)) + (it.slot ? ' · ' + it.slot : ' · No slot') + '</span><span><button type="button" onclick="DCC.setEquipped(\'' + it.id + '\',false)">Unequip</button></span></div>'; }).join('') + '</div>';
+    }
+    return html;
+  }
+  function gearBonusesHtml(stats) {
+    var rows = R.STAT_KEYS.map(function (k) {
+      var s = stats[k];
+      var before = R.statTotal(s.derived, s.ownEnh, 0, s.penalty, R.statCapFor(state.race, state.class, k));
+      var after = s.total;
+      var delta = after - before;
+      return '<div class="gear-bonus-stat"><strong>' + k.toUpperCase() + '</strong><br>' + before + ' → ' + after + (delta ? ' (+' + delta + ')' : '') + '</div>';
+    }).join('');
+    var eb = equippedBonuses();
+    var grants = {};
+    state.items.forEach(function (it) {
+      if (!it.equipped) return;
+      (it.bonuses || []).forEach(function (b) {
+        if (b.type === 'grant' && b.skillName) grants[b.skillName + '|' + (b.kind || 'skill')] = (grants[b.skillName + '|' + (b.kind || 'skill')] || 0) + num(b.amount, 0);
+      });
+    });
+    var extra = [];
+    if (eb.dr) extra.push('Damage Resistance +' + eb.dr);
+    if (eb.evade) extra.push('Evade +' + eb.evade);
+    Object.keys(grants).forEach(function (key) { extra.push(key.split('|')[0] + ' +' + grants[key]); });
+    return '<h3>Gear Bonuses</h3><p class="hint">Stats with equipped gear applied (before → after). Only equipped gear counts.</p>'
+      + '<div class="gear-bonus-grid">' + rows + '</div>'
+      + (extra.length ? '<p>' + esc(extra.join(' · ')) + '</p>' : '');
+  }
+  function gearCatalogHtml() {
+    var fams = ['Head', 'Torso', 'Arms', 'Hands/Gloves', 'Hands/Holding', 'Legs', 'Feet', 'Accessories'];
+    return '<h3>Gear Catalog</h3><p class="hint">Browse compatible inventory by equipment slot. Search and sort inside each slot; Equip puts the item in the first free place for that slot.</p>'
+      + fams.map(function (fam) {
+        var rows = state.items.filter(function (it) {
+          if (it.kind !== 'gear' || it.equipped) return false;
+          if (fam === 'Hands/Holding') return R.slotFamily(it.slot) === 'Hands/Holding';
+          return it.slot === fam;
+        });
+        var rowsHtml = rows.map(function (it) {
+          return '<div class="catalog-row" data-name="' + esc(it.name.toLowerCase()) + '" data-bonus="' + (it.bonuses || []).length + '"><span>' + esc(it.name) + (bonusSummary(it) ? ' — <span class="hint">' + esc(bonusSummary(it)) + '</span>' : '') + '</span><button type="button" onclick="DCC.equipFirstFree(\'' + it.id + '\')">Equip</button></div>';
+        }).join('') || '<p class="hint">Empty</p>';
+        return '<div class="catalog-slot" data-slot="' + esc(fam) + '"><div class="catalog-slot-head"><strong>' + fam.toUpperCase() + '</strong><span class="hint">' + rows.length + ' items</span></div>'
+          + '<div class="row"><input type="text" placeholder="Search this slot…" oninput="DCC.catalogSearch(this)"><select onchange="DCC.catalogSort(this)"><option value="name">Sort: Name</option><option value="bonus">Sort: Most bonuses</option></select></div>'
+          + '<div class="catalog-rows">' + rowsHtml + '</div></div>';
+      }).join('');
+  }
+  function loadoutBarHtml() {
+    var chips = (state.loadouts || []).map(function (l) {
+      var active = state.activeLoadoutId === l.id;
+      return '<span class="loadout-chip' + (active ? ' active' : '') + '"><input type="text" value="' + esc(l.name) + '" onchange="DCC.renameLoadout(\'' + l.id + '\',this.value)">'
+        + '<button type="button" onclick="DCC.applyLoadout(\'' + l.id + '\')">Apply</button>'
+        + '<button type="button" onclick="DCC.saveLoadout(\'' + l.id + '\')">Save current</button>'
+        + ((state.loadouts || []).length > 1 ? '<button type="button" onclick="DCC.delLoadout(\'' + l.id + '\')">×</button>' : '')
+        + (active ? ' <span class="hint">active</span>' : '') + '</span>';
+    }).join('');
+    return '<div class="loadout-bar">' + chips
+      + ((state.loadouts || []).length < 5 ? '<button type="button" onclick="DCC.addLoadout()">+ Add loadout</button>' : '')
+      + '<span class="hint">Apply swaps your whole arrangement at once. Save current stores what is equipped right now into that loadout.</span></div>';
   }
   function renderGear() {
-    var eq = state.items.filter(function (it) { return it.equipped; });
-    $('equipped-list').innerHTML = eq.map(itemHtml).join('') || '<p class="hint">Nothing equipped. Equip items from Inventory; only equipped items apply their bonuses.</p>';
+    var stats = computeStats();
+    var placed = R.derivePlacements(state.items);
+    $('loadout-bar').innerHTML = loadoutBarHtml();
+    $('gear-board').innerHTML = gearBoardHtml(placed);
+    $('gear-bonuses').innerHTML = gearBonusesHtml(stats);
+    $('gear-catalog').innerHTML = gearCatalogHtml();
   }
   function renderChoices() {
     var sections = choiceSections();
@@ -1179,8 +1332,39 @@
    * first appear there when a successful use raises one to Rank 1.
    * Until then they are offered only in the roll prompt and in the
    * "available" line on attack cards. */
+  /* ---------------- item taxonomy migration ----------------
+   * One-shot, idempotent: old sheets carry pre-taxonomy kinds
+   * (mundane/other/map) and slot labels (Hands, Accessory, Weapon,
+   * Other). New sheets already match, so later runs are no-ops.
+   * Non-gear items carry no slot; gear with no mappable slot stays
+   * unassigned (grandfathered bonuses still apply while equipped,
+   * but it cannot be newly equipped until a slot is picked). */
+  function migrateItems() {
+    var changed = false;
+    if (!Array.isArray(state.loadouts)) {
+      state.loadouts = [{ id: 'loadout-1', name: 'Loadout 1', placements: {} }, { id: 'loadout-2', name: 'Loadout 2', placements: {} }];
+      changed = true;
+    }
+    if (state.activeLoadoutId && !state.loadouts.some(function (l) { return l.id === state.activeLoadoutId; })) { state.activeLoadoutId = null; changed = true; }
+    (state.items || []).forEach(function (it) {
+      if (!it.id) { it.id = uid(); changed = true; }
+      var nk = R.normalizeKind(it.kind);
+      if (it.kind !== nk) { it.kind = nk; changed = true; }
+      if (nk !== 'gear') {
+        if (it.slot) { it.slot = null; changed = true; }
+      } else {
+        var ns = R.normalizeSlot(it.slot);
+        if (it.slot !== ns) { it.slot = ns; changed = true; }
+      }
+      if (it.subtype === undefined) { it.subtype = null; changed = true; }
+      if (it.placement === undefined) { it.placement = null; changed = true; }
+    });
+    return changed;
+  }
+
   /* ---------------- render orchestration ---------------- */
   function renderAll() {
+    if (migrateItems()) saveSoon();
     var stats = computeStats();
     renderSidebar();
     renderCounters(stats);
@@ -1302,9 +1486,52 @@
     var skills = [];
     try { skills = await ensureSkills(); } catch (e) { skills = []; }
     openPicker('Pick an item', list, function (c) {
-      state.items.push({ id: uid(), name: c.name, kind: c.kind, source: c.source, slot: R.normalizeSlot(c.gear_slot), effect: c.effect || '', bonuses: R.parseItemBonuses(c.effect || '', skills), equipped: false });
+      var kind = R.normalizeKind(c.kind);
+      state.items.push({ id: uid(), name: c.name, kind: kind, source: c.source, slot: kind === 'gear' ? R.normalizeSlot(c.gear_slot) : null, subtype: null, placement: null, effect: c.effect || '', bonuses: R.parseItemBonuses(c.effect || '', skills), equipped: false });
       saveSoon(); renderAll(); refreshWizard();
     });
+  }
+  /* Custom item creation is a form, not an instant blank row, because
+   * kind is required and gear needs a slot / consumables need a type:
+   * the form refuses to create until those are chosen. */
+  function openItemCreate() {
+    $('item-create-name').value = '';
+    $('item-create-kind').value = '';
+    $('item-create-slot').value = '';
+    $('item-create-subtype').value = '';
+    $('item-create-freetype').value = '';
+    $('item-create-effect').value = '';
+    $('item-create-error').hidden = true;
+    syncItemCreateFields();
+    $('item-create-modal').hidden = false;
+    $('item-create-name').focus();
+  }
+  function syncItemCreateFields() {
+    var k = $('item-create-kind').value;
+    $('item-create-gear').hidden = k !== 'gear';
+    $('item-create-consumable').hidden = k !== 'consumable';
+    $('item-create-freetype').hidden = !(k === 'coupon' || k === 'material');
+  }
+  function createCustomItem() {
+    var name = $('item-create-name').value.trim();
+    var kind = $('item-create-kind').value;
+    var err = $('item-create-error');
+    function fail(msg) { err.textContent = msg; err.hidden = false; }
+    if (!name) return fail('Give the item a name first.');
+    if (!kind) return fail('Choose a kind: Gear, Consumable, Coupon, or Material/Misc.');
+    var slot = null, subtype = null;
+    if (kind === 'gear') {
+      slot = $('item-create-slot').value || null;
+      if (!slot) return fail('Gear needs a slot: Head, Torso, Arms, Hands/Gloves, Hands/Holding, Weapon 1 Hand, Weapon 2 Hand, Legs, Feet, or Accessories.');
+    } else if (kind === 'consumable') {
+      subtype = $('item-create-subtype').value || null;
+      if (!subtype) return fail('Consumables need a type: Potion, Scroll, Explosive, or Spellbook.');
+    } else {
+      subtype = $('item-create-freetype').value.trim() || null;
+    }
+    state.items.push({ id: uid(), name: name, kind: kind, slot: slot, subtype: subtype, effect: $('item-create-effect').value.trim(), bonuses: [], equipped: false, placement: null });
+    $('item-create-modal').hidden = true;
+    saveSoon(); renderAll(); showTab('inventory');
   }
   async function openRaceClassPicker(kind) {
     var list = await ensureRaces();
@@ -1508,10 +1735,16 @@
         if (b.type === 'evade') return { type: 'evade', amount: amount };
         return { type: 'stat', stat: 'str', amount: amount };
       }).slice(0, 5);
-      for (var i = 0; i < n; i++) state.items.push({ id: uid(), name: item.name, kind: 'other', slot: 'Other', effect: item.notes || '', bonuses: JSON.parse(JSON.stringify(bonuses)), equipped: false });
+      // DM-sent items now carry the same taxonomy as player-created
+      // ones (kind/slot/subtype from the Send Box form); loot rows
+      // sent before that change have none and arrive as Material/Misc.
+      var lootKind = item.kind ? R.normalizeKind(item.kind) : 'material';
+      for (var i = 0; i < n; i++) state.items.push({ id: uid(), name: item.name, kind: lootKind, slot: lootKind === 'gear' ? (item.slot ? R.normalizeSlot(item.slot) : null) : null, subtype: item.subtype || null, placement: null, effect: item.notes || '', bonuses: JSON.parse(JSON.stringify(bonuses)), equipped: false });
       syncGearGrants(); saveSoon(); renderAll();
     },
     delItem: function (id) {
+      var doomed = state.items.find(function (i) { return i.id === id; });
+      if (doomed && doomed.equipped) clearActiveLoadout();
       state.items = state.items.filter(function (i) { return i.id !== id; });
       syncGearGrants(); saveSoon(); renderAll();
     },
@@ -1519,15 +1752,139 @@
       var it = state.items.find(function (i) { return i.id === id; });
       if (it && value.trim()) { it.name = value.trim(); syncGearGrants(); saveSoon(); renderAll(); }
     },
-    setItemSlot: function (id, value) {
-      var it = state.items.find(function (i) { return i.id === id; });
-      if (it) { it.slot = value; saveSoon(); renderAll(); }
-    },
-    setEquipped: function (id, on) {
+    setItemKind: function (id, value) {
       var it = state.items.find(function (i) { return i.id === id; });
       if (!it) return;
-      it.equipped = on;
+      it.kind = value;
+      if (value !== 'gear') {
+        it.slot = null;
+        if (it.equipped) { R.unequip(state.items, id); clearActiveLoadout(); }
+      }
       syncGearGrants(); saveSoon(); renderAll();
+    },
+    setItemSlot: function (id, value) {
+      var it = state.items.find(function (i) { return i.id === id; });
+      if (!it) return;
+      var nv = value || null;
+      // Changing the slot of an equipped item unequips it: its old
+      // placement no longer means anything, and silently keeping it
+      // equipped could break another slot's limit.
+      if (it.equipped && it.slot !== nv) { R.unequip(state.items, id); clearActiveLoadout(); }
+      it.slot = nv;
+      syncGearGrants(); saveSoon(); renderAll();
+    },
+    setItemSubtype: function (id, value) {
+      var it = state.items.find(function (i) { return i.id === id; });
+      if (it) { it.subtype = value || null; saveSoon(); renderAll(); }
+    },
+    setInvKindFilter: function (k) { invKindFilter = k; renderAll(); },
+    setEquipped: function (id, on) {
+      if (on) { this.equipFirstFree(id); return; }
+      R.unequip(state.items, id);
+      clearActiveLoadout();
+      syncGearGrants(); saveSoon(); renderAll();
+    },
+    equipFirstFree: function (id) {
+      var it = state.items.find(function (i) { return i.id === id; });
+      if (!it) return;
+      if (it.kind !== 'gear') { alert('Only gear can be equipped.'); return; }
+      if (!it.slot) { alert('Assign a slot to this gear first (Inventory).'); return; }
+      var free = R.freePlacement(state.items, it.slot);
+      if (!free) { alert(it.slot === 'Weapon 2 Hand' ? 'A 2 Hand weapon needs both hands free.' : it.slot + ' is full. Unequip something there first, or use a loadout.'); return; }
+      this.equipIntoPlacement(id, free);
+    },
+    equipIntoPlacement: function (id, placement) {
+      var err = R.equipInto(state.items, id, placement);
+      if (err) { alert(err); return; }
+      clearActiveLoadout();
+      syncGearGrants(); saveSoon(); renderAll();
+    },
+    openSlotPicker: function (placement) {
+      var fam = R.placementFamily(placement);
+      var placed = R.derivePlacements(state.items);
+      var cands = state.items.filter(function (it) {
+        if (it.kind !== 'gear' || it.equipped) return false;
+        if (fam === 'Hands/Holding') {
+          if (R.slotFamily(it.slot) !== 'Hands/Holding') return false;
+          // A 2 Hand weapon needs both hands free: if the other hand
+          // is taken, it cannot be picked from this box.
+          if (it.slot === 'Weapon 2 Hand') {
+            var other = placement === 'Right Hand' ? 'Left Hand' : 'Right Hand';
+            var otherTaken = Object.keys(placed).some(function (id) { return placed[id] === other || placed[id] === 'Both Hands'; });
+            if (otherTaken) return false;
+          }
+          return true;
+        }
+        return it.slot === fam;
+      });
+      if (!cands.length) { alert('Nothing in your inventory fits ' + fam + '. Add or pick an item with that slot first.'); return; }
+      openPicker('Equip ' + placement, cands, function (c) {
+        // Picking a 2 Hand weapon from a hand box equips it across both hands.
+        if (c.slot === 'Weapon 2 Hand') this.equipIntoPlacement(c.id, 'Both Hands');
+        else this.equipIntoPlacement(c.id, placement);
+      }.bind(this));
+    },
+    catalogSearch: function (input) {
+      var block = input.closest('.catalog-slot');
+      if (!block) return;
+      var q = input.value.trim().toLowerCase();
+      block.querySelectorAll('.catalog-row').forEach(function (row) {
+        row.hidden = !!q && row.getAttribute('data-name').indexOf(q) < 0;
+      });
+    },
+    catalogSort: function (select) {
+      var block = select.closest('.catalog-slot');
+      if (!block) return;
+      var box = block.querySelector('.catalog-rows');
+      var rows = Array.prototype.slice.call(box.querySelectorAll('.catalog-row'));
+      rows.sort(function (a, b) {
+        if (select.value === 'bonus') {
+          var d = parseInt(b.getAttribute('data-bonus'), 10) - parseInt(a.getAttribute('data-bonus'), 10);
+          if (d) return d;
+        }
+        return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
+      });
+      rows.forEach(function (r) { box.appendChild(r); });
+      var input = block.querySelector('input[type="text"]');
+      if (input) this.catalogSearch(input);
+    },
+    applyLoadout: function (id) {
+      var l = (state.loadouts || []).find(function (x) { return x.id === id; });
+      if (!l) return;
+      state.items.forEach(function (it) { it.equipped = false; it.placement = null; });
+      var skipped = 0;
+      Object.keys(l.placements || {}).forEach(function (placement) {
+        var it = state.items.find(function (x) { return x.id === l.placements[placement]; });
+        if (!it || it.kind !== 'gear' || !R.placementFitsItem(placement, it.slot)) { skipped++; return; }
+        it.equipped = true; it.placement = placement;
+      });
+      state.activeLoadoutId = id;
+      syncGearGrants(); saveSoon(); renderAll();
+      if (skipped) alert('Loadout applied. ' + skipped + ' item(s) skipped (no longer in inventory, or their slot changed).');
+    },
+    saveLoadout: function (id) {
+      var l = (state.loadouts || []).find(function (x) { return x.id === id; });
+      if (!l) return;
+      var placed = R.derivePlacements(state.items);
+      var map = {};
+      Object.keys(placed).forEach(function (itemId) { if (placed[itemId]) map[placed[itemId]] = itemId; });
+      l.placements = map;
+      state.activeLoadoutId = id;
+      saveSoon(); renderAll();
+    },
+    renameLoadout: function (id, value) {
+      var l = (state.loadouts || []).find(function (x) { return x.id === id; });
+      if (l && value.trim()) { l.name = value.trim(); saveSoon(); renderAll(); }
+    },
+    delLoadout: function (id) {
+      state.loadouts = (state.loadouts || []).filter(function (x) { return x.id !== id; });
+      if (state.activeLoadoutId === id) state.activeLoadoutId = null;
+      saveSoon(); renderAll();
+    },
+    addLoadout: function () {
+      if ((state.loadouts || []).length >= 5) { alert('Up to 5 loadouts.'); return; }
+      state.loadouts.push({ id: uid(), name: 'Loadout ' + ((state.loadouts || []).length + 1), placements: {} });
+      saveSoon(); renderAll();
     },
     addBonus: function (id) {
       var it = state.items.find(function (i) { return i.id === id; });
@@ -1879,10 +2236,10 @@
       state.spells.push({ id: uid(), name: 'New Spell', kind: 'spell', ownRank: 1, stat: 'int', checkType: 'Active Check', effect: '', used: false, gearGrants: {} });
       saveSoon(); renderAll(); showTab('spells');
     });
-    click('item-add', function () {
-      state.items.push({ id: uid(), name: 'New Item', kind: 'other', slot: 'Other', effect: '', bonuses: [], equipped: false });
-      saveSoon(); renderAll(); showTab('inventory');
-    });
+    click('item-add', function () { openItemCreate(); });
+    click('item-create-save', function () { createCustomItem(); });
+    click('item-create-cancel', function () { $('item-create-modal').hidden = true; });
+    (function () { var k = $('item-create-kind'); if (k) k.addEventListener('change', syncItemCreateFields); })();
     click('atk-add', function () {
       var name = $('atk-name').value.trim();
       if (!name) { alert('Give the attack a name first.'); return; }

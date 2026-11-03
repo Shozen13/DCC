@@ -572,24 +572,6 @@
     return { count: f.count, sides: f.sides, mod: f.mod, rolls: rolls, total: total };
   }
 
-  /* Item slot normalisation: the rulebook lists slots like "Hands/Holding"
-   * or "Hand/Holding"; the sheet's slot set uses "Hands". Unknown slots
-   * fall back to "Other" rather than silently landing on the first option
-   * of a dropdown (which is how a Hands item once displayed as Head). */
-  function normalizeSlot(raw) {
-    if (!raw) return 'Other';
-    var v = String(raw).trim().toLowerCase();
-    if (v === 'hand' || v === 'hands' || v === 'hand/holding' || v === 'hands/holding' || v === 'holding') return 'Hands';
-    if (v === 'head') return 'Head';
-    if (v === 'torso' || v === 'body' || v === 'chest') return 'Torso';
-    if (v === 'legs' || v === 'leg') return 'Legs';
-    if (v === 'feet' || v === 'foot') return 'Feet';
-    if (v === 'accessory') return 'Accessory';
-    if (v === 'weapon') return 'Weapon';
-    if (v === 'other') return 'Other';
-    return 'Other';
-  }
-
   /* Conservative rulebook-item bonus parsing, run ONLY when a rulebook
    * item is picked (never on load, never on custom items). Only clear,
    * numeric patterns become structured bonuses the sheet can apply while
@@ -628,6 +610,168 @@
     return out;
   }
 
+  /* ---------------- gear taxonomy, slots, placements ----------------
+   * Item taxonomy (Antony, 2026-11-03): every item has a required
+   * kind — Gear, Consumable, Coupon, or Material/Misc. Gear names one
+   * of eight slots; consumables name one of four subtypes; coupons
+   * and material/misc take free-form text. Equip limits: 1 per single
+   * slot, 2 for Hands/Holding (left + right), 10 for Accessories.
+   * Placements are display strings: singles use their slot label,
+   * holding uses 'Left Hand' / 'Right Hand', accessories use
+   * 'Accessory 1'..'Accessory 10'. An equipped item's placement is
+   * stored on the item; legacy equipped items (boolean true, no
+   * placement) get one derived at render time. Bonuses still apply
+   * from any truthy equipped flag, so grandfathered over-limit items
+   * keep working until unequipped; new equips are refused when full. */
+  var GEAR_SLOT_LABELS = ['Head', 'Torso', 'Arms', 'Hands/Gloves', 'Hands/Holding', 'Weapon 1 Hand', 'Weapon 2 Hand', 'Legs', 'Feet', 'Accessories'];
+  var SLOT_LIMITS = { 'Head': 1, 'Torso': 1, 'Arms': 1, 'Hands/Gloves': 1, 'Hands/Holding': 2, 'Legs': 1, 'Feet': 1, 'Accessories': 10 };
+  var CONSUMABLE_SUBTYPES = ['Potion', 'Scroll', 'Explosive', 'Spellbook'];
+  function placementFamily(placement) {
+    if (!placement) return null;
+    if (placement === 'Left Hand' || placement === 'Right Hand' || placement === 'Both Hands') return 'Hands/Holding';
+    if (/^Accessory \d+$/.test(placement)) return 'Accessories';
+    return GEAR_SLOT_LABELS.indexOf(placement) >= 0 ? placement : null;
+  }
+  // Weapons live in the hands: a 1 Hand weapon takes one hand slot,
+  // a 2 Hand weapon takes both (placement 'Both Hands').
+  function slotFamily(slot) {
+    if (slot === 'Weapon 1 Hand' || slot === 'Weapon 2 Hand') return 'Hands/Holding';
+    return GEAR_SLOT_LABELS.indexOf(slot) >= 0 ? slot : null;
+  }
+  function placementFitsItem(placement, slot) {
+    if (placement === 'Both Hands') return slot === 'Weapon 2 Hand';
+    var fam = placementFamily(placement);
+    if (fam === 'Hands/Holding') return slotFamily(slot) === 'Hands/Holding' && slot !== 'Weapon 2 Hand';
+    if (fam === 'Accessories') return slot === 'Accessories';
+    return slot === placement;
+  }
+  function normalizeKind(raw) {
+    var v = String(raw || '').trim().toLowerCase();
+    if (v === 'gear') return 'gear';
+    if (v === 'consumable' || v === 'consumables') return 'consumable';
+    if (v === 'coupon' || v === 'coupons') return 'coupon';
+    if (v === 'material' || v === 'material/misc' || v === 'misc') return 'material';
+    return 'material'; // mundane, other, map, missing: the anything-else bucket
+  }
+  // Canonical slot labels are the eight gear slots; anything else
+  // (including the old 'Other' bucket) maps to null (unassigned — a
+  // gear item with no slot cannot be equipped until the player picks
+  // one), except weapons, which are held, so they map to
+  // Hands/Holding. Non-gear items carry no slot at all.
+  function normalizeSlot(raw) {
+    if (!raw) return null;
+    var v = String(raw).trim().toLowerCase();
+    if (v === 'head') return 'Head';
+    if (v === 'torso' || v === 'body' || v === 'chest') return 'Torso';
+    if (v === 'arms' || v === 'arm') return 'Arms';
+    if (v === 'hands/gloves' || v === 'gloves' || v === 'glove') return 'Hands/Gloves';
+    if (v === 'weapon 1 hand' || v === 'weapon 1-hand' || v === 'weapon 1hand') return 'Weapon 1 Hand';
+    if (v === 'weapon 2 hand' || v === 'weapon 2-hand' || v === 'weapon 2hand' || v === 'weapon 2 hands') return 'Weapon 2 Hand';
+    if (v === 'hand' || v === 'hands' || v === 'hand/holding' || v === 'hands/holding' || v === 'holding' || v === 'weapon') return 'Hands/Holding';
+    if (v === 'legs' || v === 'leg') return 'Legs';
+    if (v === 'feet' || v === 'foot') return 'Feet';
+    if (v === 'accessory' || v === 'accessories') return 'Accessories';
+    return null;
+  }
+  function slotOccupants(items, familyLabel) {
+    return (items || []).filter(function (it) {
+      if (!it.equipped) return false;
+      if (it.placement) return placementFamily(it.placement) === familyLabel;
+      return slotFamily(it.slot) === familyLabel;
+    });
+  }
+  // Hands count by capacity, not by item: a 2 Hand weapon fills both.
+  function handUsed(items) {
+    var n = 0;
+    slotOccupants(items, 'Hands/Holding').forEach(function (it) {
+      n += it.placement === 'Both Hands' ? 2 : 1;
+    });
+    return n;
+  }
+  function freePlacement(items, slotLabel) {
+    var fam = slotFamily(slotLabel) || slotLabel;
+    if (fam === 'Hands/Holding') {
+      if (slotLabel === 'Weapon 2 Hand') return handUsed(items) === 0 ? 'Both Hands' : null;
+      var occ = slotOccupants(items, 'Hands/Holding').map(function (it) { return it.placement; });
+      if (occ.indexOf('Both Hands') >= 0) return null;
+      if (occ.indexOf('Right Hand') < 0) return 'Right Hand';
+      if (occ.indexOf('Left Hand') < 0) return 'Left Hand';
+      return null;
+    }
+    if (fam === 'Accessories') {
+      var occA = slotOccupants(items, 'Accessories').map(function (it) { return it.placement; });
+      for (var i = 1; i <= 10; i++) if (occA.indexOf('Accessory ' + i) < 0) return 'Accessory ' + i;
+      return null;
+    }
+    var occS = slotOccupants(items, fam);
+    return occS.length === 0 ? fam : null;
+  }
+  function derivePlacements(items) {
+    var map = {};
+    var placed = [];
+    (items || []).forEach(function (it) {
+      if (it.equipped && it.placement && placementFamily(it.placement)) { map[it.id] = it.placement; placed.push(it.placement); }
+    });
+    (items || []).forEach(function (it) {
+      if (!it.equipped || map[it.id]) return;
+      if (!it.slot) { map[it.id] = null; return; }
+      var fam = slotFamily(it.slot);
+      var free = null;
+      if (fam === 'Hands/Holding') {
+        if (it.slot === 'Weapon 2 Hand') {
+          if (placed.indexOf('Right Hand') < 0 && placed.indexOf('Left Hand') < 0 && placed.indexOf('Both Hands') < 0) free = 'Both Hands';
+        } else if (placed.indexOf('Both Hands') < 0) {
+          if (placed.indexOf('Right Hand') < 0) free = 'Right Hand';
+          else if (placed.indexOf('Left Hand') < 0) free = 'Left Hand';
+        }
+      } else if (fam === 'Accessories') {
+        for (var i = 1; i <= 10; i++) if (placed.indexOf('Accessory ' + i) < 0) { free = 'Accessory ' + i; break; }
+      } else if (fam && placed.indexOf(it.slot) < 0) free = it.slot;
+      map[it.id] = free;
+      if (free) placed.push(free);
+    });
+    return map;
+  }
+  function equipInto(items, id, placement) {
+    var it = (items || []).find(function (x) { return x.id === id; });
+    if (!it) return 'Item not found.';
+    if (it.kind !== 'gear') return 'Only gear can be equipped.';
+    if (!it.slot) return 'Assign a slot to this gear first (Inventory).';
+    var fam = placementFamily(placement);
+    if (!fam) return 'Unknown slot.';
+    if (!placementFitsItem(placement, it.slot)) {
+      if (it.slot === 'Weapon 2 Hand') return 'This is a 2 Hand weapon: it takes both hands.';
+      return 'This gear goes in ' + it.slot + ', not ' + fam + '.';
+    }
+    var occ = slotOccupants(items, fam);
+    var alreadyThere = occ.some(function (o) { return o.id === id; });
+    var fullMsg = function () { return fam + ' is full' + (occ[0] ? ' (' + occ[0].name + ' is equipped there)' : '') + '. Unequip that first, or use a loadout.'; };
+    if (fam === 'Hands/Holding') {
+      if (it.slot === 'Weapon 2 Hand') {
+        if (!alreadyThere && occ.length > 0) return fullMsg();
+      } else {
+        if (!alreadyThere && handUsed(items) >= 2) return fullMsg();
+        var taken = occ.some(function (o) { return o.placement === placement; });
+        if (taken && !alreadyThere) return placement + ' is already taken.';
+      }
+    } else if (fam === 'Accessories') {
+      if (!alreadyThere && occ.length >= 10) return fullMsg();
+      var takenAcc = occ.some(function (o) { return o.placement === placement; });
+      if (takenAcc && !alreadyThere) return placement + ' is already taken.';
+    } else {
+      if (!alreadyThere && occ.length >= 1) return fullMsg();
+    }
+    it.equipped = true;
+    it.placement = placement || it.slot;
+    return null;
+  }
+  function unequip(items, id) {
+    var it = (items || []).find(function (x) { return x.id === id; });
+    if (!it) return;
+    it.equipped = false;
+    it.placement = null;
+  }
+
   var api = {
     STAT_KEYS: STAT_KEYS, STAT_NAMES: STAT_NAMES, STAT_ABBR: STAT_ABBR,
     getModifier: getModifier, derivedBase: derivedBase, statTotal: statTotal,
@@ -645,6 +789,11 @@
     magePenalty: magePenalty, effectiveRank: effectiveRank,
     attackDamageStat: attackDamageStat, tigranMoveBonus: tigranMoveBonus,
     normName: normName, clampInt: clampInt, normalizeSlot: normalizeSlot, parseItemBonuses: parseItemBonuses,
+    GEAR_SLOT_LABELS: GEAR_SLOT_LABELS, SLOT_LIMITS: SLOT_LIMITS, CONSUMABLE_SUBTYPES: CONSUMABLE_SUBTYPES,
+    placementFamily: placementFamily, normalizeKind: normalizeKind,
+    slotFamily: slotFamily, placementFitsItem: placementFitsItem, handUsed: handUsed,
+    slotOccupants: slotOccupants, freePlacement: freePlacement, derivePlacements: derivePlacements,
+    equipInto: equipInto, unequip: unequip,
     applyRest: applyRest, rollDie: rollDie, parseDiceFormula: parseDiceFormula, rollFormula: rollFormula,
     isAttackSkill: isAttackSkill, skillAttackType: skillAttackType, isAttackSpell: isAttackSpell,
     damageEffectParents: damageEffectParents, normalizeKeywordMap: normalizeKeywordMap, adjustedDamage: adjustedDamage, effectDamage: effectDamage, damageStatFromText: damageStatFromText

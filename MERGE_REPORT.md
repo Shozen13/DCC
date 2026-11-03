@@ -180,6 +180,82 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Item taxonomy, gear slots, loadouts (2026-11-03, ?v=29, built locally)
+
+Antony's spec: items have a required kind — Gear, Consumables,
+Coupons, Material/Misc. Gear slots are Head, Torso, Arms,
+Hands/Gloves, Hands/Holding, Legs, Feet, Accessories, with limits 1
+per single slot, 2 for Hands/Holding (left + right), 10 for
+Accessories. Consumables are Potion, Scroll, Explosive, or Spellbook.
+Coupons and Material/Misc take free-form type text. The Gear tab now
+reflects the slots with a bonuses summary in the CrawlerCo style, plus
+quick-swap loadouts.
+
+**What changed.** Custom item creation is now a form (Add custom
+item opens it): name + kind are required, gear must pick a slot,
+consumables must pick a type, coupons/material take free-form type.
+Rulebook picks auto-fill kind and slot from the book data (40 gear
+entries already carry a slot; consumables arrive with no type set,
+which the player can fill in). Inventory cards now edit kind, slot,
+subtype/type inline, and gain kind filter chips (All / Gear /
+Consumables / Coupons / Material-Misc). Only gear can be equipped,
+and only into its own slot; a full slot refuses with the occupant
+named — manual equips never silently replace. The Gear tab is
+rebuilt as a slot board around the crawler's avatar (Head, Arms,
+Right Hand, Legs on one side; Torso, Hands/Gloves, Left Hand, Feet
+on the other; 10 numbered accessory boxes below), each slot showing
+its compatible-inventory option count, a Gear Bonuses summary (each
+stat before → after equipped gear, plus DR, Evade, and skill grants),
+and a Gear Catalog with per-slot search and sort (Name / Most
+bonuses). Loadouts: 2 by default, up to 5, each renameable; Apply
+swaps the whole arrangement at once, Save current stores what is
+equipped now, and any manual equip change clears the active marker.
+Equipped placement is stored per item (singles use the slot label,
+holding uses Left/Right Hand, accessories use Accessory 1–10).
+
+**Weapons (added to ?v=29 before pushing, Antony 2026-11-03).**
+Gear slots also include Weapon 1 Hand and Weapon 2 Hand. A 1 Hand
+weapon takes one hand slot and leaves the other free for anything
+else held; a 2 Hand weapon takes both hands at once (placement
+'Both Hands') and shows in both hand boxes, and nothing else can
+equip into a hand while it is equipped — nor can it equip while
+either hand is taken. Picking a 2 Hand weapon from a hand box equips
+it across both hands; the hand picker hides 2 Hand weapons when the
+other hand is taken. Loadouts store a 2 Hand weapon once, under
+'Both Hands', and apply/skip it with the same placement validation
+as everything else.
+
+**DM Send Box form (added to ?v=29 before pushing, Antony
+2026-11-03).** The DM's item rows in Send Box and Send Achievement
+now carry the same form factor as player item creation: required
+kind, gear slot (including Weapon 1 Hand / Weapon 2 Hand),
+consumable type, or free-form type, with rulebook picks auto-filling
+kind and slot from the book entry. Sending is refused with a named
+error if a filled-in item lacks its kind, slot, or type. Loot items
+now carry that taxonomy to the player's inventory instead of
+arriving as Material/Misc; loot rows sent before this change have
+no taxonomy and still arrive as Material/Misc.
+
+**Deliberate choices.** Click-to-choose, not drag-and-drop: the
+reference design mentions dragging, but tap-to-pick works on phones
+and is the reliable path here. Loadout apply is the only replace
+path; everything manual refuses when full. No new Supabase file:
+everything is client-side on the existing character rows.
+
+**Migration (idempotent, runs on render).** Old kinds map
+mundane/other/map → Material/Misc; old slots map Hands →
+Hands/Holding, Accessory → Accessories, Weapon → Hands/Holding,
+Other → unassigned. Non-gear items lose their stale slot. Items
+missing an id (notably old DM-inspector adds) get one, so Inventory
+actions work on them. Grandfathered, not destroyed: gear equipped
+before limits existed keeps its bonuses until unequipped, and shows
+in an "Equipped, no slot to show" row with an Unequip button — that
+covers over-limit sets and any non-gear item that was equipped under
+the old anything-equips rules. Changing the slot of an equipped item
+unequips it (its old placement would be meaningless). The DM
+Inspector's equip toggle follows the same slot rules, and its added
+items now carry ids and arrive as Material/Misc.
+
 ## Save-as-copy rules (2026-11-03, ?v=28, built locally)
 
 Antony's rule: Save as new crawler copies EVERYTHING the player set

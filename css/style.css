@@ -175,3 +175,36 @@ details.card summary::-webkit-details-marker { color:var(--teal); }
 .mark-big.boss { color:var(--yellow); text-shadow:0 0 6px var(--yellow), 0 0 12px #ffd700; }
 .mark-small.pk { color:#fff; }
 .mark-small.boss { color:var(--yellow); }
+
+/* ---- Gear tab: loadouts, slot board, bonuses, catalog (2026-11-03) ---- */
+.loadout-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+.loadout-chip { display:inline-flex; gap:6px; align-items:center; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
+.loadout-chip.active { border-color:var(--accent); }
+.loadout-chip input[type="text"] { width:110px; }
+.active-filter { border-color:var(--accent); font-weight:bold; }
+.gear-head { display:flex; justify-content:space-between; align-items:flex-end; margin:14px 0 8px; }
+.gear-board { display:grid; grid-template-columns:1fr 210px 1fr; gap:12px; align-items:start; }
+.gear-col { display:flex; flex-direction:column; gap:12px; }
+.gear-center { text-align:center; }
+.gear-center img { max-width:200px; width:100%; border-radius:12px; }
+.gear-center .avatar-placeholder { width:120px; height:120px; margin:0 auto; display:flex; align-items:center; justify-content:center; font-size:64px; border:1px dashed var(--line); border-radius:12px; }
+.gear-slot { background:var(--panel2); border:1px dashed var(--line); border-radius:10px; padding:10px; }
+.gear-slot.filled { border-style:solid; }
+.gear-slot-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px; }
+.gear-slot p { margin:4px 0 8px; }
+.gear-acc-head { display:flex; justify-content:space-between; align-items:baseline; margin:16px 0 8px; }
+.gear-acc-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; }
+.gear-overflow { margin-top:14px; }
+.gear-bonus-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin:8px 0; }
+.gear-bonus-stat { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:8px; text-align:center; }
+.catalog-slot { margin:14px 0; }
+.catalog-slot-head { display:flex; justify-content:space-between; align-items:baseline; }
+.catalog-row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:6px 0; border-top:1px solid var(--line); }
+.catalog-row[hidden] { display:none; }
+#item-create-modal label { display:block; margin:10px 0; color:var(--muted); }
+#item-create-modal input[type="text"], #item-create-modal select, #item-create-modal textarea { width:100%; margin-top:4px; }
+@media (max-width:700px) {
+  .gear-board { grid-template-columns:1fr; }
+  .gear-acc-grid { grid-template-columns:repeat(2, 1fr); }
+  .gear-bonus-grid { grid-template-columns:repeat(2, 1fr); }
+}

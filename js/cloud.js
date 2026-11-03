@@ -270,7 +270,10 @@ async function dmUpdateCharacter(id, mutate, msg) {
   var row = await sb.from('characters').select('id, name, level, data').eq('id', id).single();
   if (row.error) return inspectStatus('Could not load that character: ' + row.error.message);
   var d = row.data.data || {};
-  mutate(d);
+  // A mutate may return an error string instead of changing anything
+  // (used by the slot-aware equip toggle); that aborts the save.
+  var mutateErr = mutate(d);
+  if (typeof mutateErr === 'string' && mutateErr) return inspectStatus(mutateErr);
   var res = await sb.from('characters').update({ data: d, level: parseInt(d.level, 10) || 1, updated_at: new Date().toISOString() }).eq('id', id);
   if (res.error) return inspectStatus('Update failed: ' + res.error.message);
   if (msg) inspectStatus(msg);
@@ -380,7 +383,19 @@ function dmInspAddAttack() {
 function dmInspToggleEquip(idx) {
   if (!dmInspectId) return;
   dmUpdateCharacter(dmInspectId, function (d) {
-    if (Array.isArray(d.items) && d.items[idx]) d.items[idx].equipped = !d.items[idx].equipped;
+    if (!Array.isArray(d.items) || !d.items[idx]) return;
+    var it = d.items[idx];
+    if (it.equipped) { it.equipped = false; it.placement = null; return; }
+    // Slot-aware equip on the remote row, same rules as the sheet:
+    // gear only, needs a slot, never replaces a full slot.
+    var kind = R.normalizeKind(it.kind);
+    if (kind !== 'gear') return 'Only gear can be equipped.';
+    var slot = R.normalizeSlot(it.slot);
+    if (!slot) return 'Assign a slot to this gear first (the player sets it in Inventory).';
+    it.kind = kind; it.slot = slot;
+    var free = R.freePlacement(d.items, slot);
+    if (!free) return slot + ' is full.';
+    it.equipped = true; it.placement = free;
   }, 'Equipment changed.');
 }
 function dmInspDelItem(idx) {
@@ -395,8 +410,8 @@ function dmInspAddItem() {
   if (!name) return inspectStatus('Give the item a name first.');
   dmUpdateCharacter(dmInspectId, function (d) {
     if (!Array.isArray(d.items)) d.items = [];
-    d.items.push({ name: name, bonuses: [], equipped: false });
-  }, 'Item added (unequipped, no bonuses).');
+    d.items.push({ id: 'dm-' + Date.now() + '-' + Math.floor(Math.random() * 1e6), name: name, kind: 'material', slot: null, subtype: null, placement: null, bonuses: [], equipped: false });
+  }, 'Item added (Material/Misc, unequipped, no bonuses).');
 }
 async function successionForCharacter(charId) {
   // When a party leader dies, leadership passes to the next LIVING member
@@ -1469,7 +1484,23 @@ function dmItemApply(sel) {
   var notesEl = group.querySelector('.dm-item-notes');
   if (nameEl) nameEl.value = entry.name;
   if (notesEl && !notesEl.value.trim() && entry.effect) notesEl.value = entry.effect;
+  // Same taxonomy as the player's item form: kind + slot auto-fill
+  // from the book entry, so the sent item arrives classified.
+  var kindEl = group.querySelector('.dm-item-kind');
+  var slotEl = group.querySelector('.dm-item-slot');
+  if (kindEl && entry.kind) {
+    kindEl.value = R.normalizeKind(entry.kind);
+    if (slotEl) slotEl.value = kindEl.value === 'gear' ? (R.normalizeSlot(entry.gear_slot) || '') : '';
+    dmItemKindSync(group);
+  }
 }
+function dmItemKindSync(group) {
+  var kind = group.querySelector('.dm-item-kind') ? group.querySelector('.dm-item-kind').value : '';
+  var gear = group.querySelector('.dm-item-gear'); if (gear) gear.style.display = kind === 'gear' ? '' : 'none';
+  var cons = group.querySelector('.dm-item-consumable'); if (cons) cons.style.display = kind === 'consumable' ? '' : 'none';
+  var free = group.querySelector('.dm-item-freetype'); if (free) free.style.display = (kind === 'coupon' || kind === 'material') ? '' : 'none';
+}
+function onDmItemKindChange(sel) { var g = sel.closest('.dm-item-group'); if (g) dmItemKindSync(g); }
 function updateBonusEntryVisibility(entry) {
   var type = entry.querySelector('.bonus-type') ? entry.querySelector('.bonus-type').value : 'stat';
   var statEl = entry.querySelector('.bonus-stat');
@@ -1509,6 +1540,10 @@ function addDmItemRow(containerId) {
   group.className = 'dm-item-group';
   group.innerHTML = '<div><label>Rulebook item</label><select class="dm-item-rulebook" onchange="dmItemApply(this)">' + itemOptions() + '</select></div>'
     + '<div><label>Item name</label><input type="text" class="dm-item-name" placeholder="e.g. Health Potion"></div>'
+    + '<div><label>Kind</label><select class="dm-item-kind" onchange="onDmItemKindChange(this)"><option value="">Choose a kind…</option><option value="gear">Gear</option><option value="consumable">Consumable</option><option value="coupon">Coupon</option><option value="material">Material/Misc</option></select></div>'
+    + '<div class="dm-item-gear" style="display:none"><label>Slot</label><select class="dm-item-slot"><option value="">Choose a slot…</option><option>Head</option><option>Torso</option><option>Arms</option><option>Hands/Gloves</option><option>Hands/Holding</option><option>Weapon 1 Hand</option><option>Weapon 2 Hand</option><option>Legs</option><option>Feet</option><option>Accessories</option></select></div>'
+    + '<div class="dm-item-consumable" style="display:none"><label>Type</label><select class="dm-item-subtype"><option value="">Choose a type…</option><option>Potion</option><option>Scroll</option><option>Explosive</option><option>Spellbook</option></select></div>'
+    + '<div class="dm-item-freetype" style="display:none"><label>Type (free form)</label><input type="text" class="dm-item-freetype" placeholder="e.g. Tavern coupon, Iron ore"></div>'
     + '<div><label>Description</label><textarea class="dm-item-notes" placeholder="Describe stats, effects, duration, weight, or charges..."></textarea></div>'
     + '<div><label>Quantity (each player gets this many)</label><input type="number" class="dm-item-qty" value="1" min="1"></div>'
     + '<div class="cloud-subhead">Bonuses (only when equipped, max 5)</div><div class="dm-item-bonuses"></div>'
@@ -1518,9 +1553,23 @@ function addDmItemRow(containerId) {
 }
 function collectDmItems(containerId) {
   var items = [];
+  var error = null;
   document.querySelectorAll('#' + containerId + ' .dm-item-group').forEach(function (group) {
+    if (error) return;
     var name = group.querySelector('.dm-item-name').value.trim();
     if (!name) return;
+    var kind = group.querySelector('.dm-item-kind') ? group.querySelector('.dm-item-kind').value : '';
+    if (!kind) { error = 'Give "' + name + '" a kind (Gear, Consumable, Coupon, or Material/Misc).'; return; }
+    var slot = null, subtype = null;
+    if (kind === 'gear') {
+      slot = group.querySelector('.dm-item-slot').value || null;
+      if (!slot) { error = 'Give "' + name + '" a slot.'; return; }
+    } else if (kind === 'consumable') {
+      subtype = group.querySelector('.dm-item-subtype').value || null;
+      if (!subtype) { error = 'Give "' + name + '" a consumable type.'; return; }
+    } else {
+      subtype = group.querySelector('.dm-item-freetype').value.trim() || null;
+    }
     var bonuses = [];
     group.querySelectorAll('.bonus-entry').forEach(function (entry) {
       bonuses.push({
@@ -1530,9 +1579,9 @@ function collectDmItems(containerId) {
         amount: entry.querySelector('.bonus-amount').value || 0
       });
     });
-    items.push({ name: name, qty: group.querySelector('.dm-item-qty').value || 1, notes: group.querySelector('.dm-item-notes').value, bonuses: bonuses });
+    items.push({ name: name, qty: group.querySelector('.dm-item-qty').value || 1, notes: group.querySelector('.dm-item-notes').value, kind: kind, slot: slot, subtype: subtype, bonuses: bonuses });
   });
-  return items;
+  return { items: items, error: error };
 }
 function selectedPlayers(checkClass) {
   return Array.from(document.querySelectorAll('.' + checkClass + ':checked')).map(function (c) { return c.value; });
@@ -1574,7 +1623,9 @@ async function sendBoxOnly() {
   var playerIds = selectedPlayers('box-player-check');
   var boxName = $('box-name').value.trim();
   var boxGrade = $('box-grade').value;
-  var items = collectDmItems('box-items');
+  var collected = collectDmItems('box-items');
+  if (collected.error) return boxStatus(collected.error);
+  var items = collected.items;
   if (!campaignId || !playerIds.length) return boxStatus('Pick a campaign and at least one player first.');
   if (!boxName) return boxStatus('Loot Box Name is required.');
   if (!boxGrade) return boxStatus('Loot Box Grade is required.');
@@ -1597,7 +1648,9 @@ async function sendAchievement() {
   var noBox = $('ach-no-box').checked;
   var boxName = noBox ? '' : $('ach-box-name').value.trim();
   var boxGrade = noBox ? '' : $('ach-box-grade').value;
-  var items = noBox ? [] : collectDmItems('ach-items');
+  var collected = noBox ? { items: [], error: null } : collectDmItems('ach-items');
+  if (collected.error) return achStatus(collected.error);
+  var items = collected.items;
   if (!name) return achStatus('Achievement name is required.');
   if (!message) return achStatus('Message is required.');
   if (!campaignId || !playerIds.length) return achStatus('Pick a campaign and at least one player first.');

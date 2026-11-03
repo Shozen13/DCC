@@ -131,8 +131,9 @@
         return { id: uid(), name: a.name || '', toHitStat: (a.stat || 'str').toLowerCase(), damage: a.damage || '', notes: a.notes || '' };
       }),
       items: (orig.items || []).map(function (it) {
+        var slot = normalizeSlot(it.slot);
         return {
-          id: uid(), name: it.name || '', kind: 'other', slot: normalizeSlot(it.slot),
+          id: uid(), name: it.name || '', kind: slot ? 'gear' : 'material', slot: slot, subtype: null, placement: null,
           effect: it.notes || it.effect || '',
           bonuses: (it.bonuses || []).slice(0, 5).map(function (b) { return mapBonus(b, isSpellName, normalizeSlot); }),
           equipped: !!it.equipped

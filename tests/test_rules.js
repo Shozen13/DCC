@@ -67,10 +67,10 @@ eq(R.evadeString(3, 1, 0, 0), 'd20 + 1d4 + 3', 'evade string with 1d4');
 eq(R.totalHp(4), 40, 'HP = 10 slots x mod 4');
 
 // Item slot normalisation + rulebook bonus parsing (live-test fixes)
-eq(R.normalizeSlot('Hand/Holding'), 'Hands', 'buckler slot Hand/Holding -> Hands');
-eq(R.normalizeSlot('Hands/Holding'), 'Hands', 'slot Hands/Holding -> Hands');
+eq(R.normalizeSlot('Hand/Holding'), 'Hands/Holding', 'buckler slot Hand/Holding -> Hands/Holding');
+eq(R.normalizeSlot('Hands/Holding'), 'Hands/Holding', 'slot Hands/Holding stays');
 eq(R.normalizeSlot('Head'), 'Head', 'slot Head unchanged');
-eq(R.normalizeSlot('Mystery Slot'), 'Other', 'unknown slot -> Other');
+eq(R.normalizeSlot('Mystery Slot'), null, 'unknown slot -> unassigned');
 eq(R.parseItemBonuses('Grants +1 Shield Block Skill and +3 Damage Resistance. Listed Gear Slot is Hands/Holding;', []),
   [{ type: 'dr', amount: 3 }], 'buckler: DR 3 only when the library is empty (grant needs a library entry)');
 eq(R.parseItemBonuses('+2 Strength and +1 First Aid Skill', [{ name: 'FIRST AID', kind: 'skill' }]),
@@ -182,6 +182,112 @@ eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0, 3), false, 'background-only card 
   eq(twice.ownRank, 0, 'split is idempotent');
 })();
 
+
+
+// Gear taxonomy (2026-11-03): kinds, slots, placements, equip limits
+eq(R.normalizeSlot('Hand/Holding'), 'Hands/Holding', 'slot Hand/Holding');
+eq(R.normalizeSlot('Accessory'), 'Accessories', 'slot Accessory -> Accessories');
+eq(R.normalizeSlot('Weapon'), 'Hands/Holding', 'slot Weapon -> held');
+eq(R.normalizeSlot('Other'), null, 'slot Other -> unassigned');
+eq(R.normalizeSlot(null), null, 'slot null -> null');
+eq(R.normalizeSlot('Hands/Gloves'), 'Hands/Gloves', 'slot Hands/Gloves');
+eq(R.normalizeSlot('Arms'), 'Arms', 'slot Arms');
+eq(R.normalizeKind('mundane'), 'material', 'kind mundane -> material');
+eq(R.normalizeKind('map'), 'material', 'kind map -> material');
+eq(R.normalizeKind('other'), 'material', 'kind other -> material');
+eq(R.normalizeKind(undefined), 'material', 'kind missing -> material');
+eq(R.normalizeKind('gear'), 'gear', 'kind gear stays');
+eq(R.normalizeKind('consumable'), 'consumable', 'kind consumable stays');
+eq(R.SLOT_LIMITS['Head'], 1, 'Head limit 1');
+eq(R.SLOT_LIMITS['Hands/Holding'], 2, 'Hands/Holding limit 2');
+eq(R.SLOT_LIMITS['Accessories'], 10, 'Accessories limit 10');
+eq(R.placementFamily('Left Hand'), 'Hands/Holding', 'placement Left Hand family');
+eq(R.placementFamily('Accessory 3'), 'Accessories', 'placement Accessory 3 family');
+eq(R.placementFamily('Head'), 'Head', 'placement Head family');
+// Equip limits, enforced, never replacing
+(function () {
+  const items = [
+    { id: 'a', name: 'Helm', kind: 'gear', slot: 'Head', equipped: false, placement: null },
+    { id: 'b', name: 'Crown', kind: 'gear', slot: 'Head', equipped: false, placement: null },
+    { id: 's', name: 'Sword', kind: 'gear', slot: 'Hands/Holding', equipped: false, placement: null },
+    { id: 'd', name: 'Dagger', kind: 'gear', slot: 'Hands/Holding', equipped: false, placement: null },
+    { id: 'e', name: 'Mace', kind: 'gear', slot: 'Hands/Holding', equipped: false, placement: null },
+    { id: 'p', name: 'Potion', kind: 'consumable', slot: null, equipped: false, placement: null },
+  ];
+  eq(R.equipInto(items, 'a', 'Head'), null, 'equip Head ok');
+  eq(R.equipInto(items, 'b', 'Head'), 'Head is full (Helm is equipped there). Unequip that first, or use a loadout.', 'second Head refused');
+  eq(R.equipInto(items, 's', 'Right Hand'), null, 'equip Right Hand ok');
+  eq(R.equipInto(items, 'd', 'Left Hand'), null, 'equip Left Hand ok');
+  eq(R.equipInto(items, 'e', 'Right Hand'), 'Hands/Holding is full (Sword is equipped there). Unequip that first, or use a loadout.', 'third holding refused');
+  eq(R.equipInto(items, 'p', 'Head'), 'Only gear can be equipped.', 'consumable cannot equip');
+  eq(R.equipInto(items, 's', 'Head'), 'This gear goes in Hands/Holding, not Head.', 'wrong slot refused');
+  eq(R.freePlacement(items, 'Hands/Holding'), null, 'holding full -> no free placement');
+  R.unequip(items, 's');
+  eq(R.freePlacement(items, 'Hands/Holding'), 'Right Hand', 'free hand after unequip');
+  eq(R.slotOccupants(items, 'Head').length, 1, 'Head has 1 occupant');
+})();
+// Accessories: 10 ok, 11th refused
+(function () {
+  const items = [];
+  for (let i = 0; i < 11; i++) items.push({ id: 'r' + i, name: 'Ring ' + i, kind: 'gear', slot: 'Accessories', equipped: false, placement: null });
+  for (let i = 0; i < 10; i++) eq(R.equipInto(items, 'r' + i, 'Accessory ' + (i + 1)), null, 'equip accessory ' + (i + 1));
+  eq(R.equipInto(items, 'r10', 'Accessory 1'), 'Accessories is full (Ring 0 is equipped there). Unequip that first, or use a loadout.', '11th accessory refused');
+})();
+// Legacy equipped items (boolean, no placement) derive placements in order
+(function () {
+  const items = [
+    { id: 'h', name: 'Helm', kind: 'gear', slot: 'Head', equipped: true, placement: null },
+    { id: 's', name: 'Sword', kind: 'gear', slot: 'Hands/Holding', equipped: true, placement: null },
+    { id: 'x', name: 'Mystery', kind: 'gear', slot: null, equipped: true, placement: null },
+  ];
+  const m = R.derivePlacements(items);
+  eq(m.h, 'Head', 'legacy Head derives Head');
+  eq(m.s, 'Right Hand', 'legacy holding derives Right Hand');
+  eq(m.x, null, 'legacy unassigned slot derives nothing');
+})();
+
+
+// Weapons: 1 Hand takes one hand, 2 Hand takes both
+eq(R.normalizeSlot('Weapon 1 Hand'), 'Weapon 1 Hand', 'slot Weapon 1 Hand');
+eq(R.normalizeSlot('Weapon 2 Hand'), 'Weapon 2 Hand', 'slot Weapon 2 Hand');
+eq(R.slotFamily('Weapon 1 Hand'), 'Hands/Holding', 'Weapon 1 Hand family is hands');
+eq(R.slotFamily('Weapon 2 Hand'), 'Hands/Holding', 'Weapon 2 Hand family is hands');
+eq(R.slotFamily('Head'), 'Head', 'Head family is itself');
+eq(R.placementFitsItem('Both Hands', 'Weapon 2 Hand'), true, 'Both Hands fits 2 Hand weapon');
+eq(R.placementFitsItem('Both Hands', 'Weapon 1 Hand'), false, 'Both Hands does not fit 1 Hand weapon');
+eq(R.placementFitsItem('Right Hand', 'Weapon 1 Hand'), true, 'Right Hand fits 1 Hand weapon');
+eq(R.placementFitsItem('Right Hand', 'Weapon 2 Hand'), false, 'Right Hand does not fit 2 Hand weapon');
+eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits held gear');
+(function () {
+  const items = [
+    { id: 's', name: 'Sword', kind: 'gear', slot: 'Weapon 1 Hand', equipped: false, placement: null },
+    { id: 'd', name: 'Dagger', kind: 'gear', slot: 'Weapon 1 Hand', equipped: false, placement: null },
+    { id: 'g', name: 'Greatsword', kind: 'gear', slot: 'Weapon 2 Hand', equipped: false, placement: null },
+    { id: 'h', name: 'Shield', kind: 'gear', slot: 'Hands/Holding', equipped: false, placement: null },
+  ];
+  eq(R.equipInto(items, 's', 'Right Hand'), null, 'equip 1 Hand sword');
+  eq(R.equipInto(items, 'd', 'Left Hand'), null, 'equip 1 Hand dagger in other hand');
+  eq(R.equipInto(items, 'g', 'Both Hands'), 'Hands/Holding is full (Sword is equipped there). Unequip that first, or use a loadout.', '2 Hand refused while hands taken');
+  eq(R.freePlacement(items, 'Weapon 2 Hand'), null, 'no Both Hands placement while hands taken');
+  R.unequip(items, 's'); R.unequip(items, 'd');
+  eq(R.equipInto(items, 'g', 'Both Hands'), null, 'equip 2 Hand weapon with hands free');
+  eq(R.handUsed(items), 2, '2 Hand weapon uses both hands');
+  eq(R.equipInto(items, 'h', 'Right Hand'), 'Hands/Holding is full (Greatsword is equipped there). Unequip that first, or use a loadout.', 'held item refused while 2 Hand equipped');
+  eq(R.freePlacement(items, 'Weapon 1 Hand'), null, 'no free hand while 2 Hand equipped');
+  R.unequip(items, 'g');
+  eq(R.equipInto(items, 'h', 'Right Hand'), null, 'held item ok after 2 Hand unequipped');
+  eq(R.equipInto(items, 'g', 'Right Hand'), 'This is a 2 Hand weapon: it takes both hands.', '2 Hand cannot go in one hand');
+})();
+// Legacy 2 Hand weapon derives Both Hands only when both hands are free
+(function () {
+  const items = [
+    { id: 'g', name: 'Greatsword', kind: 'gear', slot: 'Weapon 2 Hand', equipped: true, placement: null },
+    { id: 's', name: 'Sword', kind: 'gear', slot: 'Weapon 1 Hand', equipped: true, placement: null },
+  ];
+  const m = R.derivePlacements(items);
+  eq(m.g, 'Both Hands', 'legacy 2 Hand derives Both Hands first');
+  eq(m.s, null, 'legacy 1 Hand after 2 Hand derives nothing');
+})();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

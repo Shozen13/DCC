@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=28">
+<link rel="stylesheet" href="css/style.css?v=29">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -203,8 +203,11 @@
 
     <section class="panel" id="panel-gear">
       <h2>Gear</h2>
-      <p class="hint">Only items equipped here apply their bonuses. Slots are organisational; any equipped item applies.</p>
-      <div id="equipped-list"></div>
+      <p class="hint">Equip gear into its slot. Only equipped gear applies its bonuses. Single slots hold 1 item, Hands/Holding holds 2 (left and right) or one 2 Hand weapon, Accessories hold up to 10. Loadouts swap your whole arrangement at once. Click a slot to choose from compatible inventory.</p>
+      <div id="loadout-bar"></div>
+      <div id="gear-board"></div>
+      <div id="gear-bonuses"></div>
+      <div id="gear-catalog"></div>
     </section>
 
     <section class="panel" id="panel-skills">
@@ -231,6 +234,7 @@
         <button type="button" id="item-pick">Pick from rulebook</button>
         <button type="button" id="item-add">Add custom item</button>
       </div>
+      <div id="item-filters" class="btn-row"></div>
       <div id="item-list"></div>
     </section>
 
@@ -569,6 +573,33 @@
   </div>
 </div>
 
+<!-- Custom item creation: kind is required; gear needs a slot, consumables need a type -->
+<div class="overlay" id="item-create-modal" hidden>
+  <div class="modal wide">
+    <h2>Add custom item</h2>
+    <label>Name <input type="text" id="item-create-name" placeholder="e.g. Ember Sword"></label>
+    <label>Kind <select id="item-create-kind">
+      <option value="">Choose a kind…</option>
+      <option value="gear">Gear</option>
+      <option value="consumable">Consumable</option>
+      <option value="coupon">Coupon</option>
+      <option value="material">Material/Misc</option>
+    </select></label>
+    <div id="item-create-gear" hidden><label>Slot <select id="item-create-slot">
+      <option value="">Choose a slot…</option>
+      <option>Head</option><option>Torso</option><option>Arms</option><option>Hands/Gloves</option><option>Hands/Holding</option><option>Weapon 1 Hand</option><option>Weapon 2 Hand</option><option>Legs</option><option>Feet</option><option>Accessories</option>
+    </select></label></div>
+    <div id="item-create-consumable" hidden><label>Type <select id="item-create-subtype">
+      <option value="">Choose a type…</option>
+      <option>Potion</option><option>Scroll</option><option>Explosive</option><option>Spellbook</option>
+    </select></label></div>
+    <div id="item-create-freetype" hidden><label>Type (free form) <input type="text" id="item-create-freetype" placeholder="e.g. Tavern coupon, Iron ore"></label></div>
+    <label>Effect / notes <textarea id="item-create-effect" rows="3" placeholder="What does it do?"></textarea></label>
+    <p id="item-create-error" class="hint" hidden></p>
+    <div class="btn-row"><button type="button" id="item-create-save">Create item</button><button type="button" id="item-create-cancel">Cancel</button></div>
+  </div>
+</div>
+
 <!-- Rulebook info popup -->
 <div class="overlay" id="info-modal" hidden>
   <div class="modal wide">
@@ -635,10 +666,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=28"></script>
-<script src="js/convert.js?v=28"></script>
-<script src="js/app.js?v=28"></script>
-<script src="js/wizard.js?v=28"></script>
-<script src="js/cloud.js?v=28"></script>
+<script src="js/rules.js?v=29"></script>
+<script src="js/convert.js?v=29"></script>
+<script src="js/app.js?v=29"></script>
+<script src="js/wizard.js?v=29"></script>
+<script src="js/cloud.js?v=29"></script>
 </body>
 </html>
