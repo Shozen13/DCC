@@ -137,6 +137,9 @@ body.dead-lock .sidebar input, body.dead-lock .sidebar button, body.dead-lock .s
 body.dead-lock .topbar button,
 body.dead-lock .panel input, body.dead-lock .panel button, body.dead-lock .panel select, body.dead-lock .panel textarea { pointer-events:none; opacity:.55; }
 body.dead-lock #panel-deadparty input, body.dead-lock #panel-deadparty button { pointer-events:auto; opacity:1; }
+/* A dead player's sheet is locked, but Save-as-copy must stay usable:
+ * copying a deceased crawler is allowed, and the copy is living. */
+body.dead-lock #cloud-save-as-new-btn { pointer-events:auto; opacity:1; }
 /* Cloud rows (original class names, styled to the merged theme). */
 .cloud-row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); }
 .cloud-subhead { font-weight:700; margin:14px 0 6px; }

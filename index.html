@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=27">
+<link rel="stylesheet" href="css/style.css?v=28">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -405,7 +405,7 @@
         <h3>My Crawlers (cloud)</h3>
         <div class="btn-row">
           <button type="button" onclick="cloudSave()">Save this sheet to cloud</button>
-          <button type="button" onclick="cloudSaveAsNew()">Save as new crawler</button>
+          <button type="button" id="cloud-save-as-new-btn" title="Copies everything except name, number, campaign and deceased status" onclick="cloudSaveAsNew()">Save as new crawler</button>
           <button type="button" onclick="refreshCloudAll()">Refresh</button>
         </div>
         <p id="cloud-status-crawlers" class="hint"></p>
@@ -635,10 +635,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=27"></script>
-<script src="js/convert.js?v=27"></script>
-<script src="js/app.js?v=27"></script>
-<script src="js/wizard.js?v=27"></script>
-<script src="js/cloud.js?v=27"></script>
+<script src="js/rules.js?v=28"></script>
+<script src="js/convert.js?v=28"></script>
+<script src="js/app.js?v=28"></script>
+<script src="js/wizard.js?v=28"></script>
+<script src="js/cloud.js?v=28"></script>
 </body>
 </html>

@@ -180,6 +180,31 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Save-as-copy rules (2026-11-03, ?v=28, built locally)
+
+Antony's rule: Save as new crawler copies EVERYTHING the player set
+except name, number, and campaign; a deceased crawler can be copied
+too, and its copy is living, in no campaign, and fully editable.
+
+**What changed.** Save-as-copy now clears name, number, deceased
+status, and the campaign selection on the copy before saving it as a
+new cloud row; the original row is untouched (still dead, still in
+its campaign, if it was). Everything else carries over exactly:
+stats, skills, spells, attacks, items including equipped states, HP
+and mana, gold, counters, buffs and debuffs, and all story content.
+The sheet on screen becomes the copy, so the lock lifts at once for
+a copied dead crawler. Previously the copy inherited the name and
+number, and copying a dead crawler was refused outright by the save
+guard.
+
+**One catch that had to be fixed for this to work at all.** The
+deceased sheet lock deadens every panel button, which included Save
+as new crawler — a dead player could not have clicked it. The copy
+button is now exempt from the lock (only that button; everything
+else on a dead sheet stays dead). The login check also moved before
+any local change, so a signed-out click can no longer blank the
+name and number on screen while saving nothing.
+
 ## Join/leave blanking + one campaign per crawler (2026-11-03, ?v=27, built locally)
 
 Antony's report: joining a campaign as a player joined it but blanked

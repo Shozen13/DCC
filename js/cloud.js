@@ -778,8 +778,21 @@ async function cloudSave() {
   return cloudCharacterId;
 }
 async function cloudSaveAsNew() {
+  if (!needLogin()) return null;
+  // Save-as-copy semantics (Antony, 2026-11-03): the copy carries
+  // EVERYTHING the player set, except name, number, campaign, and
+  // deceased status. A deceased crawler CAN be copied; the copy is a
+  // living crawler in no campaign, fully editable, and the sheet on
+  // screen becomes the copy. The original row is untouched (still
+  // dead, still in its campaign, if it was).
+  var st = Object.assign({}, window.DCC.getState(), { name: '', number: '', dead: false });
+  window.DCC.setState(st);
   cloudCharacterId = null;
   localStorage.removeItem('crawler_cloud_id');
+  cloudCampaignId = null;
+  localStorage.removeItem('cloud_campaign_id');
+  window.DCC.renderAll();
+  window.DCC.saveNow();
   return cloudSave();
 }
 async function cloudLoad(id) {
