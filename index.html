@@ -984,6 +984,8 @@
         .player-check-label { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; text-transform: none; font-size: 0.9rem; color: var(--text); }
         body:not(.dm-mode) .tab-btn[data-tab="sendbox"], body:not(.dm-mode) .tab-btn[data-tab="sendach"] { display: none; }
         body:not(.dm-mode) #panel-sendbox, body:not(.dm-mode) #panel-sendach { display: none !important; }
+        body:not(.dm-mode) .tab-btn[data-tab="dm"] { display: none; }
+        body:not(.dm-mode) #panel-dm { display: none !important; }
         body.dm-mode .tab-btn[data-tab="achievements"] { display: none; }
         body.dm-mode #panel-achievements { display: none !important; }
         .landing-screen {
@@ -1930,6 +1932,7 @@
 
     function showTab(tab) {
         if (tab === 'hotlist') tab = 'vitals';
+        if (tab === 'dm' && crawlerMode !== 'dm') tab = 'vitals';
         if (crawlerMode === 'dm' && ['dm', 'campaign', 'sendbox', 'sendach'].indexOf(tab) === -1) tab = 'dm';
 
         activeTab = tab;
