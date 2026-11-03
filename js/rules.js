@@ -772,6 +772,49 @@
     it.placement = null;
   }
 
+  /* ---------------- consumable picks (book loot list, pp.216-218) ----
+   * Rulebook consumables mapped to the use payload the sheet needs:
+   * potions by effect, dynamites by damage, scrolls/spellbooks by
+   * subtype (the spell itself is designated by the player/DM, since
+   * the book lists them generically). Bandages carry a standalone
+   * debuff removal. Anything unlisted arrives generic: confirmation
+   * shows its effect text and one unit is consumed. There is no
+   * general explosives table in the book — the two dynamites below
+   * are the listed explosives, each with its own damage, blast, and
+   * splash; area rules (blast full, splash half) are applied as text. */
+  var CONSUMABLE_PICK = {
+    'Healing Potion': { subtype: 'Potion', use: { potionKind: 'heal', potionAmount: 5 } },
+    'Good Healing Potion': { subtype: 'Potion', use: { potionKind: 'heal', potionAmount: 6 } },
+    'Gold Standard Healing Potion': { subtype: 'Potion', use: { potionKind: 'heal', potionAmount: 7, potionNote: 'Mends one Minor Injury' } },
+    'Supreme Healing Potion': { subtype: 'Potion', use: { potionKind: 'heal', potionAmount: 8, potionNote: 'Mends one Minor or Major Injury, or deals 8d8 Holy damage to an undead Mob' } },
+    'Heal Severe Injury Potion': { subtype: 'Potion', use: { potionKind: 'heal', potionAmount: 9, potionNote: 'Mends all Injuries' } },
+    'Mana Potion': { subtype: 'Potion', use: { potionKind: 'manaFull' } },
+    'Good Mana Refill Potion': { subtype: 'Potion', use: { potionKind: 'manaOverTime', potionAmount: 15, potionRounds: 10 } },
+    'Heal Pet Potion': { subtype: 'Potion', use: { potionKind: 'healPet', potionAmount: 5 } },
+    'Poison Antidote': { subtype: 'Potion', use: { potionKind: 'removeDebuff', potionMatch: 'poison' } },
+    'Crawler Biscuits': { subtype: 'Potion', use: { potionKind: 'food' } },
+    'Potion of +1 Skill': { subtype: 'Potion', use: { potionKind: 'skillBoost', potionAmount: 1 } },
+    'Potion of +2 Skill': { subtype: 'Potion', use: { potionKind: 'skillBoost', potionAmount: 2 } },
+    'Potion of +3 Skill': { subtype: 'Potion', use: { potionKind: 'skillBoost', potionAmount: 3 } },
+    'Potion of +5 Skill': { subtype: 'Potion', use: { potionKind: 'skillBoost', potionAmount: 5 } },
+    'Bandages': { subtype: null, use: { removeDebuff: 'blood trail' } },
+    'Stick of Basic Dynamite': { subtype: 'Explosive', use: { damage: '1d6', damageType: 'Bludgeoning', blast: '0ft', splash: '+5ft' } },
+    'Stick of Good Goblin Dynamite': { subtype: 'Explosive', use: { damage: '2d6', damageType: 'Bludgeoning', blast: '5ft', splash: '+5ft' } },
+    'Spell Scroll': { subtype: 'Scroll', use: {} },
+    'Rare Spell Scroll': { subtype: 'Scroll', use: {} },
+    'Magic Tome': { subtype: 'Spellbook', use: {} },
+    'Spellbook': { subtype: 'Spellbook', use: {} },
+    'Rare Spellbook': { subtype: 'Spellbook', use: {} },
+    'Scroll of Upgrade': { subtype: 'Scroll', use: {} }
+  };
+  function consumablePickFor(name) {
+    if (!name) return null;
+    var key = Object.keys(CONSUMABLE_PICK).find(function (k) { return normName(k) === normName(name); });
+    if (!key) return null;
+    var p = CONSUMABLE_PICK[key];
+    return { subtype: p.subtype, use: Object.assign({}, p.use) };
+  }
+
   var api = {
     STAT_KEYS: STAT_KEYS, STAT_NAMES: STAT_NAMES, STAT_ABBR: STAT_ABBR,
     getModifier: getModifier, derivedBase: derivedBase, statTotal: statTotal,
@@ -792,6 +835,7 @@
     GEAR_SLOT_LABELS: GEAR_SLOT_LABELS, SLOT_LIMITS: SLOT_LIMITS, CONSUMABLE_SUBTYPES: CONSUMABLE_SUBTYPES,
     placementFamily: placementFamily, normalizeKind: normalizeKind,
     slotFamily: slotFamily, placementFitsItem: placementFitsItem, handUsed: handUsed,
+    consumablePickFor: consumablePickFor,
     slotOccupants: slotOccupants, freePlacement: freePlacement, derivePlacements: derivePlacements,
     equipInto: equipInto, unequip: unequip,
     applyRest: applyRest, rollDie: rollDie, parseDiceFormula: parseDiceFormula, rollFormula: rollFormula,

@@ -564,8 +564,17 @@
     $('debuff-list').innerHTML = listHtml(state.debuffs, 'debuff');
     setVal('t-gold', state.gold); setVal('t-pop', state.popularity); setVal('t-favor', state.aiFavor);
     setVal('t-move', state.moveVal); setVal('t-step', state.stepVal);
+    if (pruneHotlistRefs()) saveSoon();
     $('hotlist').innerHTML = state.hotlist.map(function (x, i) {
-      return '<div class="card"><span>' + esc(x) + '</span> <button type="button" onclick="DCC.delHotlist(' + i + ')">Remove</button></div>';
+      if (!x || x.type === 'note') return '<div class="card"><span>' + esc(x ? x.name : '') + '</span> <button type="button" onclick="DCC.delHotlist(' + i + ')">Remove</button></div>';
+      if (x.type === 'item') {
+        var it = state.items.find(function (t) { return t.id === x.id; });
+        if (!it) return '';
+        return '<div class="card"><span>' + esc(it.name) + ' ×' + getQty(it) + ' (consumable)</span> <button type="button" onclick="DCC.useConsumable(\'' + it.id + '\')">Use</button> <button type="button" onclick="DCC.delHotlist(' + i + ')">Remove</button></div>';
+      }
+      var card = (x.type === 'skill' ? state.skills : state.spells).find(function (c) { return c.id === x.id; });
+      if (!card) return '';
+      return '<div class="card"><span>' + esc(card.name) + ' (' + x.type + ', Rank ' + cardRank(card) + ')</span> <button type="button" onclick="DCC.rollCard(\'' + x.type + '\',\'' + card.id + '\')">Roll</button> <button type="button" onclick="DCC.delHotlist(' + i + ')">Remove</button></div>';
     }).join('') || '<p class="hint">Hotlist is empty.</p>';
   }
   function setOwnBase(key, value) {
@@ -1124,6 +1133,31 @@
       return '';
     }).filter(Boolean).join(', ');
   }
+  /* Consumable use fields in the Inventory editor: quantity plus the
+   * subtype-specific details the use flow reads. */
+  function consumableUseFieldsHtml(it) {
+    var use = it.use || {};
+    var set = function (field) { return 'DCC.setItemUseField(\'' + it.id + '\',\'' + field + '\',this.value)'; };
+    var html = '<label>Qty <input type="number" min="1" value="' + getQty(it) + '" onchange="' + set('qty') + '"></label>';
+    if (it.subtype === 'Scroll' || it.subtype === 'Spellbook') {
+      html += '<label>Spell <input type="text" value="' + esc(use.spell || '') + '" placeholder="e.g. Fireball" onchange="' + set('spell') + '"></label>'
+        + '<label>Rank <input type="number" min="1" value="' + Math.max(1, num(use.spellRank, 1)) + '" onchange="' + set('spellRank') + '"></label>';
+    } else if (it.subtype === 'Potion') {
+      var pkOpts = [['heal', 'Heal slots'], ['manaFull', 'Restore mana fully'], ['manaOverTime', 'Mana over time'], ['skillBoost', 'Skill boost'], ['healPet', 'Heal pet'], ['removeDebuff', 'Remove debuff'], ['food', 'Food'], ['other', 'Other']];
+      html += '<label>Potion effect <select onchange="' + set('potionKind') + '"><option value="">Choose an effect…</option>' + pkOpts.map(function (o) { return '<option value="' + o[0] + '"' + (use.potionKind === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
+      if (use.potionKind === 'heal' || use.potionKind === 'manaOverTime' || use.potionKind === 'skillBoost') html += '<label>Amount <input type="number" min="0" value="' + num(use.potionAmount, 0) + '" onchange="' + set('potionAmount') + '"></label>';
+      if (use.potionKind === 'manaOverTime') html += '<label>Rounds <input type="number" min="1" value="' + Math.max(1, num(use.potionRounds, 1)) + '" onchange="' + set('potionRounds') + '"></label>';
+      if (use.potionKind === 'skillBoost') html += '<label>Skill (optional) <input type="text" value="' + esc(use.potionSkill || '') + '" placeholder="Blank = choose when used" onchange="' + set('potionSkill') + '"></label>';
+      if (use.potionKind === 'removeDebuff') html += '<label>Debuff it removes <input type="text" value="' + esc(use.potionMatch || '') + '" placeholder="e.g. poison" onchange="' + set('potionMatch') + '"></label>';
+      if (use.potionKind === 'heal') html += '<label>Note <input type="text" value="' + esc(use.potionNote || '') + '" placeholder="e.g. Mends one Minor Injury" onchange="' + set('potionNote') + '"></label>';
+    } else if (it.subtype === 'Explosive') {
+      html += '<label>Damage formula <input type="text" value="' + esc(use.damage || '') + '" placeholder="e.g. 2d6" onchange="' + set('damage') + '"></label>'
+        + '<label>Damage type <input type="text" value="' + esc(use.damageType || '') + '" placeholder="e.g. Bludgeoning" onchange="' + set('damageType') + '"></label>'
+        + '<label>Blast radius <input type="text" value="' + esc(use.blast || '') + '" placeholder="e.g. 5ft" onchange="' + set('blast') + '"></label>'
+        + '<label>Splash <input type="text" value="' + esc(use.splash || '') + '" placeholder="e.g. +5ft" onchange="' + set('splash') + '"></label>';
+    }
+    return html;
+  }
   function itemHtml(it) {
     var lib = null;
     if (cache.items) {
@@ -1136,11 +1170,11 @@
       + (it.kind === 'consumable' && it.subtype ? ' · ' + it.subtype : '')
       + ((it.kind === 'coupon' || it.kind === 'material') && it.subtype ? ' · ' + it.subtype : '');
     var kindOpts = [['gear', 'Gear'], ['consumable', 'Consumable'], ['coupon', 'Coupon'], ['material', 'Material/Misc']];
-    var html = '<div class="card"><h4>' + esc(it.name) + (it.equipped ? ' — EQUIPPED' + (it.placement ? ' (' + it.placement + ')' : '') : '') + '</h4>'
+    var html = '<div class="card"><h4>' + esc(it.name) + (it.kind === 'consumable' ? ' ×' + getQty(it) : '') + (it.equipped ? ' — EQUIPPED' + (it.placement ? ' (' + it.placement + ')' : '') : '') + '</h4>'
       + '<p>' + esc(it.effect || '') + '</p>'
       + '<p class="hint">' + esc(meta) + '</p>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(it.name) + '" onchange="DCC.renameItem(\'' + it.id + '\',this.value)"></label>'
-      + '<label>Kind <select onchange="DCC.setItemKind(\'' + it.id + '\',this.value)">'
+      + '<label>Category <select onchange="DCC.setItemKind(\'' + it.id + '\',this.value)">'
       + kindOpts.map(function (k) { return '<option value="' + k[0] + '"' + (it.kind === k[0] ? ' selected' : '') + '>' + k[1] + '</option>'; }).join('') + '</select></label>'
       + (it.kind === 'gear'
         ? '<label>Slot <select onchange="DCC.setItemSlot(\'' + it.id + '\',this.value)">'
@@ -1155,11 +1189,13 @@
       + ((it.kind === 'coupon' || it.kind === 'material')
         ? '<label>Type <input type="text" value="' + esc(it.subtype || '') + '" placeholder="Free form, e.g. Tavern coupon" onchange="DCC.setItemSubtype(\'' + it.id + '\',this.value)"></label>'
         : '')
+      + (it.kind === 'consumable' ? consumableUseFieldsHtml(it) : '')
       + (it.kind === 'gear'
         ? (it.equipped
           ? '<button type="button" onclick="DCC.setEquipped(\'' + it.id + '\',false)">Unequip</button>'
           : '<button type="button" onclick="DCC.setEquipped(\'' + it.id + '\',true)">Equip</button>')
         : '')
+      + (it.kind === 'consumable' ? '<button type="button" onclick="DCC.useConsumable(\'' + it.id + '\')">Use</button>' : '')
       + '<button type="button" onclick="DCC.delItem(\'' + it.id + '\')">Delete</button></div>';
     if (lib) html += '<div class="rulebook"><strong>Rulebook:</strong> ' + esc(lib.effect || '') + (lib.source ? ' — ' + esc(lib.source) : '') + (lib.source_book_page ? ' (p.' + lib.source_book_page + ')' : '') + '</div>';
     html += '<p><strong>Bonuses (apply only while equipped, up to 5):</strong></p>'
@@ -1358,13 +1394,57 @@
       }
       if (it.subtype === undefined) { it.subtype = null; changed = true; }
       if (it.placement === undefined) { it.placement = null; changed = true; }
+      if (it.use === undefined) { it.use = {}; changed = true; }
     });
     return changed;
+  }
+  /* Old hotlist entries were plain strings; new entries are refs
+   * ({type:'item'|'skill'|'spell', id, name}) or notes. Strings
+   * migrate to notes (display-only) so nothing is lost. */
+  function migrateHotlist() {
+    var changed = false;
+    (state.hotlist || []).forEach(function (x, i) {
+      if (typeof x === 'string') { state.hotlist[i] = { type: 'note', name: x }; changed = true; }
+    });
+    return changed;
+  }
+  function getQty(it) {
+    if (!it || it.kind !== 'consumable') return 1;
+    var q = it.use ? num(it.use.qty, 1) : 1;
+    return Math.max(1, q);
+  }
+  function pruneHotlistRefs() {
+    var before = state.hotlist.length;
+    state.hotlist = (state.hotlist || []).filter(function (x) {
+      if (!x || x.type === 'note') return true;
+      if (x.type === 'item') return state.items.some(function (it) { return it.id === x.id; });
+      if (x.type === 'skill') return state.skills.some(function (c) { return c.id === x.id; });
+      if (x.type === 'spell') return state.spells.some(function (c) { return c.id === x.id; });
+      return true;
+    });
+    return state.hotlist.length !== before;
+  }
+  /* Consume one unit: quantity down, or the item leaves the sheet
+   * at zero (and its hotlist entry goes with it). */
+  function consumeOne(id) {
+    var it = state.items.find(function (i) { return i.id === id; });
+    if (!it) return;
+    var q = getQty(it) - 1;
+    if (q <= 0) {
+      state.items = state.items.filter(function (i) { return i.id !== id; });
+      state.hotlist = (state.hotlist || []).filter(function (x) { return !(x.type === 'item' && x.id === id); });
+    } else {
+      it.use = it.use || {};
+      it.use.qty = q;
+    }
+    saveSoon(); renderAll();
   }
 
   /* ---------------- render orchestration ---------------- */
   function renderAll() {
-    if (migrateItems()) saveSoon();
+    var mig = migrateItems();
+    mig = migrateHotlist() || mig;
+    if (mig) saveSoon();
     var stats = computeStats();
     renderSidebar();
     renderCounters(stats);
@@ -1435,6 +1515,24 @@
 
   /* ---------------- pickers & info modal ---------------- */
   var pickerMode = null; // {type, onPick}
+  var pendingUseConfirm = null;
+  function openUseConfirm(title, bodyHtml, extraHtml, onConfirm) {
+    $('use-confirm-title').textContent = title;
+    $('use-confirm-body').innerHTML = bodyHtml;
+    $('use-confirm-extra').innerHTML = extraHtml || '';
+    pendingUseConfirm = onConfirm;
+    $('use-confirm-modal').hidden = false;
+  }
+  /* Permanent trained-rank increase (skill potions). Unknown skills
+   * become known at the boosted rank. */
+  function applySkillBoost(skill, bump) {
+    var lib = findLib(skill);
+    var card = state.skills.find(function (c) { return R.normName(c.name) === R.normName(skill); });
+    if (!card) {
+      card = { id: uid(), name: lib ? lib.name : skill, kind: 'skill', ownRank: bump, stat: lib && lib.stat ? lib.stat.toLowerCase() : 'str', checkType: 'Active Check', effect: '', used: false, gearGrants: {} };
+      state.skills.push(card);
+    } else card.ownRank += bump;
+  }
   function openPicker(title, candidates, onPick) {
     pickerMode = { onPick: onPick };
     $('picker-title').textContent = title;
@@ -1487,7 +1585,8 @@
     try { skills = await ensureSkills(); } catch (e) { skills = []; }
     openPicker('Pick an item', list, function (c) {
       var kind = R.normalizeKind(c.kind);
-      state.items.push({ id: uid(), name: c.name, kind: kind, source: c.source, slot: kind === 'gear' ? R.normalizeSlot(c.gear_slot) : null, subtype: null, placement: null, effect: c.effect || '', bonuses: R.parseItemBonuses(c.effect || '', skills), equipped: false });
+      var pick = kind === 'consumable' ? R.consumablePickFor(c.name) : null;
+      state.items.push({ id: uid(), name: c.name, kind: kind, source: c.source, slot: kind === 'gear' ? R.normalizeSlot(c.gear_slot) : null, subtype: pick ? pick.subtype : null, placement: null, effect: c.effect || '', bonuses: R.parseItemBonuses(c.effect || '', skills), use: pick ? pick.use : {}, equipped: false });
       saveSoon(); renderAll(); refreshWizard();
     });
   }
@@ -1501,16 +1600,74 @@
     $('item-create-subtype').value = '';
     $('item-create-freetype').value = '';
     $('item-create-effect').value = '';
+    $('item-create-qty').value = '1';
+    $('item-create-spell').value = '';
+    $('item-create-spellrank').value = '1';
+    $('item-create-potionkind').value = 'heal';
+    $('item-create-potionamount').value = '';
+    $('item-create-potionrounds').value = '';
+    $('item-create-potionskill').value = '';
+    $('item-create-potionmatch').value = '';
+    $('item-create-potionnote').value = '';
+    $('item-create-damage').value = '';
+    $('item-create-damagetype').value = '';
+    $('item-create-blast').value = '';
+    $('item-create-splash').value = '';
+    $('item-create-bonuses').innerHTML = '';
+    syncCreateBonusAdd();
     $('item-create-error').hidden = true;
     syncItemCreateFields();
     $('item-create-modal').hidden = false;
     $('item-create-name').focus();
   }
+  /* Bonus rows on the creation form mirror the Inventory bonus
+   * editor (same four types, same shapes), collected on Create. */
+  function syncCreateBonusRow(row) {
+    var type = row.querySelector('.create-bonus-type').value;
+    row.querySelector('.create-bonus-stat').style.display = type === 'stat' ? '' : 'none';
+    row.querySelector('.create-bonus-skill').style.display = type === 'grant' ? '' : 'none';
+    row.querySelector('.create-bonus-kind').style.display = type === 'grant' ? '' : 'none';
+  }
+  function syncCreateBonusAdd() {
+    var btn = $('item-create-bonus-add');
+    if (btn) btn.hidden = document.querySelectorAll('#item-create-bonuses .create-bonus-row').length >= 5;
+  }
+  function addCreateBonusRow() {
+    var box = $('item-create-bonuses');
+    if (box.querySelectorAll('.create-bonus-row').length >= 5) return;
+    var row = document.createElement('div');
+    row.className = 'bonus-row create-bonus-row';
+    row.innerHTML = '<select class="create-bonus-type"><option value="stat">Stat bonus</option><option value="grant">Skill grant</option><option value="dr">Damage Resistance</option><option value="evade">Evade</option></select>'
+      + '<select class="create-bonus-stat">' + R.STAT_KEYS.map(function (k) { return '<option value="' + k + '">' + k.toUpperCase() + '</option>'; }).join('') + '</select>'
+      + '<input type="text" class="create-bonus-skill" placeholder="Skill/spell name" style="display:none">'
+      + '<select class="create-bonus-kind" style="display:none"><option value="skill">skill</option><option value="spell">spell</option></select>'
+      + '<label>Amount <input type="number" class="create-bonus-amount" value="0"></label>'
+      + '<button type="button" class="create-bonus-remove">Remove bonus</button>';
+    row.querySelector('.create-bonus-type').addEventListener('change', function () { syncCreateBonusRow(row); });
+    row.querySelector('.create-bonus-remove').addEventListener('click', function () { row.remove(); syncCreateBonusAdd(); });
+    box.appendChild(row);
+    syncCreateBonusRow(row);
+    syncCreateBonusAdd();
+  }
   function syncItemCreateFields() {
     var k = $('item-create-kind').value;
+    var sub = $('item-create-subtype').value;
     $('item-create-gear').hidden = k !== 'gear';
     $('item-create-consumable').hidden = k !== 'consumable';
     $('item-create-freetype').hidden = !(k === 'coupon' || k === 'material');
+    var cons = k === 'consumable';
+    $('item-create-qtygroup').hidden = !cons;
+    $('item-create-spellgroup').hidden = !(cons && (sub === 'Scroll' || sub === 'Spellbook'));
+    $('item-create-potiongroup').hidden = !(cons && sub === 'Potion');
+    $('item-create-damagegroup').hidden = !(cons && sub === 'Explosive');
+    if (cons && sub === 'Potion') {
+      var pk = $('item-create-potionkind').value;
+      $('item-create-potionamount-wrap').hidden = !(pk === 'heal' || pk === 'manaOverTime' || pk === 'skillBoost');
+      $('item-create-potionrounds-wrap').hidden = pk !== 'manaOverTime';
+      $('item-create-potionskill-wrap').hidden = pk !== 'skillBoost';
+      $('item-create-potionmatch-wrap').hidden = pk !== 'removeDebuff';
+      $('item-create-potionnote-wrap').hidden = pk !== 'heal';
+    }
   }
   function createCustomItem() {
     var name = $('item-create-name').value.trim();
@@ -1518,18 +1675,73 @@
     var err = $('item-create-error');
     function fail(msg) { err.textContent = msg; err.hidden = false; }
     if (!name) return fail('Give the item a name first.');
-    if (!kind) return fail('Choose a kind: Gear, Consumable, Coupon, or Material/Misc.');
+    if (!kind) return fail('Choose a category: Gear, Consumable, Coupon, or Material/Misc.');
     var slot = null, subtype = null;
     if (kind === 'gear') {
       slot = $('item-create-slot').value || null;
       if (!slot) return fail('Gear needs a slot: Head, Torso, Arms, Hands/Gloves, Hands/Holding, Weapon 1 Hand, Weapon 2 Hand, Legs, Feet, or Accessories.');
     } else if (kind === 'consumable') {
+      /* Subtype is optional: blank means a general consumable (e.g.
+       * bandages), used from its effect text. The subtypes that need
+       * data validate their fields below. */
       subtype = $('item-create-subtype').value || null;
-      if (!subtype) return fail('Consumables need a type: Potion, Scroll, Explosive, or Spellbook.');
     } else {
       subtype = $('item-create-freetype').value.trim() || null;
     }
-    state.items.push({ id: uid(), name: name, kind: kind, slot: slot, subtype: subtype, effect: $('item-create-effect').value.trim(), bonuses: [], equipped: false, placement: null });
+    var bonuses = [];
+    var bonusErr = null;
+    document.querySelectorAll('#item-create-bonuses .create-bonus-row').forEach(function (row) {
+      if (bonusErr) return;
+      var type = row.querySelector('.create-bonus-type').value;
+      var amount = num(row.querySelector('.create-bonus-amount').value, 0);
+      if (type === 'stat') bonuses.push({ type: 'stat', stat: row.querySelector('.create-bonus-stat').value, amount: amount });
+      else if (type === 'grant') {
+        var skill = row.querySelector('.create-bonus-skill').value.trim();
+        if (!skill) { bonusErr = 'Give the skill grant a skill/spell name.'; return; }
+        bonuses.push({ type: 'grant', skillName: skill, kind: row.querySelector('.create-bonus-kind').value, amount: amount });
+      }
+      else if (type === 'dr') bonuses.push({ type: 'dr', amount: amount });
+      else if (type === 'evade') bonuses.push({ type: 'evade', amount: amount });
+    });
+    if (bonusErr) return fail(bonusErr);
+    var use = {};
+    if (kind === 'consumable') {
+      use.qty = Math.max(1, num($('item-create-qty').value, 1));
+      if (subtype === 'Scroll' || subtype === 'Spellbook') {
+        var spell = $('item-create-spell').value.trim();
+        if (!spell) return fail('Scrolls and spellbooks need a designated spell.');
+        use.spell = spell;
+        use.spellRank = Math.max(1, num($('item-create-spellrank').value, 1));
+      } else if (subtype === 'Potion') {
+        var pk = $('item-create-potionkind').value;
+        use.potionKind = pk;
+        if (pk === 'heal' || pk === 'manaOverTime' || pk === 'skillBoost') {
+          var amt = $('item-create-potionamount').value.trim();
+          if (amt === '' || num(amt, 0) < 0) return fail('Give this potion an amount.');
+          use.potionAmount = num(amt, 0);
+        }
+        if (pk === 'manaOverTime') {
+          var rnd = $('item-create-potionrounds').value.trim();
+          if (rnd === '' || num(rnd, 0) < 1) return fail('Give this potion a number of rounds.');
+          use.potionRounds = num(rnd, 1);
+        }
+        if (pk === 'skillBoost') use.potionSkill = $('item-create-potionskill').value.trim() || null;
+        if (pk === 'removeDebuff') {
+          var m = $('item-create-potionmatch').value.trim();
+          if (!m) return fail('Say which debuff this potion removes, e.g. poison.');
+          use.potionMatch = m;
+        }
+        if (pk === 'heal') use.potionNote = $('item-create-potionnote').value.trim() || null;
+      } else if (subtype === 'Explosive') {
+        var dmg = $('item-create-damage').value.trim();
+        if (!dmg) return fail('Explosives need a damage formula, e.g. 2d6.');
+        use.damage = dmg;
+        use.damageType = $('item-create-damagetype').value.trim() || null;
+        use.blast = $('item-create-blast').value.trim() || null;
+        use.splash = $('item-create-splash').value.trim() || null;
+      }
+    }
+    state.items.push({ id: uid(), name: name, kind: kind, slot: slot, subtype: subtype, effect: $('item-create-effect').value.trim(), bonuses: bonuses, use: use, equipped: false, placement: null });
     $('item-create-modal').hidden = true;
     saveSoon(); renderAll(); showTab('inventory');
   }
@@ -1736,10 +1948,17 @@
         return { type: 'stat', stat: 'str', amount: amount };
       }).slice(0, 5);
       // DM-sent items now carry the same taxonomy as player-created
-      // ones (kind/slot/subtype from the Send Box form); loot rows
+      // ones (kind/slot/subtype/use from the Send Box form); loot rows
       // sent before that change have none and arrive as Material/Misc.
       var lootKind = item.kind ? R.normalizeKind(item.kind) : 'material';
-      for (var i = 0; i < n; i++) state.items.push({ id: uid(), name: item.name, kind: lootKind, slot: lootKind === 'gear' ? (item.slot ? R.normalizeSlot(item.slot) : null) : null, subtype: item.subtype || null, placement: null, effect: item.notes || '', bonuses: JSON.parse(JSON.stringify(bonuses)), equipped: false });
+      if (lootKind === 'consumable') {
+        // Consumables stack: one entry carrying the quantity, so
+        // using it can count down and remove it at zero.
+        var useIn = item.use || {};
+        state.items.push({ id: uid(), name: item.name, kind: 'consumable', slot: null, subtype: item.subtype || null, placement: null, effect: item.notes || '', bonuses: JSON.parse(JSON.stringify(bonuses)), use: Object.assign({}, useIn, { qty: n }), equipped: false });
+      } else {
+        for (var i = 0; i < n; i++) state.items.push({ id: uid(), name: item.name, kind: lootKind, slot: lootKind === 'gear' ? (item.slot ? R.normalizeSlot(item.slot) : null) : null, subtype: item.subtype || null, placement: null, effect: item.notes || '', bonuses: JSON.parse(JSON.stringify(bonuses)), use: {}, equipped: false });
+      }
       syncGearGrants(); saveSoon(); renderAll();
     },
     delItem: function (id) {
@@ -1924,6 +2143,148 @@
       saveSoon(); renderAll();
     },
     delHotlist: function (i) { state.hotlist.splice(i, 1); saveSoon(); renderAll(); },
+    openHotlistPicker: function (type) {
+      var cands = [];
+      var title = '';
+      if (type === 'item') { cands = state.items.filter(function (it) { return it.kind === 'consumable'; }); title = 'Add a consumable to the hotlist'; }
+      else if (type === 'skill') { cands = state.skills.filter(function (c) { return cardRank(c) >= 1; }); title = 'Add a skill to the hotlist'; }
+      else { cands = state.spells.filter(function (c) { return cardRank(c) >= 1; }); title = 'Add a spell to the hotlist'; }
+      if (!cands.length) { alert(type === 'item' ? 'No consumables in your inventory.' : 'No known ' + type + 's yet.'); return; }
+      openPicker(title, cands, function (c) {
+        if (state.hotlist.length >= 10) { alert('Hotlist holds up to 10 entries.'); return; }
+        if (state.hotlist.some(function (x) { return x.type === type && x.id === c.id; })) { alert('Already on the hotlist.'); return; }
+        state.hotlist.push({ type: type, id: c.id, name: c.name });
+        saveSoon(); renderAll();
+      });
+    },
+    setItemUseField: function (id, field, value) {
+      var it = state.items.find(function (i) { return i.id === id; });
+      if (!it) return;
+      it.use = it.use || {};
+      if (field === 'qty') it.use.qty = Math.max(1, num(value, 1));
+      else if (field === 'spellRank') it.use.spellRank = Math.max(1, num(value, 1));
+      else if (field === 'potionAmount') it.use.potionAmount = Math.max(0, num(value, 0));
+      else if (field === 'potionRounds') it.use.potionRounds = Math.max(1, num(value, 1));
+      else it.use[field] = (typeof value === 'string' ? value.trim() : value) || null;
+      saveSoon(); renderAll();
+    },
+    /* Using a consumable: a confirmation window shows the effect
+     * being applied first; confirming applies it, then drops the
+     * quantity by one (removing the item at zero). */
+    useConsumable: function (id) {
+      var it = state.items.find(function (i) { return i.id === id; });
+      if (!it) return;
+      if (it.kind !== 'consumable') { alert('Only consumables can be used.'); return; }
+      var use = it.use || {};
+      var qtyNote = getQty(it) > 1 ? ' (' + getQty(it) + ' in inventory; one will be used)' : '';
+      function done() { consumeOne(id); }
+      /* Spellbook: the spell joins the known Spells at the book's rank. */
+      if (it.subtype === 'Spellbook' && use.spell) {
+        var rank = Math.max(1, num(use.spellRank, 1));
+        var known = state.spells.find(function (c) { return R.normName(c.name) === R.normName(use.spell); });
+        if (known && known.ownRank >= rank) { alert(use.spell + ' is already known at Rank ' + known.ownRank + ' or higher, so this book would teach nothing new.'); return; }
+        var lib = findLib(use.spell);
+        openUseConfirm('Use ' + it.name, '<p><strong>' + esc(use.spell) + ' learned at Rank ' + rank + '.</strong> The spell joins your known Spells; the book is consumed.' + qtyNote + '</p>' + (lib ? '<p class="hint">' + esc(lib.base_effect || lib.effect || '') + '</p>' : ''), '', function () {
+          var card = state.spells.find(function (c) { return R.normName(c.name) === R.normName(use.spell); });
+          if (!card) {
+            card = { id: uid(), name: lib ? lib.name : use.spell, kind: 'spell', ownRank: rank, stat: lib && lib.stat ? lib.stat.toLowerCase() : 'int', checkType: 'Active Check', effect: '', used: false, gearGrants: {} };
+            state.spells.push(card);
+          } else if (card.ownRank < rank) card.ownRank = rank;
+          done();
+        });
+        return;
+      }
+      /* Scroll: one-shot cast, no Mana, spell NOT learned (book: the
+       * scroll turns to dust after use). */
+      if (it.subtype === 'Scroll' && use.spell) {
+        var srank = Math.max(1, num(use.spellRank, 1));
+        var slib = findLib(use.spell);
+        openUseConfirm('Use ' + it.name, '<p><strong>' + esc(use.spell) + ' (Rank ' + srank + ') cast.</strong> One-shot, no Mana cost; the spell is NOT added to your known Spells. The scroll turns to dust.' + qtyNote + '</p>' + (slib ? '<p class="hint">' + esc(slib.base_effect || slib.effect || '') + '</p>' : ''), '', done);
+        return;
+      }
+      /* Potions: what the sheet can apply mechanically, it does. */
+      if (it.subtype === 'Potion' && use.potionKind) {
+        var pk = use.potionKind;
+        if (pk === 'heal') {
+          var n = Math.max(0, num(use.potionAmount, 0));
+          var before = state.hpCurrent;
+          var after = Math.min(10, before + n);
+          openUseConfirm('Use ' + it.name, '<p><strong>Heals ' + n + ' Health Bar slots (' + before + ' → ' + after + ').</strong>' + qtyNote + '</p>' + (use.potionNote ? '<p>' + esc(use.potionNote) + ' — apply that part with your DM.</p>' : ''), '', function () { state.hpCurrent = after; done(); });
+          return;
+        }
+        if (pk === 'manaFull') {
+          var maxM = R.maxMana(computeStats().int.total);
+          openUseConfirm('Use ' + it.name, '<p><strong>Fully restores Mana (' + state.manaCurrent + ' → ' + maxM + ').</strong>' + qtyNote + '</p>', '', function () { state.manaCurrent = maxM; done(); });
+          return;
+        }
+        if (pk === 'manaOverTime') {
+          var amt = Math.max(0, num(use.potionAmount, 0));
+          var rounds = Math.max(1, num(use.potionRounds, 1));
+          openUseConfirm('Use ' + it.name, '<p><strong>Restores ' + amt + ' Mana per round for ' + rounds + ' rounds.</strong> Added to your Buffs — track the rounds with your DM.' + qtyNote + '</p>', '', function () { state.buffs.push('Mana Refill: +' + amt + ' Mana/round for ' + rounds + ' rounds'); done(); });
+          return;
+        }
+        if (pk === 'skillBoost') {
+          var bump = Math.max(0, num(use.potionAmount, 0));
+          var skill = (use.potionSkill || '').trim();
+          if (skill) {
+            var sc = state.skills.find(function (c) { return R.normName(c.name) === R.normName(skill); });
+            var newRank = (sc ? sc.ownRank : 0) + bump;
+            openUseConfirm('Use ' + it.name, '<p><strong>' + esc(skill) + ' permanently +' + bump + ' (trained rank ' + (sc ? sc.ownRank : 0) + ' → ' + newRank + ').</strong>' + qtyNote + '</p>', '', function () { applySkillBoost(skill, bump); done(); });
+          } else {
+            var knownSkills = state.skills.filter(function (c) { return cardRank(c) >= 1; });
+            var extra = knownSkills.length
+              ? '<label>Skill <select id="use-confirm-skill">' + knownSkills.map(function (c) { return '<option>' + esc(c.name) + '</option>'; }).join('') + '</select></label>'
+              : '<label>Skill <input type="text" id="use-confirm-skill" placeholder="Skill name"></label>';
+            openUseConfirm('Use ' + it.name, '<p><strong>One Skill permanently +' + bump + '.</strong> Pick which one.' + qtyNote + '</p>', extra, function () {
+              var chosen = $('use-confirm-skill') ? $('use-confirm-skill').value.trim() : '';
+              if (!chosen) { alert('Pick a skill first.'); return; }
+              applySkillBoost(chosen, bump); done();
+            });
+          }
+          return;
+        }
+        if (pk === 'healPet') {
+          openUseConfirm('Use ' + it.name, '<p><strong>Heals ' + Math.max(0, num(use.potionAmount, 0)) + ' Health Bar slots on a pet.</strong> Pets do not track current HP on this sheet, so apply it to the pet with your DM.' + qtyNote + '</p>', '', done);
+          return;
+        }
+        if (pk === 'removeDebuff') {
+          var match = (use.potionMatch || '').trim();
+          if (!match) { alert('This potion does not say which debuff it removes. Set it in Inventory first.'); return; }
+          openUseConfirm('Use ' + it.name, '<p><strong>Removes debuffs mentioning "' + esc(match) + '".</strong>' + qtyNote + '</p>', '', function () {
+            var ml = match.toLowerCase();
+            state.debuffs = state.debuffs.filter(function (d) { return String(d).toLowerCase().indexOf(ml) < 0; });
+            done();
+          });
+          return;
+        }
+        if (pk === 'food') {
+          openUseConfirm('Use ' + it.name, '<p><strong>Eaten.</strong> Food for crawlers; no mechanical effect on the sheet.' + qtyNote + '</p>' + (it.effect ? '<p class="hint">' + esc(it.effect) + '</p>' : ''), '', done);
+          return;
+        }
+        /* potionKind 'other': falls through to the generic confirmation. */
+      }
+      /* Explosives: show the damage formula (book area rules: the
+       * blast area takes full damage, the splash zone takes half). */
+      if (it.subtype === 'Explosive' && use.damage) {
+        var dmgLine = '<strong>' + esc(use.damage) + (use.damageType ? ' ' + esc(use.damageType) : '') + ' damage</strong>';
+        if (use.blast) dmgLine += ' · Blast ' + esc(use.blast) + ' (full damage)';
+        if (use.splash) dmgLine += ' · Splash ' + esc(use.splash) + ' (half damage)';
+        openUseConfirm('Use ' + it.name, '<p>' + dmgLine + '.</p>' + (it.effect ? '<p class="hint">' + esc(it.effect) + '</p>' : '') + '<p class="hint">Area attacks: the blast area takes full damage, the splash zone takes half.' + qtyNote + '</p>', '', done);
+        return;
+      }
+      /* Standalone debuff removal (e.g. Bandages) and anything else:
+       * show the effect, consume one. */
+      if (use.removeDebuff) {
+        var mm = use.removeDebuff;
+        openUseConfirm('Use ' + it.name, '<p><strong>Removes debuffs mentioning "' + esc(mm) + '".</strong>' + qtyNote + '</p>', '', function () {
+          var ml2 = String(mm).toLowerCase();
+          state.debuffs = state.debuffs.filter(function (d) { return String(d).toLowerCase().indexOf(ml2) < 0; });
+          done();
+        });
+        return;
+      }
+      openUseConfirm('Use ' + it.name, '<p>' + esc(it.effect || 'Consumable used.') + '</p><p class="hint">No mechanical effect the sheet can apply — apply the rest with your DM.' + qtyNote + '</p>', '', done);
+    },
     rollCard: function (kind, id) {
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
@@ -2210,12 +2571,9 @@
     })();
     click('buff-add', function () { var v = $('buff-name').value.trim(); if (v) { state.buffs.push(v); $('buff-name').value = ''; saveSoon(); renderAll(); } });
     click('debuff-add', function () { var v = $('debuff-name').value.trim(); if (v) { state.debuffs.push(v); $('debuff-name').value = ''; saveSoon(); renderAll(); } });
-    click('hotlist-add', function () {
-      var v = $('hotlist-name').value.trim();
-      if (!v) return;
-      if (state.hotlist.length >= 10) { alert('Hotlist holds up to 10 entries.'); return; }
-      state.hotlist.push(v); $('hotlist-name').value = ''; saveSoon(); renderAll();
-    });
+    click('hotlist-add-item', function () { DCC.openHotlistPicker('item'); });
+    click('hotlist-add-skill', function () { DCC.openHotlistPicker('skill'); });
+    click('hotlist-add-spell', function () { DCC.openHotlistPicker('spell'); });
     click('btn-distribute', openDistribute);
     click('dist-cancel', function () { $('distribute-modal').hidden = true; });
     click('dist-apply', function () {
@@ -2239,7 +2597,12 @@
     click('item-add', function () { openItemCreate(); });
     click('item-create-save', function () { createCustomItem(); });
     click('item-create-cancel', function () { $('item-create-modal').hidden = true; });
+    click('item-create-bonus-add', function () { addCreateBonusRow(); });
     (function () { var k = $('item-create-kind'); if (k) k.addEventListener('change', syncItemCreateFields); })();
+    (function () { var s = $('item-create-subtype'); if (s) s.addEventListener('change', syncItemCreateFields); })();
+    (function () { var p = $('item-create-potionkind'); if (p) p.addEventListener('change', syncItemCreateFields); })();
+    click('use-confirm-ok', function () { var fn = pendingUseConfirm; pendingUseConfirm = null; $('use-confirm-modal').hidden = true; if (fn) fn(); });
+    click('use-confirm-cancel', function () { pendingUseConfirm = null; $('use-confirm-modal').hidden = true; });
     click('atk-add', function () {
       var name = $('atk-name').value.trim();
       if (!name) { alert('Give the attack a name first.'); return; }

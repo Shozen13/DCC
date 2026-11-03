@@ -180,6 +180,80 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Consumables: quantity, scrolls, spellbooks, potions, explosives, hotlist (2026-11-03, ?v=31, built locally)
+
+Antony's consumables spec, plus what the rulebook actually says
+(read, not assumed). Quantity defaults to 1 and is designated on
+consumable creation (player form and DM form quantity already
+existed there); DM-sent consumables now arrive as ONE stacked
+entry carrying the quantity instead of N duplicate entries, and
+old loot rows (no taxonomy) still arrive as before.
+
+- Scrolls: designated spell + rank at creation (required on the
+  player form; optional on DM sends, since a DM may send an
+  unidentified scroll and the player designates it in Inventory
+  afterwards). Using one casts the spell at that rank with no Mana
+  cost and does NOT add it to known Spells; the scroll is consumed.
+  Book grounding: scrolls are one-shot, set Rank at writing, no
+  Mana, turn to dust after use.
+- Spellbooks: designated spell + rank; using one teaches the spell
+  at that rank (trained rank, so it stacks with any race/class or
+  gear floor) and consumes the book. Already known at that rank or
+  higher refuses with a message instead of wasting the book. Book
+  grounding: reading grants a single Spell at a predefined Rank,
+  then the book disappears.
+- Potions (book effects implemented): Heal slots (Healing 5, Good
+  6, Gold Standard 7, Supreme 8, Severe 9 — injury-mending notes
+  ride along as text, since the sheet tracks no injuries); Mana
+  Potion restores fully; Good Mana Refill adds a Buff (+15/round
+  for 10 rounds, rounds tracked with the DM); Skill potions (+1/+2/
+  +3/+5) raise a Skill's trained rank permanently, skill designated
+  at creation or picked when used, unknown skills become known at
+  the boosted rank; Heal Pet shows its effect (pets track max slots
+  only, not current HP); Antidote and Bandages remove matching
+  debuffs (poison, blood trail); Biscuits are food (text only).
+  Book rules NOT enforced by the sheet: at most one potion every
+  other round in combat (Potion Sickness = Poisoned Debuff), and
+  healing potions usable as an Interrupt — no round tracker exists
+  to enforce either.
+- Explosives: Antony's question first — there is NO general
+  explosives table in the book. The listed explosives are the two
+  dynamites (Basic 1d6 Bludgeoning, 0ft Blast +5ft Splash; Good
+  Goblin 2d6, 5ft Blast +5ft Splash), plus general area rules
+  (blast full damage, splash half). So explosive items carry their
+  own damage formula + type + blast + splash, and the use
+  confirmation shows exactly that formula.
+- Using any consumable: a confirmation window shows the effect
+  being applied first ("X learned", "X cast", "X damage formula",
+  "Heals N slots (a → b)", ...), then one unit is consumed; at
+  zero the item leaves the inventory (and its hotlist entry with
+  it). A consumable type left blank at creation is a general
+  consumable: confirmation shows its effect text, one unit consumed.
+- Hotlist: no more free-text names. Entries are now real refs —
+  any consumable in Inventory, or any skill/spell the player knows
+  (Rank 1+) — added via three picker buttons, Use for consumables,
+  Roll for skills/spells, max 10, no duplicates. Old free-text
+  entries migrate to display-only notes; dangling refs (item sold,
+  card deleted) are pruned.
+- Rulebook picks auto-fill all of this (potion map, dynamite map,
+  scroll/spellbook subtypes) in both the player picker and the DM
+  Send Box/Achievement form, which gained the same spell/potion/
+  damage field groups.
+
+## Creation form: Category label + bonuses at creation (2026-11-03, ?v=30, built locally)
+
+Two fixes Antony reported on ?v=29. First, the item
+classification label is now "Category" everywhere it appears on an
+item form — the creation form, the Inventory card editor, and the
+DM Send Box/Achievement form (the stored field is still `kind`,
+so no data migration was needed). Second, the creation form
+regained bonus effects: it now has the same bonus editor as the
+Inventory cards (Stat bonus, Skill grant, Damage Resistance,
+Evade, up to 5 rows), collected when the item is created, so a new
+item no longer has to be created bare and edited afterwards. A
+skill-grant row without a skill name refuses with a message, like
+the other required fields.
+
 ## Item taxonomy, gear slots, loadouts (2026-11-03, ?v=29, built locally)
 
 Antony's spec: items have a required kind — Gear, Consumables,

@@ -289,5 +289,37 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
   eq(m.s, null, 'legacy 1 Hand after 2 Hand derives nothing');
 })();
 
+// Consumable rulebook picks (book loot list, pp.216-218)
+(function () {
+  var p = R.consumablePickFor('Healing Potion');
+  eq(p.subtype, 'Potion', 'healing potion subtype');
+  eq(p.use.potionKind, 'heal', 'healing potion effect');
+  eq(p.use.potionAmount, 5, 'healing potion heals 5');
+  var g = R.consumablePickFor('Gold Standard Healing Potion');
+  eq(g.use.potionAmount, 7, 'gold standard heals 7');
+  eq(g.use.potionNote, 'Mends one Minor Injury', 'gold standard mends minor');
+  var m = R.consumablePickFor('Mana Potion');
+  eq(m.use.potionKind, 'manaFull', 'mana potion restores fully');
+  var r = R.consumablePickFor('Good Mana Refill Potion');
+  eq(r.use.potionKind, 'manaOverTime', 'mana refill over time');
+  eq(r.use.potionAmount, 15, 'mana refill 15 per round');
+  eq(r.use.potionRounds, 10, 'mana refill 10 rounds');
+  var s = R.consumablePickFor('Potion of +3 Skill');
+  eq(s.use.potionKind, 'skillBoost', 'skill potion boosts');
+  eq(s.use.potionAmount, 3, 'skill potion +3');
+  var d = R.consumablePickFor('Stick of Good Goblin Dynamite');
+  eq(d.subtype, 'Explosive', 'dynamite subtype');
+  eq(d.use.damage, '2d6', 'good dynamite 2d6');
+  eq(d.use.blast, '5ft', 'good dynamite blast 5ft');
+  eq(d.use.splash, '+5ft', 'good dynamite splash +5ft');
+  var b = R.consumablePickFor('Bandages');
+  eq(b.subtype, null, 'bandages have no potion subtype');
+  eq(b.use.removeDebuff, 'blood trail', 'bandages remove blood trail');
+  var sc = R.consumablePickFor('Spell Scroll');
+  eq(sc.subtype, 'Scroll', 'spell scroll subtype');
+  eq(sc.use.spell, undefined, 'scroll spell designated later');
+  eq(R.consumablePickFor('Something Unlisted'), null, 'unlisted consumable has no pick');
+})();
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

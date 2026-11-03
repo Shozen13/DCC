@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=29">
+<link rel="stylesheet" href="css/style.css?v=31">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -182,9 +182,8 @@
         <button type="button" id="btn-distribute">Distribute stat points</button></p>
       <h3>Hotlist</h3>
       <div id="hotlist"></div>
-      <p class="hint">Hotlist: up to 10 quick slots. Add a skill, spell, or item name.</p>
-      <input type="text" id="hotlist-name" placeholder="Hotlist entry name">
-      <button type="button" id="hotlist-add">Add to hotlist</button>
+      <p class="hint">Hotlist: up to 10 quick slots. Consumables are used from here, skills and spells roll from here.</p>
+      <div class="btn-row"><button type="button" id="hotlist-add-item">Add consumable</button><button type="button" id="hotlist-add-skill">Add skill</button><button type="button" id="hotlist-add-spell">Add spell</button></div>
     </section>
 
     <section class="panel" id="panel-attacks">
@@ -578,8 +577,8 @@
   <div class="modal wide">
     <h2>Add custom item</h2>
     <label>Name <input type="text" id="item-create-name" placeholder="e.g. Ember Sword"></label>
-    <label>Kind <select id="item-create-kind">
-      <option value="">Choose a kind…</option>
+    <label>Category <select id="item-create-kind">
+      <option value="">Choose a category…</option>
       <option value="gear">Gear</option>
       <option value="consumable">Consumable</option>
       <option value="coupon">Coupon</option>
@@ -594,9 +593,35 @@
       <option>Potion</option><option>Scroll</option><option>Explosive</option><option>Spellbook</option>
     </select></label></div>
     <div id="item-create-freetype" hidden><label>Type (free form) <input type="text" id="item-create-freetype" placeholder="e.g. Tavern coupon, Iron ore"></label></div>
+    <div id="item-create-qtygroup" hidden><label>Quantity <input type="number" id="item-create-qty" value="1" min="1"></label></div>
+    <div id="item-create-spellgroup" hidden><label>Spell <input type="text" id="item-create-spell" placeholder="e.g. Fireball"></label><label>Rank <input type="number" id="item-create-spellrank" value="1" min="1"></label></div>
+    <div id="item-create-potiongroup" hidden>
+      <label>Potion effect <select id="item-create-potionkind">
+        <option value="heal">Heal Health Bar slots</option><option value="manaFull">Restore Mana fully</option><option value="manaOverTime">Mana over time</option><option value="skillBoost">Skill boost (permanent)</option><option value="healPet">Heal pet</option><option value="removeDebuff">Remove debuff</option><option value="food">Food</option><option value="other">Other</option>
+      </select></label>
+      <div id="item-create-potionamount-wrap"><label>Amount <input type="number" id="item-create-potionamount" min="0"></label></div>
+      <div id="item-create-potionrounds-wrap" hidden><label>Rounds <input type="number" id="item-create-potionrounds" min="1"></label></div>
+      <div id="item-create-potionskill-wrap" hidden><label>Skill (optional — blank means choose when used) <input type="text" id="item-create-potionskill" placeholder="e.g. First Aid"></label></div>
+      <div id="item-create-potionmatch-wrap" hidden><label>Debuff it removes <input type="text" id="item-create-potionmatch" placeholder="e.g. poison"></label></div>
+      <div id="item-create-potionnote-wrap" hidden><label>Note <input type="text" id="item-create-potionnote" placeholder="e.g. Mends one Minor Injury"></label></div>
+    </div>
+    <div id="item-create-damagegroup" hidden><label>Damage formula <input type="text" id="item-create-damage" placeholder="e.g. 2d6"></label><label>Damage type <input type="text" id="item-create-damagetype" placeholder="e.g. Bludgeoning"></label><label>Blast radius <input type="text" id="item-create-blast" placeholder="e.g. 5ft"></label><label>Splash <input type="text" id="item-create-splash" placeholder="e.g. +5ft"></label></div>
     <label>Effect / notes <textarea id="item-create-effect" rows="3" placeholder="What does it do?"></textarea></label>
+    <p><strong>Bonuses (apply only while equipped, up to 5):</strong></p>
+    <div id="item-create-bonuses"></div>
+    <div class="btn-row"><button type="button" id="item-create-bonus-add">Add bonus</button></div>
     <p id="item-create-error" class="hint" hidden></p>
     <div class="btn-row"><button type="button" id="item-create-save">Create item</button><button type="button" id="item-create-cancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Consumable use confirmation -->
+<div class="overlay" id="use-confirm-modal" hidden>
+  <div class="modal">
+    <h2 id="use-confirm-title">Use item</h2>
+    <div id="use-confirm-body"></div>
+    <div id="use-confirm-extra"></div>
+    <div class="btn-row"><button type="button" id="use-confirm-ok">Use</button><button type="button" id="use-confirm-cancel">Cancel</button></div>
   </div>
 </div>
 
@@ -666,10 +691,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=29"></script>
-<script src="js/convert.js?v=29"></script>
-<script src="js/app.js?v=29"></script>
-<script src="js/wizard.js?v=29"></script>
-<script src="js/cloud.js?v=29"></script>
+<script src="js/rules.js?v=31"></script>
+<script src="js/convert.js?v=31"></script>
+<script src="js/app.js?v=31"></script>
+<script src="js/wizard.js?v=31"></script>
+<script src="js/cloud.js?v=31"></script>
 </body>
 </html>

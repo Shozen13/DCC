@@ -1491,16 +1491,53 @@ function dmItemApply(sel) {
   if (kindEl && entry.kind) {
     kindEl.value = R.normalizeKind(entry.kind);
     if (slotEl) slotEl.value = kindEl.value === 'gear' ? (R.normalizeSlot(entry.gear_slot) || '') : '';
+    var pick = kindEl.value === 'consumable' ? R.consumablePickFor(entry.name) : null;
+    if (pick) {
+      var subEl = group.querySelector('.dm-item-subtype');
+      if (subEl) subEl.value = pick.subtype || '';
+      var u = pick.use || {};
+      var setVal = function (sel, v) { var el = group.querySelector(sel); if (el) el.value = (v === undefined || v === null) ? '' : v; };
+      setVal('.dm-item-potionkind', u.potionKind || '');
+      setVal('.dm-item-potionamount', u.potionAmount);
+      setVal('.dm-item-potionrounds', u.potionRounds);
+      setVal('.dm-item-potionskill', u.potionSkill);
+      setVal('.dm-item-potionmatch', u.potionMatch);
+      setVal('.dm-item-potionnote', u.potionNote);
+      setVal('.dm-item-damage', u.damage);
+      setVal('.dm-item-damagetype', u.damageType);
+      setVal('.dm-item-blast', u.blast);
+      setVal('.dm-item-splash', u.splash);
+      // Bandages carry no subtype group; keep their debuff removal
+      // on the group so collectDmItems can pick it up.
+      if (u.removeDebuff) group.dataset.removeDebuff = u.removeDebuff; else delete group.dataset.removeDebuff;
+    }
     dmItemKindSync(group);
   }
 }
+function dmItemPotionKindSync(group) {
+  var pk = group.querySelector('.dm-item-potionkind') ? group.querySelector('.dm-item-potionkind').value : '';
+  var show = function (sel, on) { var el = group.querySelector(sel); if (el) el.style.display = on ? '' : 'none'; };
+  show('.dm-item-potionamount-wrap', pk === 'heal' || pk === 'manaOverTime' || pk === 'skillBoost');
+  show('.dm-item-potionrounds-wrap', pk === 'manaOverTime');
+  show('.dm-item-potionskill-wrap', pk === 'skillBoost');
+  show('.dm-item-potionmatch-wrap', pk === 'removeDebuff');
+  show('.dm-item-potionnote-wrap', pk === 'heal');
+}
 function dmItemKindSync(group) {
   var kind = group.querySelector('.dm-item-kind') ? group.querySelector('.dm-item-kind').value : '';
+  var sub = group.querySelector('.dm-item-subtype') ? group.querySelector('.dm-item-subtype').value : '';
   var gear = group.querySelector('.dm-item-gear'); if (gear) gear.style.display = kind === 'gear' ? '' : 'none';
   var cons = group.querySelector('.dm-item-consumable'); if (cons) cons.style.display = kind === 'consumable' ? '' : 'none';
   var free = group.querySelector('.dm-item-freetype'); if (free) free.style.display = (kind === 'coupon' || kind === 'material') ? '' : 'none';
+  var cons2 = kind === 'consumable';
+  var sg = group.querySelector('.dm-item-spellgroup'); if (sg) sg.style.display = cons2 && (sub === 'Scroll' || sub === 'Spellbook') ? '' : 'none';
+  var pg = group.querySelector('.dm-item-potiongroup'); if (pg) pg.style.display = cons2 && sub === 'Potion' ? '' : 'none';
+  var dg = group.querySelector('.dm-item-damagegroup'); if (dg) dg.style.display = cons2 && sub === 'Explosive' ? '' : 'none';
+  dmItemPotionKindSync(group);
 }
 function onDmItemKindChange(sel) { var g = sel.closest('.dm-item-group'); if (g) dmItemKindSync(g); }
+function onDmItemSubtypeChange(sel) { var g = sel.closest('.dm-item-group'); if (g) dmItemKindSync(g); }
+function onDmItemPotionKindChange(sel) { var g = sel.closest('.dm-item-group'); if (g) dmItemPotionKindSync(g); }
 function updateBonusEntryVisibility(entry) {
   var type = entry.querySelector('.bonus-type') ? entry.querySelector('.bonus-type').value : 'stat';
   var statEl = entry.querySelector('.bonus-stat');
@@ -1540,9 +1577,17 @@ function addDmItemRow(containerId) {
   group.className = 'dm-item-group';
   group.innerHTML = '<div><label>Rulebook item</label><select class="dm-item-rulebook" onchange="dmItemApply(this)">' + itemOptions() + '</select></div>'
     + '<div><label>Item name</label><input type="text" class="dm-item-name" placeholder="e.g. Health Potion"></div>'
-    + '<div><label>Kind</label><select class="dm-item-kind" onchange="onDmItemKindChange(this)"><option value="">Choose a kind…</option><option value="gear">Gear</option><option value="consumable">Consumable</option><option value="coupon">Coupon</option><option value="material">Material/Misc</option></select></div>'
+    + '<div><label>Category</label><select class="dm-item-kind" onchange="onDmItemKindChange(this)"><option value="">Choose a category…</option><option value="gear">Gear</option><option value="consumable">Consumable</option><option value="coupon">Coupon</option><option value="material">Material/Misc</option></select></div>'
     + '<div class="dm-item-gear" style="display:none"><label>Slot</label><select class="dm-item-slot"><option value="">Choose a slot…</option><option>Head</option><option>Torso</option><option>Arms</option><option>Hands/Gloves</option><option>Hands/Holding</option><option>Weapon 1 Hand</option><option>Weapon 2 Hand</option><option>Legs</option><option>Feet</option><option>Accessories</option></select></div>'
-    + '<div class="dm-item-consumable" style="display:none"><label>Type</label><select class="dm-item-subtype"><option value="">Choose a type…</option><option>Potion</option><option>Scroll</option><option>Explosive</option><option>Spellbook</option></select></div>'
+    + '<div class="dm-item-consumable" style="display:none"><label>Type</label><select class="dm-item-subtype" onchange="onDmItemSubtypeChange(this)"><option value="">Choose a type…</option><option>Potion</option><option>Scroll</option><option>Explosive</option><option>Spellbook</option></select></div>'
+    + '<div class="dm-item-spellgroup" style="display:none"><label>Spell</label><input type="text" class="dm-item-spell" placeholder="e.g. Fireball"><label>Rank</label><input type="number" class="dm-item-spellrank" value="1" min="1"></div>'
+    + '<div class="dm-item-potiongroup" style="display:none"><label>Potion effect</label><select class="dm-item-potionkind" onchange="onDmItemPotionKindChange(this)"><option value="">Choose an effect…</option><option value="heal">Heal Health Bar slots</option><option value="manaFull">Restore Mana fully</option><option value="manaOverTime">Mana over time</option><option value="skillBoost">Skill boost (permanent)</option><option value="healPet">Heal pet</option><option value="removeDebuff">Remove debuff</option><option value="food">Food</option><option value="other">Other</option></select>'
+    + '<div class="dm-item-potionamount-wrap"><label>Amount</label><input type="number" class="dm-item-potionamount"></div>'
+    + '<div class="dm-item-potionrounds-wrap" style="display:none"><label>Rounds</label><input type="number" class="dm-item-potionrounds"></div>'
+    + '<div class="dm-item-potionskill-wrap" style="display:none"><label>Skill (optional)</label><input type="text" class="dm-item-potionskill"></div>'
+    + '<div class="dm-item-potionmatch-wrap" style="display:none"><label>Debuff it removes</label><input type="text" class="dm-item-potionmatch"></div>'
+    + '<div class="dm-item-potionnote-wrap" style="display:none"><label>Note</label><input type="text" class="dm-item-potionnote"></div></div>'
+    + '<div class="dm-item-damagegroup" style="display:none"><label>Damage formula</label><input type="text" class="dm-item-damage" placeholder="e.g. 2d6"><label>Damage type</label><input type="text" class="dm-item-damagetype"><label>Blast radius</label><input type="text" class="dm-item-blast"><label>Splash</label><input type="text" class="dm-item-splash"></div>'
     + '<div class="dm-item-freetype" style="display:none"><label>Type (free form)</label><input type="text" class="dm-item-freetype" placeholder="e.g. Tavern coupon, Iron ore"></div>'
     + '<div><label>Description</label><textarea class="dm-item-notes" placeholder="Describe stats, effects, duration, weight, or charges..."></textarea></div>'
     + '<div><label>Quantity (each player gets this many)</label><input type="number" class="dm-item-qty" value="1" min="1"></div>'
@@ -1559,14 +1604,15 @@ function collectDmItems(containerId) {
     var name = group.querySelector('.dm-item-name').value.trim();
     if (!name) return;
     var kind = group.querySelector('.dm-item-kind') ? group.querySelector('.dm-item-kind').value : '';
-    if (!kind) { error = 'Give "' + name + '" a kind (Gear, Consumable, Coupon, or Material/Misc).'; return; }
+    if (!kind) { error = 'Give "' + name + '" a category (Gear, Consumable, Coupon, or Material/Misc).'; return; }
     var slot = null, subtype = null;
     if (kind === 'gear') {
       slot = group.querySelector('.dm-item-slot').value || null;
       if (!slot) { error = 'Give "' + name + '" a slot.'; return; }
     } else if (kind === 'consumable') {
+      /* Subtype is optional (blank = general consumable); the
+       * subtypes that need data validate their fields below. */
       subtype = group.querySelector('.dm-item-subtype').value || null;
-      if (!subtype) { error = 'Give "' + name + '" a consumable type.'; return; }
     } else {
       subtype = group.querySelector('.dm-item-freetype').value.trim() || null;
     }
@@ -1579,7 +1625,47 @@ function collectDmItems(containerId) {
         amount: entry.querySelector('.bonus-amount').value || 0
       });
     });
-    items.push({ name: name, qty: group.querySelector('.dm-item-qty').value || 1, notes: group.querySelector('.dm-item-notes').value, kind: kind, slot: slot, subtype: subtype, bonuses: bonuses });
+    /* Use payload, mirroring the player's creation form. Spell and
+     * rank are optional here (unlike player creation): a DM may send
+     * an unidentified scroll or book, and the player designates the
+     * spell in Inventory after receiving it. */
+    var use = {};
+    if (kind === 'consumable') {
+      if (subtype === 'Scroll' || subtype === 'Spellbook') {
+        use.spell = group.querySelector('.dm-item-spell').value.trim() || null;
+        use.spellRank = Math.max(1, parseInt(group.querySelector('.dm-item-spellrank').value, 10) || 1);
+      } else if (subtype === 'Potion') {
+        var pk = group.querySelector('.dm-item-potionkind').value;
+        if (!pk) { error = 'Give "' + name + '" a potion effect.'; return; }
+        use.potionKind = pk;
+        if (pk === 'heal' || pk === 'manaOverTime' || pk === 'skillBoost') {
+          var amt = group.querySelector('.dm-item-potionamount').value.trim();
+          if (amt === '') { error = 'Give "' + name + '" an amount.'; return; }
+          use.potionAmount = parseInt(amt, 10) || 0;
+        }
+        if (pk === 'manaOverTime') {
+          var rnd = group.querySelector('.dm-item-potionrounds').value.trim();
+          if (rnd === '') { error = 'Give "' + name + '" a number of rounds.'; return; }
+          use.potionRounds = parseInt(rnd, 10) || 1;
+        }
+        if (pk === 'skillBoost') use.potionSkill = group.querySelector('.dm-item-potionskill').value.trim() || null;
+        if (pk === 'removeDebuff') {
+          var mm = group.querySelector('.dm-item-potionmatch').value.trim();
+          if (!mm) { error = 'Say which debuff "' + name + '" removes.'; return; }
+          use.potionMatch = mm;
+        }
+        if (pk === 'heal') use.potionNote = group.querySelector('.dm-item-potionnote').value.trim() || null;
+      } else if (subtype === 'Explosive') {
+        var dmg = group.querySelector('.dm-item-damage').value.trim();
+        if (!dmg) { error = 'Give "' + name + '" a damage formula.'; return; }
+        use.damage = dmg;
+        use.damageType = group.querySelector('.dm-item-damagetype').value.trim() || null;
+        use.blast = group.querySelector('.dm-item-blast').value.trim() || null;
+        use.splash = group.querySelector('.dm-item-splash').value.trim() || null;
+      }
+      if (group.dataset.removeDebuff) use.removeDebuff = group.dataset.removeDebuff;
+    }
+    items.push({ name: name, qty: group.querySelector('.dm-item-qty').value || 1, notes: group.querySelector('.dm-item-notes').value, kind: kind, slot: slot, subtype: subtype, use: use, bonuses: bonuses });
   });
   return { items: items, error: error };
 }

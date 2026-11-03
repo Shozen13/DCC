@@ -208,3 +208,6 @@ details.card summary::-webkit-details-marker { color:var(--teal); }
   .gear-acc-grid { grid-template-columns:repeat(2, 1fr); }
   .gear-bonus-grid { grid-template-columns:repeat(2, 1fr); }
 }
+/* Creation-form bonus rows sit inline (the modal's own label/input rules stack everything). */
+#item-create-bonuses .bonus-row select, #item-create-bonuses .bonus-row input { width:auto; }
+#item-create-bonuses .bonus-row label { display:inline-block; width:auto; margin:0; }
