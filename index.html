@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=17">
+<link rel="stylesheet" href="css/style.css?v=18">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -27,12 +27,20 @@
     <div class="logo-container">
       <img src="DCC_Banner.png" alt="Dungeon Crawler Carl Roleplaying Game">
     </div>
-    <div class="avatar-box">
-      <img id="avatar-img" alt="Crawler avatar" hidden>
-      <div id="avatar-placeholder" aria-hidden="true">?</div>
+    <div class="profile-head">
+      <div class="avatar-box">
+        <img id="avatar-img" alt="Crawler avatar" hidden>
+        <div id="avatar-placeholder" aria-hidden="true">?</div>
+      </div>
+      <div class="profile-name">
+        <strong id="profile-name">—</strong>
+        <span id="profile-sub">— • Floor 1</span>
+      </div>
     </div>
     <label class="file-label">Avatar <input type="file" id="avatar-file" accept="image/*" hidden></label>
     <button type="button" id="avatar-remove">Remove avatar</button>
+    <div class="kill-row"><span class="kill-label">💀 Player Killer</span><span class="kill-marks" id="pk-marks">No marks</span><span class="btn-row kill-btns"><button type="button" onclick="DCC.killDelta('pk',-1)">−</button><strong id="pk-count">0</strong><button type="button" onclick="DCC.killDelta('pk',1)">+</button></span></div>
+    <div class="kill-row"><span class="kill-label">⭐ Boss Kills</span><span class="kill-marks" id="boss-marks">No stars</span><span class="btn-row kill-btns"><button type="button" onclick="DCC.killDelta('boss',-1)">−</button><strong id="boss-count">0</strong><button type="button" onclick="DCC.killDelta('boss',1)">+</button></span></div>
     <label>Name <input type="text" id="f-name" placeholder="Crawler name"></label>
     <label>Number <input type="text" id="f-number" placeholder="Crawler number"></label>
     <label>Level <input type="number" id="f-level" min="1" max="250" value="1"></label>
@@ -104,13 +112,16 @@
           <button type="button" id="hp-full">Full HP</button>
         </div>
         <div class="mana-row"><strong>Mana</strong> <span id="mana-text"></span></div>
+        <div class="mana-bar"><div id="mana-fill"></div></div>
         <div class="btn-row">
           <button type="button" id="mana-minus">−1</button>
           <button type="button" id="mana-plus">+1</button>
           <button type="button" id="mana-full">Full Mana</button>
         </div>
-        <p><strong>Evade:</strong> <span id="evade-disp"></span> <span class="sub" id="evade-sub"></span></p>
-        <p><strong>Damage Resistance:</strong> <span id="dr-disp"></span> <span class="sub" id="dr-sub"></span></p>
+        <p><strong>Evade:</strong> <span id="evade-disp"></span></p>
+        <p class="formula-line" id="evade-sub"></p>
+        <p><strong>Damage Resistance:</strong> <span id="dr-disp"></span></p>
+        <p class="formula-line" id="dr-sub"></p>
         <label>Armor (own) <input type="number" id="f-armor" min="0" value="0"></label>
         <label>Evade buffs <input type="number" id="f-evade-buffs" value="0"></label>
         <label>DR buffs <input type="number" id="f-dr-buffs" value="0"></label>
@@ -574,10 +585,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=17"></script>
-<script src="js/convert.js?v=17"></script>
-<script src="js/app.js?v=17"></script>
-<script src="js/wizard.js?v=17"></script>
-<script src="js/cloud.js?v=17"></script>
+<script src="js/rules.js?v=18"></script>
+<script src="js/convert.js?v=18"></script>
+<script src="js/app.js?v=18"></script>
+<script src="js/wizard.js?v=18"></script>
+<script src="js/cloud.js?v=18"></script>
 </body>
 </html>

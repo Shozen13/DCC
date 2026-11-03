@@ -44,7 +44,7 @@
       buffs: [], debuffs: [], hotlist: [],
       skills: [], spells: [], attacks: [], items: [], pendingDamage: null,
       story: { quests: [], journal: [], pets: [], mounts: [], sponsors: [], faith: { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] }, crafting: [], bio: { appearance: '', personality: '', backstory: '', notes: '' } },
-      raceClassApplied: [], raceClassChoices: {}, raceClassMoveApplied: null, backgrounds: null,
+      raceClassApplied: [], raceClassChoices: {}, raceClassMoveApplied: null, backgrounds: null, cardOpen: {},
       activeTab: 'vitals'
     };
   }
@@ -459,6 +459,12 @@
   /* ---------------- rendering: sidebar / counters ---------------- */
   var activeTab = 'vitals';
   function renderSidebar() {
+    $('profile-name').textContent = state.name || 'Unnamed Crawler';
+    $('profile-sub').textContent = (state.race || '—') + ' • Floor ' + state.floor;
+    $('pk-count').textContent = state.pkKills;
+    $('boss-count').textContent = state.bossKills;
+    $('pk-marks').textContent = state.pkKills ? '💀 ×' + state.pkKills : 'No marks';
+    $('boss-marks').textContent = state.bossKills ? '⭐ ×' + state.bossKills : 'No stars';
     setVal('f-name', state.name);
     setVal('f-number', state.number);
     setVal('f-level', state.level);
@@ -510,14 +516,15 @@
     if (state.manaCurrent > maxMana) state.manaCurrent = maxMana;
     if (state.manaCurrent < 0) state.manaCurrent = 0;
     $('mana-text').textContent = state.manaCurrent + ' / ' + maxMana + ' Mana';
+    $('mana-fill').style.width = (maxMana ? Math.round(state.manaCurrent / maxMana * 100) : 0) + '%';
     var evadeDice = R.evadeDiceCount(raceEntry(), classEntry());
     var gearEvade = equippedBonuses().evade;
     $('evade-disp').textContent = R.evadeString(stats.dex.mod, evadeDice, state.evadeBuffs, gearEvade);
-    $('evade-sub').textContent = 'd20' + (evadeDice ? ' + ' + evadeDice + 'd4 (Race/Class)' : '') + ' + DEX ' + stats.dex.mod + ' + Buffs ' + state.evadeBuffs + (gearEvade ? ' + Gear ' + gearEvade : '');
+    $('evade-sub').textContent = 'Evade = d20' + (evadeDice ? ' + ' + evadeDice + 'd4 (Race/Class)' : '') + ' + DEX modifier (+' + stats.dex.mod + ')' + ' + Buffs (' + (state.evadeBuffs >= 0 ? '+' : '') + state.evadeBuffs + ')' + (gearEvade ? ' + Gear (+' + gearEvade + ')' : '');
     var armor = state.ownArmor + equippedBonuses().dr;
     var dr = R.totalDR(armor, state.drBuffs, raceClassDR());
     $('dr-disp').textContent = dr;
-    $('dr-sub').textContent = 'Armor ' + armor + ' + Buffs ' + state.drBuffs + (raceClassDR() ? ' + Race/Class ' + raceClassDR() : '');
+    $('dr-sub').textContent = 'Damage Resistance = Armor (' + armor + ') + Buffs (' + (state.drBuffs >= 0 ? '+' : '') + state.drBuffs + ')' + (raceClassDR() ? ' + Race/Class (+' + raceClassDR() + ')' : '');
     setVal('f-armor', state.ownArmor);
     setVal('f-evade-buffs', state.evadeBuffs);
     setVal('f-dr-buffs', state.drBuffs);
@@ -528,10 +535,10 @@
       cards += '<div class="stat-card"><h3>' + k.toUpperCase() + ' — ' + R.STAT_NAMES[k] + '</h3>'
         + '<label>Base (edit to set) <input type="number" min="1" value="' + s.derived + '" onchange="DCC.setOwnBase(\'' + k + '\', this.value)"></label>'
         + '<p>Derived Base: <strong>' + s.derived + '</strong> (own + positive race/class + split)</p>'
+        + '<p class="stat-total">Total: <strong>' + s.total + '</strong> &nbsp; Modifier: <strong>+' + s.mod + '</strong></p>'
         + '<label>Enhance (own) <input type="number" min="0" value="' + (state.ownEnh[k] || 0) + '" onchange="DCC.setOwnEnh(\'' + k + '\', this.value)"></label>'
         + '<p>Gear: +' + s.gear + ' &nbsp; Race/Class: ' + (s.fixed + s.split >= 0 ? '+' : '') + (s.fixed + s.split) + '</p>'
-        + (s.penalty < 0 ? '<p>Race/Class penalty: ' + s.penalty + ' (subtracted from Total)</p>' : '')
-        + '<p>Total: <strong>' + s.total + '</strong> &nbsp; Modifier: <strong>+' + s.mod + '</strong></p></div>';
+        + (s.penalty < 0 ? '<p>Race/Class penalty: ' + s.penalty + ' (subtracted from Total)</p>' : '') + '</div>';
     });
     $('stat-cards').innerHTML = cards;
     // Note: the Base input above shows the derived base; changing it
@@ -618,7 +625,8 @@
     }).join('');
     var rankOptions = '';
     for (var r = 1; r <= 20; r++) rankOptions += '<option value="' + r + '"' + (rank === r ? ' selected' : '') + '>' + r + '</option>';
-    return '<div class="card"><h4>' + esc(card.name) + '</h4>'
+    var open = !!(state.cardOpen && state.cardOpen[card.id]);
+    return '<details class="card"' + (open ? ' open' : '') + ' ontoggle="DCC.setCardOpen(\'' + card.id + '\',this.open)"><summary>' + esc(card.name) + ' — Rank ' + rank + (card.used ? ' (Used)' : '') + '</summary>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(card.name) + '" onchange="DCC.renameCard(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
       + '<label>Rank <select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select></label>'
       + '<label>Stat ' + (statNoStat
@@ -634,7 +642,7 @@
       + '<p>Rank ' + rank + (group ? ' (Group +' + group + ' in rank)' : '') + (backgroundGivenFor(card) ? ' (Background +' + backgroundGivenFor(card) + ' in rank)' : '') + (eff !== rank ? ' — effective Rank ' + eff + ' (Mage −3)' : '') + (floor ? ' — floor ' + floor : '') + '</p>'
       + cardRelationHtml(card)
       + '<label>Notes <input type="text" value="' + esc(card.effect || '') + '" onchange="DCC.setCardEffect(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
-      + rulebookBox(card) + '</div>';
+      + rulebookBox(card) + '</details>';
   }
   function renderSkills() {
     if (!cache.skills) { ensureSkills().then(function () { renderAll(); }).catch(function () {}); }
@@ -1405,6 +1413,13 @@
     openSkillPicker: openSkillPicker, openItemPicker: openItemPicker, openRaceClassPicker: openRaceClassPicker,
     showRaceClassInfo: showRaceClassInfo, openChoicePicker: openChoicePicker, pickerPick: pickerPick,
     setOwnBase: setOwnBase, setOwnEnh: setOwnEnh,
+    setCardOpen: function (id, open) {
+      // Collapsed by default; a card the user opened stays open on reload.
+      // No re-render here: re-rendering would rebuild the element mid-toggle.
+      state.cardOpen = state.cardOpen || {};
+      if (open) state.cardOpen[id] = true; else delete state.cardOpen[id];
+      saveSoon();
+    },
     killDelta: function (which, delta) {
       // Boss/Player kills are raised one at a time (a kill is an event,
       // not a number to type); the number input stays for corrections.

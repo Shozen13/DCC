@@ -180,6 +180,34 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Profile + readability pass (2026-11-03, ?v=18, built locally)
+
+From Antony's screenshots of his sheet vs CrawlerCo:
+
+1. **Skills/Spells cards are collapsible, collapsed by default.** Each
+   card is now a `<details>` element whose summary shows name + rank
+   (+ Used); expanding reveals the rank/stat/check controls, Roll,
+   notes, and Rulebook box. A card the user opens stays open across
+   reloads (`state.cardOpen`, saved on toggle, no re-render mid-toggle).
+2. **Stat card Total/Modifier are prominent.** The Total/Modifier line
+   moved up to directly under Derived Base (it used to sit last, like a
+   footnote) and renders at 1.3rem with the numbers in solid yellow.
+3. **Evade/DR formulas in words, under the values.** Evade and DR now
+   have their own formula line beneath the value, e.g. "Evade = d20 +
+   1d4 (Race/Class) + DEX modifier (+2) + Buffs (+0)" and "Damage
+   Resistance = Armor (3) + Buffs (+0) + Race/Class (+0)", in normal
+   text size instead of the old muted inline sub-text.
+4. **Mana is a bar.** A teal fill bar under the "X / Y Mana" text,
+   width = current/max; the numerical text is unchanged.
+5. **Sidebar profile closer to CrawlerCo.** The sidebar now opens with
+   avatar beside a large uppercase name and a "Race • Floor N" line
+   (e.g. "Human • Floor 1"), followed by Player Killer and Boss Kills
+   rows with −/count/+ and "No marks"/"No stars" text at zero (the same
+   kill state as the Vitals Trackers buttons, not a second copy of it).
+   Name/Number/Level/Floor inputs and Race/Class pickers stay below, as
+   before. Rest buttons were deliberately NOT duplicated into the
+   sidebar — they already live in the Vitals Rest section.
+
 ## Post-launch fix (2026-11-03, ?v=17, built locally)
 
 Three reports from live use of the merged site, all fixed here:

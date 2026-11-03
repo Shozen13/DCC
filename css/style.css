@@ -126,3 +126,22 @@ body:not(.dm-mode) #panel-dm, body:not(.dm-mode) #panel-sendbox, body:not(.dm-mo
 .dm-item-group { border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:10px; }
 .dm-item-group label { display:flex; flex-direction:column; gap:4px; font-size:.9rem; color:var(--muted); margin-bottom:8px; }
 .bonus-entry { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:6px; }
+
+/* ---- Profile / Vitals readability (2026-11-03) ---- */
+.profile-head { display:flex; gap:12px; align-items:center; }
+.profile-head .avatar-box { margin:0; flex-shrink:0; width:96px; height:96px; }
+.profile-name { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.profile-name strong { font-size:1.35rem; text-transform:uppercase; color:var(--yellow); overflow-wrap:anywhere; }
+.profile-name span { font-size:.9rem; color:var(--muted); }
+.kill-row { display:flex; gap:8px; align-items:center; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; }
+.kill-row .kill-label { font-weight:bold; }
+.kill-row .kill-marks { color:var(--muted); font-size:.85rem; margin-right:auto; }
+.kill-row .kill-btns { margin:0; align-items:center; }
+.kill-row .kill-btns strong { color:var(--yellow); min-width:1.2em; text-align:center; }
+.stat-total { font-size:1.3rem; }
+.stat-total strong { color:var(--yellow); }
+.formula-line { font-size:.95rem; color:var(--text); margin:2px 0 10px; }
+.mana-bar { height:26px; background:#2b2b2b; border-radius:4px; margin:8px 0; overflow:hidden; }
+#mana-fill { height:100%; background:var(--teal); width:0%; }
+details.card summary { cursor:pointer; font-weight:bold; font-size:1.05rem; margin-bottom:2px; }
+details.card summary::-webkit-details-marker { color:var(--teal); }
