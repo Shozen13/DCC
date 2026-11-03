@@ -180,6 +180,23 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Campaign tab account section (2026-11-03, ?v=22, built locally)
+
+Antony's report: signed in, yet the Campaign tab still showed Sign up
+and Log in, and had no way to switch to DM mode. Root cause: the
+Account block was static HTML — only the status hint text ever
+changed with auth state — and the only Switch buttons lived in the
+start-screen overlay (sidebar "Start screen"), which the Campaign tab
+never pointed to. Fix: the Account section now renders by auth state
+(`renderAccountSection`, called on session load, every auth change,
+log out, and mode change). Signed out: email/password + Sign up /
+Log in, as before. Signed in: those hide and the section shows
+"Signed in as <email>" + a mode switch ("Switch to DM view", or
+"Switch to Player view" in DM mode) + Log out. The switch runs the
+same `chooseRole` path as the start screen's Switch button, so DM
+switch shows the DM Dashboard tab set and Player switch runs the
+existing player auto-load.
+
 ## Kill dedup, Level/Floor buttons, stat totals, condensed marks (2026-11-03, ?v=21, built locally)
 
 1. **Kills no longer duplicated in Trackers.** Boss/Player Kills inputs

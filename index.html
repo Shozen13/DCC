@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=21">
+<link rel="stylesheet" href="css/style.css?v=22">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -380,12 +380,20 @@
       <h2>Campaign</h2>
       <p class="hint">Log in, save your crawler to the cloud, then join a campaign with the code your DM gave you. When a player is signed in with a cloud crawler loaded, changes sync live: a DM heal shows on the player's sheet right away, and player changes show on the DM dashboard right away.</p>
       <h3>Account</h3>
-      <label>Email <input type="email" id="cloud-email" placeholder="you@example.com" autocomplete="email"></label>
-      <label>Password <input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password"></label>
-      <div class="btn-row">
-        <button type="button" onclick="cloudSignUp()">Sign up</button>
-        <button type="button" onclick="cloudLogIn()">Log in</button>
-        <button type="button" onclick="cloudLogOut()">Log out</button>
+      <div id="cloud-signedout-box">
+        <label>Email <input type="email" id="cloud-email" placeholder="you@example.com" autocomplete="email"></label>
+        <label>Password <input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password"></label>
+        <div class="btn-row">
+          <button type="button" onclick="cloudSignUp()">Sign up</button>
+          <button type="button" onclick="cloudLogIn()">Log in</button>
+        </div>
+      </div>
+      <div id="cloud-signedin-box" hidden>
+        <p>Signed in as <strong id="cloud-signedin-email"></strong></p>
+        <div class="btn-row">
+          <button type="button" id="cloud-switch-btn" onclick="switchMode()">Switch to DM view</button>
+          <button type="button" onclick="cloudLogOut()">Log out</button>
+        </div>
       </div>
       <p id="cloud-status" class="hint"></p>
       <h3>My Crawlers (cloud)</h3>
@@ -584,10 +592,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=21"></script>
-<script src="js/convert.js?v=21"></script>
-<script src="js/app.js?v=21"></script>
-<script src="js/wizard.js?v=21"></script>
-<script src="js/cloud.js?v=21"></script>
+<script src="js/rules.js?v=22"></script>
+<script src="js/convert.js?v=22"></script>
+<script src="js/app.js?v=22"></script>
+<script src="js/wizard.js?v=22"></script>
+<script src="js/cloud.js?v=22"></script>
 </body>
 </html>

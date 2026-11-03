@@ -68,6 +68,24 @@ function setMode(mode) {
   crawlerMode = mode;
   localStorage.setItem('crawler_mode', mode);
   applyModeClass();
+  renderAccountSection();
+}
+function renderAccountSection() {
+  var out = $('cloud-signedout-box'), inn = $('cloud-signedin-box');
+  if (!out || !inn) return;
+  var signedIn = !!cloudUser;
+  out.hidden = signedIn;
+  inn.hidden = !signedIn;
+  if (signedIn) {
+    $('cloud-signedin-email').textContent = cloudUser.email;
+    var sw = $('cloud-switch-btn');
+    if (sw) sw.textContent = crawlerMode === 'dm' ? 'Switch to Player view' : 'Switch to DM view';
+  }
+}
+function switchMode() {
+  // Same switch the start screen offers, from the Campaign tab itself.
+  if (!cloudUser) { cloudStatus('Log in first, in the Account section above.'); return; }
+  chooseRole(crawlerMode === 'dm' ? 'player' : 'dm');
 }
 
 /* Party leader = highest combined BASE stat total. Base here is the
@@ -137,6 +155,7 @@ function initCloud() {
   sb.auth.getSession().then(function (res) {
     cloudUser = res.data && res.data.session ? res.data.session.user : null;
     cloudStatus(cloudUser ? ('Signed in as ' + cloudUser.email) : 'Not signed in. The sheet still works offline without an account.');
+    renderAccountSection();
     if (cloudUser) {
       refreshCloudAll(); startRealtime();
       applyModeClass();
@@ -148,6 +167,7 @@ function initCloud() {
   sb.auth.onAuthStateChange(function (_event, session) {
     cloudUser = session ? session.user : null;
     cloudStatus(cloudUser ? ('Signed in as ' + cloudUser.email) : 'Signed out.');
+    renderAccountSection();
     if (cloudUser) { refreshCloudAll(); startRealtime(); }
   });
 }
@@ -265,6 +285,7 @@ async function cloudLogIn() {
 async function cloudLogOut() {
   if (sb) await sb.auth.signOut();
   cloudUser = null;
+  renderAccountSection();
   ['cloud-crawlers', 'cloud-campaigns', 'cloud-campaign-detail', 'cloud-parties', 'cloud-dm-tools'].forEach(function (id) {
     var el = $(id); if (el) el.innerHTML = '';
   });
