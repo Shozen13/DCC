@@ -418,6 +418,7 @@ function makeCode() {
 }
 async function createCampaign() {
   if (!needLogin()) return;
+  if (crawlerMode !== 'dm') return cloudStatus('Campaign creation is DM only. Switch to DM view to create a campaign.');
   var name = $('cloud-new-campaign').value.trim();
   if (!name) return cloudStatus('Give the campaign a name first.');
   var res = null;

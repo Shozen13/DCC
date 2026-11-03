@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="stylesheet" href="css/style.css?v=23">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -404,8 +404,10 @@
       </div>
       <div id="cloud-crawlers"></div>
       <h3>Campaign</h3>
-      <label>New campaign name (DM only) <input type="text" id="cloud-new-campaign" placeholder="e.g. Floor 1 - The Beginning"></label>
-      <button type="button" onclick="createCampaign()">Create campaign</button>
+      <div id="cloud-create-campaign-box">
+        <label>New campaign name (DM only) <input type="text" id="cloud-new-campaign" placeholder="e.g. Floor 1 - The Beginning"></label>
+        <button type="button" onclick="createCampaign()">Create campaign</button>
+      </div>
       <label>Join with a code <input type="text" id="cloud-join-code" placeholder="e.g. K7Q2XA"></label>
       <button type="button" onclick="joinCampaign()">Join campaign with this crawler</button>
       <div id="cloud-campaigns"></div>
@@ -592,10 +594,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=22"></script>
-<script src="js/convert.js?v=22"></script>
-<script src="js/app.js?v=22"></script>
-<script src="js/wizard.js?v=22"></script>
-<script src="js/cloud.js?v=22"></script>
+<script src="js/rules.js?v=23"></script>
+<script src="js/convert.js?v=23"></script>
+<script src="js/app.js?v=23"></script>
+<script src="js/wizard.js?v=23"></script>
+<script src="js/cloud.js?v=23"></script>
 </body>
 </html>

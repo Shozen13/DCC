@@ -115,6 +115,9 @@ body.dm-mode .tab-btn[data-tab="sponsors"], body.dm-mode .tab-btn[data-tab="fait
 body.dm-mode .tab-btn[data-tab="crafting"], body.dm-mode .tab-btn[data-tab="bio"],
 body.dm-mode .tab-btn[data-tab="loot"], body.dm-mode .tab-btn[data-tab="all"] { display:none; }
 /* Non-DM modes: DM-only tabs and panels stay hidden (original rule). */
+/* Campaign creation is DM-only too: players never see the field, not
+ * just a "(DM only)" label on a field they can still use. */
+body:not(.dm-mode) #cloud-create-campaign-box { display:none; }
 body:not(.dm-mode) .tab-btn[data-tab="dm"], body:not(.dm-mode) .tab-btn[data-tab="sendbox"], body:not(.dm-mode) .tab-btn[data-tab="sendach"] { display:none; }
 body:not(.dm-mode) #panel-dm, body:not(.dm-mode) #panel-sendbox, body:not(.dm-mode) #panel-sendach { display:none !important; }
 /* Cloud rows (original class names, styled to the merged theme). */

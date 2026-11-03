@@ -180,6 +180,19 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Campaign creation hidden from players (2026-11-03, ?v=23, built locally)
+
+Antony's correction: as a player he should not even see the "New
+campaign name (DM only)" field. It was only ever a label — the old
+code let any signed-in user create a campaign (it checked login, not
+mode). Fix, two parts: (1) the field + Create button now live in
+`#cloud-create-campaign-box`, hidden by CSS for every non-DM mode
+(`body:not(.dm-mode)`), the same gating the DM-only tabs already use
+— so players and guests never see it, and DMs do; (2)
+`createCampaign` now refuses unless in DM mode, so the action is
+blocked even if the controls were somehow shown. Join-with-a-code is
+unchanged and stays visible to everyone.
+
 ## Campaign tab account section (2026-11-03, ?v=22, built locally)
 
 Antony's report: signed in, yet the Campaign tab still showed Sign up
