@@ -1604,7 +1604,8 @@
                 <div class="form-group"><label>Campaign</label><select id="box-campaign" onchange="refreshBoxPlayers()"></select></div>
                 <div class="form-group"><label>Players</label><div id="box-players"></div></div>
                 <div class="form-group"><label>Loot Box Name *</label><input type="text" id="box-name" placeholder="e.g. Goblin King's Hoard"></div>
-                <div class="form-group"><label>Loot Box Grade *</label><select id="box-grade"><option value="">Select grade</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Legendary</option><option>Celestial</option></select></div>
+                <div class="form-group"><label>Loot Box Grade *</label><select id="box-grade" onchange="updateBoxGoldHint('box-grade', 'box-gold-hint')"><option value="">Select grade</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Legendary</option><option>Celestial</option></select></div>
+                <p id="box-gold-hint" class="cloud-note" style="display: none;"></p>
                 <div class="cloud-subhead">Items in this box</div>
                 <div id="box-items"></div>
                 <div class="btn-group"><button type="button" onclick="addDmItemRow('box-items')">Add item</button></div>
@@ -1623,7 +1624,8 @@
                 <div class="form-group"><label>Players</label><div id="ach-players"></div></div>
                 <div id="ach-box-fields">
                 <div class="form-group"><label>Loot Box Name *</label><input type="text" id="ach-box-name" placeholder="e.g. Goblin King's Hoard"></div>
-                <div class="form-group"><label>Loot Box Grade *</label><select id="ach-box-grade"><option value="">Select grade</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Legendary</option><option>Celestial</option></select></div>
+                <div class="form-group"><label>Loot Box Grade *</label><select id="ach-box-grade" onchange="updateBoxGoldHint('ach-box-grade', 'ach-box-gold-hint')"><option value="">Select grade</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Legendary</option><option>Celestial</option></select></div>
+                <p id="ach-box-gold-hint" class="cloud-note" style="display: none;"></p>
                 <div class="cloud-subhead">Items in this box</div>
                 <div id="ach-items"></div>
                 <div class="btn-group"><button type="button" onclick="addDmItemRow('ach-items')">Add item</button></div>
@@ -6080,6 +6082,27 @@
             if (res.error) return res.error;
         }
         return null;
+    }
+    // Gold in a loot box, book Chapter 4 sample loot (pp.216-218, "almost
+    // always" in each box): the player rolls this when the box is opened.
+    // This is a roll to show the DM, not a fixed amount and not auto-added
+    // to the player's gold tracker, because the roll itself is random.
+    const LOOT_GOLD_ROLL = {
+        'Bronze': 'Roll 1d10 gold',
+        'Silver': 'Roll 1d10 \u00d7 100 gold',
+        'Gold': 'Roll 1d6 \u00d7 1,000 gold',
+        'Platinum': 'Roll 2d6 \u00d7 1,000 gold',
+        'Legendary': 'Roll 1d10 \u00d7 10,000 gold',
+        'Celestial': 'No gold in the box'
+    };
+    function updateBoxGoldHint(gradeId, hintId) {
+        const gradeEl = document.getElementById(gradeId);
+        const hintEl = document.getElementById(hintId);
+        if (!gradeEl || !hintEl) return;
+        const roll = LOOT_GOLD_ROLL[gradeEl.value];
+        if (!roll) { hintEl.style.display = 'none'; hintEl.innerText = ''; return; }
+        hintEl.style.display = '';
+        hintEl.innerText = 'Gold in this box: ' + roll + ' (almost always, per the book; roll when the player opens the box, not auto-added).';
     }
     async function sendBoxOnly() {
         if (!needLogin()) return;
