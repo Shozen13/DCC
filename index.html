@@ -3928,6 +3928,8 @@
     let raceClassChoices = {}; // choiceId -> value (split: {str:..,..}, skill/spell: {name, kind, amount})
     let raceClassSkillApplied = []; // {source, sourceName, skillName, kind, amount, ownRankBefore, createdByBonus}
     let creationPromptPending = false;
+    let creationPromptDeferred = false; // fresh sheet, prompt not yet shown (waits for guest/player choice)
+    let pendingCloudCreateAfterPrompt = false;
     const RC_STAT_KEYS = ['str', 'con', 'dex', 'int', 'cha'];
     const RC_STAT_NAMES = { str: 'Strength', con: 'Constitution', dex: 'Dexterity', int: 'Intelligence', cha: 'Charisma' };
     const RC_STAT_ABBR = { Strength: 'str', Constitution: 'con', Dexterity: 'dex', Intelligence: 'int', Charisma: 'cha' };
@@ -4633,6 +4635,7 @@
     // ---- Creation prompt ----
     function openCreationPrompt() {
         creationPromptPending = true;
+        creationPromptDeferred = false;
         const content = document.getElementById('creation-modal-content');
         if (!content) return;
         let rows = '';
@@ -4641,6 +4644,11 @@
         });
         content.innerHTML = '<h3>New Crawler &mdash; Level 1 Base Stats</h3><p>Every crawler starts at Level 1 with all base stats at 1. Set your Level 1 base stats here. This prompt appears only once for this character; it will not come back on reload.</p>' + rows + '<div class="modal-actions"><button type="button" onclick="confirmCreationStats()">Confirm Base Stats</button></div>';
         document.getElementById('creationModal').style.display = 'flex';
+    }
+    function maybeOpenCreationPrompt() {
+        if (!creationPromptDeferred) return;
+        if (crawlerMode !== 'guest' && crawlerMode !== 'player') return;
+        if (typeof openCreationPrompt === 'function') openCreationPrompt();
     }
     function confirmCreationStats() {
         [['str', 'con', 'dex', 'int', 'cha']].forEach(() => {});
@@ -4652,6 +4660,11 @@
         creationPromptPending = false;
         document.getElementById('creationModal').style.display = 'none';
         renderBaseStats(); calculateSheet(); saveDataSilently();
+        if (pendingCloudCreateAfterPrompt) {
+            pendingCloudCreateAfterPrompt = false;
+            localStorage.removeItem('player_autoload_pending');
+            if (typeof cloudSave === 'function') cloudSave();
+        }
     }
     function getStatBank() {
         const el = document.getElementById('stat-bank');
@@ -5219,7 +5232,11 @@
             renderManaBar();
             ownBase = { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
             bonusesAlreadyInBase = false;
-            if (typeof openCreationPrompt === 'function') openCreationPrompt();
+            // Do not open here: the prompt must wait until the player picks
+            // Guest, or logs in as a player. It stays blocked from saving
+            // (creationPromptPending) until then, so closing mid-prompt
+            // still leaves no saved character and the prompt returns.
+            creationPromptDeferred = true;
         }
 
         applySectionVisibility('attacks');
@@ -5355,6 +5372,7 @@
         showTab('vitals');
 
         closeResetModal();
+        pendingCloudCreateAfterPrompt = false;
         if (typeof openCreationPrompt === 'function') openCreationPrompt();
     }
 
@@ -5406,12 +5424,12 @@
         sb.auth.getSession().then(function (res) {
             cloudUser = res.data && res.data.session ? res.data.session.user : null;
             cloudStatus(cloudUser ? ('Signed in as ' + cloudUser.email) : 'Not signed in. The sheet still works offline without an account.');
-            if (cloudUser) { refreshCloudAll(); startRealtime(); if (localStorage.getItem('player_autoload_pending') === 'create' && crawlerMode === 'player') { localStorage.removeItem('player_autoload_pending'); cloudSave(); } if (crawlerMode === 'dm') refreshDmDashboard(); }
+            if (cloudUser) { refreshCloudAll(); startRealtime(); if (localStorage.getItem('player_autoload_pending') === 'create' && crawlerMode === 'player') { if (typeof creationPromptPending !== 'undefined' && creationPromptPending) { pendingCloudCreateAfterPrompt = true; } else { localStorage.removeItem('player_autoload_pending'); cloudSave(); } } if (crawlerMode === 'dm') refreshDmDashboard(); }
         });
         sb.auth.onAuthStateChange(function (_event, session) {
             cloudUser = session ? session.user : null;
             cloudStatus(cloudUser ? ('Signed in as ' + cloudUser.email) : 'Signed out.');
-            if (cloudUser) { refreshCloudAll(); startRealtime(); if (localStorage.getItem('player_autoload_pending') === 'create' && crawlerMode === 'player') { localStorage.removeItem('player_autoload_pending'); cloudSave(); } if (crawlerMode === 'dm') refreshDmDashboard(); }
+            if (cloudUser) { refreshCloudAll(); startRealtime(); if (localStorage.getItem('player_autoload_pending') === 'create' && crawlerMode === 'player') { if (typeof creationPromptPending !== 'undefined' && creationPromptPending) { pendingCloudCreateAfterPrompt = true; } else { localStorage.removeItem('player_autoload_pending'); cloudSave(); } } if (crawlerMode === 'dm') refreshDmDashboard(); }
         });
     }
     async function cloudSignUp() {
@@ -5764,6 +5782,7 @@
     function chooseGuest() {
         setMode('guest');
         hideLanding();
+        maybeOpenCreationPrompt();
     }
     function chooseRole(role) {
         pendingRole = role;
@@ -6280,9 +6299,14 @@
         if (crawlerMode) {
             hideLanding();
             if (crawlerMode === 'dm') showTab('dm');
+            if ((crawlerMode === 'guest' || crawlerMode === 'player') && typeof maybeOpenCreationPrompt === 'function') maybeOpenCreationPrompt();
             if (localStorage.getItem('player_autoload_pending') === 'create' && cloudUser && crawlerMode === 'player') {
-                localStorage.removeItem('player_autoload_pending');
-                cloudSave();
+                if (creationPromptPending) {
+                    pendingCloudCreateAfterPrompt = true;
+                } else {
+                    localStorage.removeItem('player_autoload_pending');
+                    cloudSave();
+                }
             }
             return;
         }
