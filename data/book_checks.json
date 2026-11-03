@@ -1,0 +1,1178 @@
+[
+  {
+    "name": "BITE",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "BACK CLAW",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "SLICE ATTACK",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "CLUB",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "IMPROVISED WEAPONS",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "WARHAMMER",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "AXE",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "DAGGER",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "LONGSWORD",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "RAPIER",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "FOOT SOLDIER",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "NOGGIN NOCKER",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "PUGILISM",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "UNARMED COMBAT",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "WRASSLIN'",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "CHOKE OUT",
+    "kind": "attack",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Damage Effect, Passive in entry"
+  },
+  {
+    "name": "DIRTY FIGHTING",
+    "kind": "attack",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Damage Effect, Passive in entry"
+  },
+  {
+    "name": "IRON PUNCH",
+    "kind": "attack",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Damage Effect, Passive in entry"
+  },
+  {
+    "name": "POWERFUL STRIKE",
+    "kind": "attack",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Damage Effect, Passive in entry"
+  },
+  {
+    "name": "SKULLCRACKER",
+    "kind": "attack",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Damage Effect, Passive in entry"
+  },
+  {
+    "name": "SMUSH",
+    "kind": "attack",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Damage Effect, Passive in entry"
+  },
+  {
+    "name": "TOSS",
+    "kind": "attack",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Damage Effect, Passive in entry"
+  },
+  {
+    "name": "BOW",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "CROSSBOW",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "HANDGUN",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "JAVELIN",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "SHOTGUN",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "SHURIKEN",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "SLINGSHOT",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "HERDING WEAPONS",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "LANCE",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "POLEARM",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "QUARTERSTAFF",
+    "kind": "attack",
+    "stat": "STR",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "Acute Ears",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "AIMING",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Alchemy",
+    "kind": "utility",
+    "stat": "INT",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Ambush",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Animal Handling",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Arcane",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Attack of Opportunity",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Backfire",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Balance",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Basic Science",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Bomb Surgeon",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Calligraphy",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Cartography",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Cat-Like Reflexes",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Cesta Punta",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Character Actor",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Catcher",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Chopper Pilot",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Climbing",
+    "kind": "utility",
+    "stat": "STR",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Cockroach",
+    "kind": "utility",
+    "stat": "CON",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Cooking",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Deception",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Detect Lies",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Detect Trap",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Determine Value",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Diplomacy",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Dodge",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Double Tap",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Driving",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Dumpster Diving",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Endurance",
+    "kind": "utility",
+    "stat": "CON",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Engineering",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Escape Artist",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Escape Plan",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Explosives Handling",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Fabricate",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Find Crawler",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Find Trap",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "First Aid",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Gear Head",
+    "kind": "utility",
+    "stat": "INT",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Goblin Explosives",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Good First Impression",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Hide in Shadows",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Improvised Explosive Device",
+    "kind": "utility",
+    "stat": "INT",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Incendiary Device Handling",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Infusion",
+    "kind": "utility",
+    "stat": "INT",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Intimidate",
+    "kind": "utility",
+    "stat": "STR",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Investigation",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Iron Stomach",
+    "kind": "utility",
+    "stat": "CON",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Jumping",
+    "kind": "utility",
+    "stat": "STR",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Leadership",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Light on Your Feet",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Lockpicking",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Lore",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Negotiation",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Pathfinder",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Perception",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Performance",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Persuasion",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Regeneration",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "Religion",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Repair",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Riding",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Ropework",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Running",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Salvage",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Scutelliphily",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Shield Block",
+    "kind": "utility",
+    "stat": "STR",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Sleight of Hand",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Smithing",
+    "kind": "utility",
+    "stat": "STR",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Stealth",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Streetwise",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Survival",
+    "kind": "utility",
+    "stat": "CON",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Swimming",
+    "kind": "utility",
+    "stat": "STR",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Tactics",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Tattoo Artistry",
+    "kind": "utility",
+    "stat": "DEX",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Taunt",
+    "kind": "utility",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Skill Check in entry"
+  },
+  {
+    "name": "Throwing",
+    "kind": "utility",
+    "stat": "STR",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Tracking",
+    "kind": "utility",
+    "stat": "INT",
+    "check": "Active Check",
+    "reason": "Unopposed Skill Check in entry"
+  },
+  {
+    "name": "Trap Engineer",
+    "kind": "utility",
+    "stat": "INT",
+    "check": null,
+    "reason": "No check phrase in extracted entry; left editable"
+  },
+  {
+    "name": "Zone of Control",
+    "kind": "utility",
+    "stat": null,
+    "check": "Passive Effect",
+    "reason": "Passive in entry"
+  },
+  {
+    "name": "AIR BUDDY",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "ASTRAL PAW (ASTRAL HAND, ASTRAL CLAW)",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "BAD FAITH",
+    "kind": "spell",
+    "stat": "CHA",
+    "check": "Evade Check",
+    "reason": "Trailing Attack Type line in entry"
+  },
+  {
+    "name": "BANG BRO",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "CLOCKWORK TRIPLICATE",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "CONFUSING FOG",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "DIRT CLOD",
+    "kind": "spell",
+    "stat": "INT",
+    "check": "Evade Check",
+    "reason": "Trailing Attack Type line in entry"
+  },
+  {
+    "name": "DRAIN LIFE",
+    "kind": "spell",
+    "stat": "INT",
+    "check": "Evade Check",
+    "reason": "Trailing Attack Type line in entry"
+  },
+  {
+    "name": "EARWORM",
+    "kind": "spell",
+    "stat": "CHA",
+    "check": "Evade Check",
+    "reason": "Trailing Attack Type line in entry"
+  },
+  {
+    "name": "FEAR",
+    "kind": "spell",
+    "stat": "INT",
+    "check": "Evade Check",
+    "reason": "Trailing Attack Type line in entry"
+  },
+  {
+    "name": "FIRE FINGERS",
+    "kind": "spell",
+    "stat": "INT",
+    "check": "Evade Check",
+    "reason": "Trailing Attack Type line in entry"
+  },
+  {
+    "name": "FIREBALL",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "FROST SCAR",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "GRAND ILLUSION",
+    "kind": "spell",
+    "stat": "INT",
+    "check": "Contested Check",
+    "reason": "X-Opposed Spell Check in entry"
+  },
+  {
+    "name": "HEAL",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "HEAL CRITTER",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "HEAL OTHERS",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "HEAL SELF",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "HOLE",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "HOLY AURA",
+    "kind": "spell",
+    "stat": "CHA",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "HOT STUFF AURA",
+    "kind": "spell",
+    "stat": "CHA",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "ICE BLAST",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "ICICLES",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "INTIMATE TOUCHES",
+    "kind": "spell",
+    "stat": "CHA",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "LIGHTNING BOLT",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "MAGIC MISSILE",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "MIND TICKLE",
+    "kind": "spell",
+    "stat": "CHA",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "MINION ARMY",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "NATURE'S BREATH",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "OAKHIDE",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "PALADIN'S SMITE",
+    "kind": "spell",
+    "stat": "CHA",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "PANTY DROPPER",
+    "kind": "spell",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Spell Check in entry"
+  },
+  {
+    "name": "PING",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "PROTECTIVE SHELL",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "PUDDLE JUMPER",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "RISE, DEAD MINION!",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "ROOTFOOT",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "SECOND CHANCE",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "SHIELD",
+    "kind": "spell",
+    "stat": "CON",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "SHOCK TREATMENT",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "SOLSPLASH",
+    "kind": "spell",
+    "stat": "CON",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "SOUL COLLECTOR",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "THUNDERLASH",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "TORCH",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "TRIPPER",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "TURN UNDEAD",
+    "kind": "spell",
+    "stat": "CHA",
+    "check": "Contested Check",
+    "reason": "X-Opposed Spell Check in entry"
+  },
+  {
+    "name": "TWINKLE TOES",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "UNNECESSARY FORCE",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "VINE PORN",
+    "kind": "spell",
+    "stat": "CON",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "WALL OF FIRE",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "WATER BREATHING",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "WEB",
+    "kind": "spell",
+    "stat": "INT",
+    "check": "Evade Check",
+    "reason": "Spell Attack Skill Check in entry"
+  },
+  {
+    "name": "WILBUR'S SLOW-BUILD FIREBLAST",
+    "kind": "spell",
+    "stat": "INT",
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "WISP ARMOR",
+    "kind": "spell",
+    "stat": null,
+    "check": null,
+    "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  }
+]

@@ -1,0 +1,822 @@
+[
+ {
+  "benefits": "Size: Medium (4). +6 Strength, +3 Dexterity, +2 Bow, Endurance, and Pugilism Skills, and +2 DR. Each floor you receive a coupon for one free training at a Weapon Training Guild; the race has little innate magical ability.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Amazonian",
+  "prerequisites": "This limited Race is only available to crawlers who have at least one Strength or Dexterity-based Skill at Rank 5+",
+  "source_book_page": 129,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +5 Dexterity, +3 Web Spell which costs half the normal Mana to cast, and +2 Climbing, Perception, and Performance (with a stringed instrument specialty) Skills. You have an innate Climb Move equal to your normal Move value, without needing Checks unless under duress.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Arachnid",
+  "prerequisites": null,
+  "source_book_page": 129,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Small (2); Animal. +4 Dexterity, +2 Constitution, +1 Charisma, -3 Strength, +3 Cat-like Reflexes, and +2 Slice Attack Skill. You can see in total darkness, have Advantage on Cat-like Reflexes Skill Checks, and Nine Lives lets you take half damage from the first 9 attacks each day, but you take double damage from Dogs and Beasts.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Cat",
+  "prerequisites": "This limited Race is only available to crawlers who are already a Cat",
+  "source_book_page": 130,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +3 Dexterity and Charisma, -2 Constitution, and +2 Cat-like Reflexes, Good First Impression, Light on your Feet, and Slice Attack Skills. Your Slice Attacks may add your Cha Mod to damage instead of Str. Once per day, Toxoplasma G. gives your allies Rank 5 Catcher Skill (and the +5 DR Upgrade) for one round to protect only you, and those who do gain 1 AI Favor; you make Charisma-based Skill Checks with Disadvantage when dealing with felines other than Cat Girls/Boys.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Cat Girl/Cat Boy",
+  "prerequisites": null,
+  "source_book_page": 130,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +5 Dexterity, +3 Strength and Constitution, -2 Charisma, and +3 Ambush and Creepy Chains (Club) Skills. Creepy Chains lets you use any chain as a weapon (Club Weapon Skill, 10ft range) and lengthen or shorten any chain by 50% once per scene. A foe touching you with bare skin takes 1d4+F Acid; you need not breathe, are vulnerable to Holy damage, and cannot worship a deity.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Changbi Demon",
+  "prerequisites": null,
+  "source_book_page": 130,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Large (5). +3 Charisma, +2 Intelligence, +2 Ambush and Deception Skills, and +1 Escape Artist Skill, with Advantage on Deception Skill Checks when no talking is needed. By touching a member of another Race you can build a library of Races to shapeshift into as an Action (Unopposed Deception Skill Check), gaining that Race's bonuses other than statistics and Skills while shifted. Changelings can't touch mimics-type creatures. Changelings gain free access to organizations and producers by impersonating other crawlers and Syndicate celebrities, but can only use those relevant to the currently shifted individual. While shapeshifted into another Race, these changes are conveyed to World Dungeon systems, including information on viewers' HUDs, mini-maps, and other systems.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Changeling",
+  "prerequisites": null,
+  "source_book_page": 130,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Large (5). +4 Strength, +3 Constitution, and +2 Pugilism and Powerful Strike Skills. You roll Intimidate Skill Checks with Advantage when physically menacing someone in person, gain +3 DR Buff, and +1 Buff for all Skill Checks for 1 hour after eating a full meal. While Fatigued, you roll all Charisma-based Checks with Disadvantage.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Crocodilian",
+  "prerequisites": null,
+  "source_book_page": 131,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Unchanged, but size changes when shifting. +4 Constitution, +3 Strength, +1 Deception and Endurance Skills, and +2 DR. You determine maximum weight to lift based on Constitution instead of Strength, have Advantage on Escape Artist Skill Checks (even while Held or watched), and once per scene as an Action can incorporate a held weapon into your mass for additional damage equal to your Con Mod (it can't be disarmed). Shape-Changing as an Action lets you transform into any shape of comparable mass, costing 1 Health Bar slot per change, with an Unopposed Deception Skill Check to resemble a specific person or object.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Doppelg\u00e4nger",
+  "prerequisites": null,
+  "source_book_page": 131,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +4 Constitution, +2 Intelligence, -2 Charisma, +3 in two different crafting Skills of your choice, and +2 Endurance Skill. You can see in total darkness and all crafting Skills can be raised to Rank 20, but you make all Charisma-based Checks with Disadvantage when dealing with elves or fairies.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Dwarf, Classic",
+  "prerequisites": null,
+  "source_book_page": 132,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +3 Constitution, +2 Strength, +3 Engineering Skill, and +2 Dumpster Diving and Salvage Skills. You roll d20 Checks with Advantage when earth, rocks, and dirt are involved, and can produce a 15ft Cone of light from a harmless lizard nesting atop your head, easily acquiring a new lizard if it is lost or killed.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Dwarf, Fathom",
+  "prerequisites": null,
+  "source_book_page": 132,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +4 Intelligence, Dexterity, and Charisma, +2 Intimidation Skill (you can use your Cha Mod), and +1 Lore Skill. You recover Mana at twice the normal rate in a natural environment and add 1d4 to your Evade Checks. You make all Charisma-based Checks with Disadvantage when dealing with Dwarves, Rat-Kin, or anyone smelly or dirty, and two different Charisma-based Skills can be raised to Rank 20.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Elf, High",
+  "prerequisites": null,
+  "source_book_page": 133,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +6 split as you please between Intelligence, Dexterity, and Charisma, +3 Good First Impression Skill, and +2 Negotiation and Streetwise Skills. Once per floor during a Long Rest you can reassign those points between Charisma, Intelligence, and Dexterity. When entering a settlement for the first time, your first Charisma-based Check is made with Advantage, and on an Amazing Success or better you gain a permanent contact.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Elf, City",
+  "prerequisites": null,
+  "source_book_page": 133,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +3 Intelligence and Dexterity, and +3 Acute Ears and Hide in Shadows Skills. You can see in total darkness and gain Advantage when using Hide in Shadows at night, but have difficulty seeing in bright light. Once per day you can instruct the shadow of a living thing to use the Taunt Skill at Rank equal to Floor Number (no Stat Mod) to pull attacks away from you; Hide in Shadows and one crafting Skill of your choice can be raised to Rank 20.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Elf, Night",
+  "prerequisites": null,
+  "source_book_page": 134,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Petite (3). +2 Charisma, Intelligence, and Dexterity, and +2 Persuasion Skill. Melee attacks deal +1d4 Ice damage, you roll with Advantage on Int and Con Stat Checks, and you are immune to mental infirmity. Your Game Guide becomes your Manager, and you are capable of flight for up to 1 minute per scene.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Frost Maiden",
+  "prerequisites": null,
+  "source_book_page": 134,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Typically Medium (4). +2 to all Stats. At the end of each floor you roll one Skill Advancement Check with Advantage if that Skill is Rank 9 or less, and you gain 1 AI Favor each time you level up. When you take damage you may spend 1 AI Favor to gain DR equal to your Con; once per day you may roll an untrained Skill Check on a non-Passive Utility Skill as if you had 2 Ranks, and once per floor you can spend an Action to remove any single Debuff, even Injuries.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Human",
+  "prerequisites": null,
+  "source_book_page": 135,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Large (5). +6 Constitution, +4 Strength, -2 Intelligence and Charisma, +1 Endurance Skill, and +3 DR Buff. Once per day you can double your Move for 20 seconds, and as an Action make a Con Stat Check to deal 1d8+F Fire damage in a 5ft Burst radius on Success. You need no Survival Checks in harsh heat, can breathe underwater, are immune to Fire damage but vulnerable to Ice damage, and can burrow. Drawbacks: you lose 1 Health Bar slot each time you access your Inventory (not Hotlist) and have Disadvantage on Checks to conceal your presence or nature.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Igneous",
+  "prerequisites": null,
+  "source_book_page": 135,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +5 Intelligence during the day and +5 Strength during the night, +2 in two Spells of your choice, +3 in one Weapon Skill of your choice, and Advantage when using the Ambush and Intimidation Skills. During the day Strength is halved but Spells cost half Mana; during the night Strength is doubled but Spells cost double Mana.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Lajabless",
+  "prerequisites": null,
+  "source_book_page": 136,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4), mostly due to wings. +3 Dexterity, +2 Intelligence, -4 Constitution, +2 Intimidate and Slice Attack Skills, and +2 in a Spell of your choice. You have four translucent butterfly wings up to 15 feet that can deliver touch- or melee-range Spells, may use Cha Mod instead of Con Mod in your Health Bar, and add 1d4 to your Evade Checks. Upon entering the Sixth Floor, choose Stronger Wings (flight up to 2 minutes per scene, +20ft Move when flying) or Ferocious Visage (Advantage when using any Skill to inspire fear or respect).",
+  "class_type": null,
+  "kind": "race",
+  "name": "Obsidian Butterfly",
+  "prerequisites": "This limited Race is only available to crawlers who earn Rank 5+ with any Edged Weapon",
+  "source_book_page": 136,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Unchanged. You find your current Race in this section and apply those racial benefits, but list your Race as Primal, with -1 to all Stats. All Skills can be raised to Rank 20, trading other races' significant bonuses for the ability to raise Skills above the soft cap of 15 Ranks.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Primal",
+  "prerequisites": null,
+  "source_book_page": 137,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Petite (3). +2 Dexterity, +1 Constitution, +2 Escape Plan and Stealth Skills, and +1 Bite and Survival Skills. You have Advantage on Checks to resist hunger and thirst, can converse with common house rats to gather minimal information while in buildings, and may add Dex Mod to Bite damage instead of Str.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Rat Hooligan",
+  "prerequisites": null,
+  "source_book_page": 137,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Large (5). +6 Strength and Constitution, +2 Dexterity, -3 Intelligence, -1 Charisma, and +3 Foot Soldier and Smush Skills. The Smush Skill can be raised to Rank 20.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Sasquatch",
+  "prerequisites": "This limited Race is only available to crawlers who have attained Rank 5+ in the Smush Skill",
+  "source_book_page": 137,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +6 Dexterity, -2 Charisma, +2 Pugilism and Wrasslin' Skills, and +1 in all Edged Weapon Skills. Four Arms: your Hands/Holding Gear slot allows for four items (or two weapons requiring two hands).",
+  "class_type": null,
+  "kind": "race",
+  "name": "Tetrakai",
+  "prerequisites": null,
+  "source_book_page": 138,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +3 Dexterity, +2 Strength, -4 Charisma, and +2 Ambush, Cat-like Reflexes, and Slice Attack Skills. You can see in total darkness, gain +1 DR Buff and +10ft Move, and deal x2 total damage with melee attacks when attacking during a Surprise Action. You have Disadvantage on Dexterity-based Skills that require fine manipulation or motor coordination.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Tigran",
+  "prerequisites": null,
+  "source_book_page": 138,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +3 Intelligence, +2 Dexterity, -2 Constitution, and +3 Determine Value, Fabricate, and Negotiation Skills. At Level 50 you gain +2 Dexterity and wings capable of flying up to 500ft per scene, and you gain +1 Popularity each time you roll a Critical Hit in combat.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Bune",
+  "prerequisites": "This limited Race is only available to crawlers with 3 or more Popularity",
+  "source_book_page": 139,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Large (5). +3 Intelligence and Charisma, -2 Strength, and +3 Find Crawler, Investigation, and Leadership Skills. Find Crawler and Persuasion Skills can be raised to Rank 20, and you gain +1 Popularity each time you roll a Critical Hit on a Charisma Skill Check or on a Spell Skill Check outside of combat.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Caprid",
+  "prerequisites": null,
+  "source_book_page": 139,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +3 Dexterity, +2 Strength, -2 Charisma, +3 in either Jumping or Light on Your Feet Skills, and +2 Zone of Control and a Reach Weapon Skill of your choice. Tongue Lashing is a ranged attack ([Rank = Floor Number] + Dex to hit, 1d8 + Str Bludgeoning, 30ft range, +1d8 at Rank 5, 10, and 15; Rank is always equal to Floor Number and cannot be raised by other means). You gain a +2 DR breastplate (Torso) with your Grulke Battalion crest. Troll-type enemies have Advantage on Wrasslin' Checks against you and lick you when successful; you gain +1 Popularity when a troll-type enemy licks you, when you achieve an Amazing Success or better on an Attack against a troll-type enemy, or when you score a Critical Hit on a larger foe in combat.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Grulke",
+  "prerequisites": "This limited Race is only available to crawlers who have Rank 5+ in the Jumping or Light on Your Feet Skill",
+  "source_book_page": 139,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +1 Dexterity, -5 Charisma (Charisma is capped at 10), +3 in all Trap-based and Explosive-based Skills, and +1 Regeneration Skill. You have free access to all Hobgoblin Sapper Workshops, roll one Explosive or Trap-based Skill Advancement Check with Advantage at the end of each floor, and all explosives and trap-making Skills can be raised to Rank 20. You gain +1 Popularity when you kill an enemy with a trap or explosive once per scene.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Hobgoblin",
+  "prerequisites": "This limited Race is only available to crawlers who have Rank 5+ in the Explosives Handling Skill and any Trap-based Skill",
+  "source_book_page": 140,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Small (2); Animal. +5 Dexterity and Charisma, -4 Strength (Strength is capped at 10), -4 Constitution, +2 Bite, Dodge, and Slice Attack Skills, and +1 Ambush Skill. You roll with Advantage on all Charisma-based Checks, can see in total darkness, take no damage from falling, and Light on Your Feet Skill can be raised to Rank 20. You deal half damage with Strength-based melee weapons, are vulnerable to Bludgeoning damage, are too small to wield or use weapons or items not specifically designed for you, and gain +1 Popularity when you act in the Surprise Round of a combat or roll a Critical Fail on an Evade Check.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Pocket Kuma",
+  "prerequisites": null,
+  "source_book_page": 140,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +4 Charisma, +2 Dexterity, +3 Bite, Performance, and Tracking Skills, and +1 Diplomacy Skill. You have wings capable of flight for up to 50 seconds per scene, have Disadvantage on all Checks to conceal emotion or presence (such as Deception and Stealth), and gain +1 Popularity when you roll a Critical Hit on a Charisma Skill Check.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Pterolykos",
+  "prerequisites": null,
+  "source_book_page": 140,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Size: Medium (4). +3 Dexterity and Charisma, -1 Strength and Constitution, +2 Slice Attack Skill, and +2 in all Charisma-based Skills. You have Advantage on the Perception Skill for observing things 10+ feet away and are capable of flight for up to 3 minutes per scene, except Skyfowl who choose a Cleric-based Class have their wings clipped and can only make short hops of up to 10 seconds per scene when flying. You gain +1 Popularity when you roll a Critical Hit on a Leadership, Perception, Persuasion, or Taunt Skill Check.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Skyfowl",
+  "prerequisites": null,
+  "source_book_page": 141,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Intelligence and +2 Dexterity, +5 Arcane, +3 Salvage, and +2 in one crafting Skill of your choice and +1 in another crafting Skill of your choice. Gains a Tier 1 Arcanist table, and Arcane and one crafting skill can be raised to Rank 20.",
+  "class_type": "Arcanist",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Arcanist",
+  "prerequisites": null,
+  "source_book_page": 142,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Constitution and Intelligence, +5 Alchemy and +3 Infusion, immunity to Poison, and a Tier 1 Alchemy table. Alchemy can be raised to Rank 20, and at the end of each floor it adds 1 to Skill Advancement Checks for Alchemy and Infusion.",
+  "class_type": "Arcanist",
+  "kind": "class",
+  "name": "Alchemist",
+  "prerequisites": null,
+  "source_book_page": 142,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +5 Intelligence, +1 Strength and Dexterity, and -2 Charisma, with +5 Arcane and +2 Lore, Negotiation, and Salvage. Gains a Tier-1 crafting table of choice, Arcanist skill can be raised to Rank 20, and a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Arcanist",
+  "kind": "class",
+  "name": "Douchy Wizard School Wand-Maker",
+  "prerequisites": null,
+  "source_book_page": 142,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Strength and Constitution and +1 Dexterity, +5 Arcane and +3 Smithing, and resistance to Fire damage. Gains Tier 1 Arcanist and Smithing tables, and Arcane can be raised to Rank 20.",
+  "class_type": "Arcanist",
+  "kind": "class",
+  "name": "Infernocrafter",
+  "prerequisites": null,
+  "source_book_page": 143,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Constitution and Dexterity and +2 Intelligence, +5 Tattoo Artistry, +3 Calligraphy, and +2 Dagger, plus a Tier 1 Tattoo chair (table). Creates functional but unattractive temporary magical tattoos, Tattoo Artistry can be raised to Rank 20, and it includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Arcanist",
+  "kind": "class",
+  "name": "Prison Tattoo Artist",
+  "prerequisites": null,
+  "source_book_page": 143,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +6 Strength and +5 Constitution, +3 in a weapon skill of choice, +2 Endurance, and +1 Intimidate, plus a +2 DR Buff. Its Rage benefit adds +1 melee damage for each Health Bar slot lost.",
+  "class_type": "Barbarian",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Barbarian",
+  "prerequisites": null,
+  "source_book_page": 144,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Strength, Constitution, and Charisma, +2 in a weapon skill of choice, +2 Performance and Intimidation, and +1 Attack of Opportunity, plus Rage (+1 melee damage per Health Bar slot lost) and a +1 DR Buff. Once per combat after killing an enemy it can make an Unopposed Performance check, gaining +1 Popularity on an Amazing Success or better, and one weapon skill can be raised to Rank 20.",
+  "class_type": "Barbarian, Bard",
+  "kind": "class",
+  "name": "Gladiator",
+  "prerequisites": null,
+  "source_book_page": 144,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +1 Strength, Dexterity, and Intelligence, +4 Ambush and Stealth, and +2 in one weapon skill of choice, plus Rage (+1 melee damage per Health Bar slot lost) and a +1 DR Buff. It can see in total darkness, has access to the Desperado Club, and includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Barbarian, Rogue",
+  "kind": "class",
+  "name": "Harii",
+  "prerequisites": null,
+  "source_book_page": 144,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +2 Dexterity, Strength, and Charisma, +3 Slice Attack and Unarmed Combat, +2 Dodge, and +1 Ambush, plus Rage (+1 melee damage per Health Bar slot lost) and a +1 DR Buff. It can see in total darkness and includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Barbarian",
+  "kind": "class",
+  "name": "Feral Cat Berserker",
+  "prerequisites": "This limited Class is only available to cat-based Races, such as Cat, Cat Girl, and Tigran",
+  "source_book_page": 144,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Strength, Dexterity, and Charisma and -2 Intelligence, +5 Shield Block, and +2 in one weapon skill of choice, plus Rage (+1 melee damage per Health Bar slot lost) and a +1 DR Buff. One weapon skill can be raised to Rank 20, it adds its Str Mod a second time to melee attack damage against males, and it includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Barbarian, Fighter",
+  "kind": "class",
+  "name": "Shieldmaiden",
+  "prerequisites": "This limited Class is only available to female crawlers",
+  "source_book_page": 144,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Charisma, +3 Performance, +1 in a weapon skill of choice, +2 in a spell of choice, +2 Diplomacy, and +1 Good First Impression and Lore. It has access to all membership-based clubs, membership in the Dungeon Book of the Floor Club (all Spells), a free room at all saferooms, possible Patron access, but pays +1 Mana to cast spells that are not 'Favored: Bard'.",
+  "class_type": "Bard",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Bard",
+  "prerequisites": null,
+  "source_book_page": 145,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +5 Dexterity and +5 Charisma, +2 Dodge, Negotiation, and Pathfinder, and +2 Shield Spell. It gets a 25% discount at all stores, a 15% bonus to money earned from sales, and 10% interest on coins upon descent to the next floor, Dodge can be raised to Rank 20, and it includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Bard, Merchant",
+  "kind": "class",
+  "name": "Artist Alley Mogul",
+  "prerequisites": null,
+  "source_book_page": 145,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +10 Charisma, +3 Character Actor, and +2 Cockroach, adds 1 to Skill Advancement Checks for Charisma-based skills, and is immune to Poison and all diseases. It has the Manager Benefit, a Rank 3 Character Actor skill that increases only upon descent to the next floor, and a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Bard",
+  "kind": "class",
+  "name": "Former Child Actor",
+  "prerequisites": "Must have Popularity 3+, receiving the Cut! achievement, to take this Class (prose also describes earning the Cut! achievement and reaching at least one trillion views)",
+  "source_book_page": 145,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Intelligence, Constitution, and Charisma and -2 Strength, +4 Performance, and +3 Turn Undead and Panty Dropper Spells. It has access to all membership-based clubs and a free room at all saferooms, but pays +1 Mana to cast spells that are not 'Favored: Bard' or that do not deal Necrotic damage.",
+  "class_type": "Bard, Necromancer",
+  "kind": "class",
+  "name": "NecroBard",
+  "prerequisites": null,
+  "source_book_page": 146,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Intelligence and +2 Charisma, +5 Performance with the written word specialty, and +2 Earworm (as spoken word poetry), Heal Others, and Shield Spells, and Performance can be raised to 20. It has access to all membership-based clubs, must choose a Patron (GM gives at least two options), pays +1 Mana for spells not 'Favored: Bard', and includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Bard",
+  "kind": "class",
+  "name": "Poet Laureate",
+  "prerequisites": null,
+  "source_book_page": 146,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +8 split between Strength, Constitution, and Charisma, +4 Performance with a guitar specialty, +3 Negotiation, and +1 Iron Stomach and Repair, with Advantage on checks against Poison or effects that give the Shit-Faced Debuff. At the start of each combat it may declare all damage it deals is Sonic damage, it rolls with Advantage on Repair checks, and it includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Bard, Rogue",
+  "kind": "class",
+  "name": "Professional Roadie",
+  "prerequisites": null,
+  "source_book_page": 146,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +2 Charisma and Intelligence, +2 Good First Impression, Lore, and Performance, and +2 in Hot Stuff Aura and Panty Dropper Spells. It adds its Cha Mod a second time on Cha skill checks during a potentially hostile situation, has access to the Spellbook of the Floor club ('Favored: Bard' Spells only), and once per day can draw everyone's attention on the battlefield for a round, preventing attacks except by Bosses.",
+  "class_type": "Bard",
+  "kind": "class",
+  "name": "Spellbinder",
+  "prerequisites": null,
+  "source_book_page": 147,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +4 Charisma and +3 Intelligence, +2 in a weapon skill of choice, +3 Religion, and +2 Heal Others, Shield, and Turn Undead Spells. It has access to the Spell Book of the Level club ('Favored: Cleric' Spells only) and Club Vanquisher, must worship a deity, and cannot choose a Cleric-type Class if it has access to the Desperado Club.",
+  "class_type": "Cleric",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Cleric",
+  "prerequisites": null,
+  "source_book_page": 148,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Strength and Intelligence, +1 Charisma, and -2 Constitution, with +3 Find Trap, +3 in a weapon skill of choice, +2 Trap Engineer, +2 in a spell of choice, and +1 Religion. It can see in total darkness, must worship a deity, and has access to all membership-based clubs.",
+  "class_type": "Cleric, Mage, Paladin",
+  "kind": "class",
+  "name": "Black Inquisitor General",
+  "prerequisites": null,
+  "source_book_page": 148,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Strength and Charisma, +2 Constitution, and -2 Intelligence, with +2 Heal Others, Shield, and Soul Collector Spells, +2 in a weapon skill of choice, +2 Religion, and +1 Endurance. It has access to the Dungeon Book of the Floor club ('Favored: Cleric' Spells only) and Club Vanquisher, must worship a deity, and cannot choose this Class if it has access to the Desperado Club.",
+  "class_type": "Cleric",
+  "kind": "class",
+  "name": "Santero",
+  "prerequisites": null,
+  "source_book_page": 148,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +2 Intelligence, Constitution, and Dexterity, +3 Nature's Breath Spell, +3 in a spell of choice, +2 in another spell of choice, and +2 Survival. Its Mana recovers at twice the normal rate in a natural environment, and it has access to the Dungeon Book of the Floor club ('Favored: Druid' Spells only).",
+  "class_type": "Druid",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Druid",
+  "prerequisites": null,
+  "source_book_page": 148,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +2 Constitution and Intelligence, +2 Alchemy, Cooking, First Aid, and Survival, and +2 Nature's Breath and Dirt Clod Spells. Its Mana recovers at twice the normal rate in a natural environment.",
+  "class_type": "Arcanist, Druid",
+  "kind": "class",
+  "name": "Herbalist",
+  "prerequisites": null,
+  "source_book_page": 149,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +2 Constitution and +1 Intelligence, +2 First Aid, Pathfinder, Regeneration, and Survival, +2 Nature's Breath Spell, and +1 Rank in all Spells with the Heal keyword. Once per day it can grant Regeneration at its Skill Rank to all party members within 30 feet for 10 minutes.",
+  "class_type": "Druid",
+  "kind": "class",
+  "name": "Lifebringer",
+  "prerequisites": null,
+  "source_book_page": 149,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Constitution and Intelligence, +3 Nature's Breath and Oakhide Spells, and +2 Rootfoot and Solsplash Spells. It has double Mana regeneration when outdoors and can grant +1 DR to its party for 1 scene, once per day.",
+  "class_type": "Druid",
+  "kind": "class",
+  "name": "Physicker",
+  "prerequisites": null,
+  "source_book_page": 149,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +2 Intelligence, Charisma, and Constitution, +3 Animal Handling, +2 Pathfinder, and +2 Nature's Breath and Drain Life Spells, can see twice as far as most creatures, and recovers Mana twice as fast in a natural environment. It may not use melee weapons other than Herding Weapons, gains a friendly Pet, pets in its Herd gain +2 DR, and it includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Druid",
+  "kind": "class",
+  "name": "Shepherd",
+  "prerequisites": null,
+  "source_book_page": 150,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +2 Strength and Constitution, +5 in a weapon skill of choice, +3 Dodge, and +2 to two chosen skills from Aiming, Attack of Opportunity, Catcher, Shield Block, or Zone of Control. It can access any Weapon Training Guild and receives a coupon for one free training there upon arrival on each floor.",
+  "class_type": "Fighter",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Fighter",
+  "prerequisites": null,
+  "source_book_page": 150,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +3 Dexterity, +2 Intelligence, and +1 Strength, +3 Attack of Opportunity and Dirty Fighting, +2 Dodge and Improvised Weapons, and a +2 DR Buff. It includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Fighter",
+  "kind": "class",
+  "name": "Pit Fighter",
+  "prerequisites": null,
+  "source_book_page": 150,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +2 Strength, Constitution, and Dexterity and -2 Charisma, +5 in a Ranged Weapon Skill, +2 Aiming and Intimidate, and +1 in all muscle-powered movement-related Skills. It can access any Weapon Training Guild with a coupon for one free training each floor, has access to the Desperado Club, and includes a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Fighter",
+  "kind": "class",
+  "name": "Shotgun Messenger",
+  "prerequisites": null,
+  "source_book_page": 150,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+3 Strength, Constitution, Dexterity, and Charisma, -2 Intelligence; +2 Unarmed Combat and +1 Driving, Running, and Performance; takes no damage from falling, +1 DR, the Manager Benefit, and a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Fighter",
+  "kind": "class",
+  "name": "Straight-to-DVD Action Hero",
+  "prerequisites": null,
+  "source_book_page": 151,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+2 Strength, Constitution, and Dexterity, -2 Intelligence; +5 Shield Block, +3 in an Edged Weapon Skill of choice, and +2 Attack of Opportunity and Catcher; access to the Desperado Club.",
+  "class_type": "Fighter",
+  "kind": "class",
+  "name": "Sword and Boarder",
+  "prerequisites": null,
+  "source_book_page": 151,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+4 Constitution, +2 Dexterity, -2 Strength and Intelligence; +3 Gear Head, Driving, and Pathfinder; While moving in combat, you gain a Con Mod bonus in your Health Bar slots (only) equal to 1/10th of the Move value of your means of conveyance; on foot, you must have spent a Move Action during the previous round to gain this bonus. Ramming attack: you bolt across the room and slam through each entity in the way; to hit is Floor Number (as Rank) + Dex, dealing 1d12 Bludgeoning in a 2d10+3ft Line, then you gain the Fatigued Debuff; a Critical Fail occurs on a Natural 4 or less, cooldown is 30 hours, add 1d at Rank 5, 10, and 15, and Rank only increases by Floor. Once per combat, when you lose 2+ Health Bar slots, roll 1d2; on a 1, the attacker loses 1 Health Bar slot. Resistance to Force damage, and a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Fighter",
+  "kind": "class",
+  "name": "Monster Truck Driver",
+  "prerequisites": "This limited Class is only available to crawlers who have Rank 5+ in the Driving Skill",
+  "source_book_page": 152,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+3 Strength, Constitution, and Dexterity; +3 in one Melee Weapon Skill of choice and +2 Attack of Opportunity, Endurance, and Running; +1 DR, one Weapon Skill can be raised to Rank 20, and a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Fighter",
+  "kind": "class",
+  "name": "Zulu Warrior",
+  "prerequisites": null,
+  "source_book_page": 152,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+5 Intelligence and Charisma, -2 Strength and Dexterity; +3 in a Fire Spell, +2 in one Force Spell and one Sonic Spell, +2 in two different Passive Spells, +2 Lore, and +1 Arcane; drawback of -3 Ranks in all Dexterity and Strength Skills (to a minimum of 1 Rank).",
+  "class_type": "Mage",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Mage",
+  "prerequisites": null,
+  "source_book_page": 152,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+4 Intelligence, +3 Dexterity, -2 Strength; +4 Ice Blast and Frost Scar Spells and +2 Aiming; Ice damage resistance and can use Aiming for single-target Ice Spells.",
+  "class_type": "Mage",
+  "kind": "class",
+  "name": "Blizzardmancer",
+  "prerequisites": null,
+  "source_book_page": 153,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+3 Intelligence, +2 Dexterity, -2 Constitution; +3 Wall of Fire and Fire Fingers, +2 Fireball and Wilbur's Slow-Build Fireblast, and +2 Lore; Fire resistance but no DR against Ice or water-based damage, with versatile fire effects including burning, searing, and flame-delivered healing.",
+  "class_type": "Mage",
+  "kind": "class",
+  "name": "Crisper",
+  "prerequisites": null,
+  "source_book_page": 153,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+2 Intelligence and Charisma; +2 Holy Aura, Hot Stuff Aura, Heal Others, and Intimate Touches Spells, with Heal Others raisable to Rank 20; once-per-day Ethereal Hug: for one scene, grant your party +1 DR, Rank 4 Regeneration, +1 to hit on Weapon and Spell Skill Checks, and +1d4 bonus when they deal damage, but vulnerable to Ice damage.",
+  "class_type": "Bard, Mage",
+  "kind": "class",
+  "name": "Fire Spiritualist",
+  "prerequisites": null,
+  "source_book_page": 153,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+5 Intelligence, -2 Charisma; +3 Drain Life and Soul Collector Spells and +1 Alchemy, Infusion, and Tactics; doubles the duration of Rank 5 and lower duration Spells and can apply Spells to a creature without it realizing it is under a Spell effect.",
+  "class_type": "Mage",
+  "kind": "class",
+  "name": "Forsaken Aerialist",
+  "prerequisites": null,
+  "source_book_page": 153,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+2 Intelligence and Dexterity, -2 Constitution and Charisma; +4 Soul Collector and Rise, Dead Minion! Spells and +2 Drain Life and Second Chance Spells; once per rest can question a corpse, and heals 1 Health Bar per undead Mob killed (up to 5 per combat).",
+  "class_type": "Mage, Necromancer",
+  "kind": "class",
+  "name": "Necromancer",
+  "prerequisites": null,
+  "source_book_page": 154,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+3 Constitution and Dexterity, +1 Strength; +3 Unarmed Combat, +1 Foot Soldier, Iron Punch, Powerful Strike, Pugilism, and Smush, and +1 in Dexterity-based Weapon Skills; Unarmed Combat can be raised to Rank 20.",
+  "class_type": "Monk",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Monk",
+  "prerequisites": null,
+  "source_book_page": 154,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+2 Intelligence and Dexterity; +3 Unarmed Combat, +1 Dirt Clod, Fire Fingers, and Frost Scar Spells, and +1 in all Electric, Fire, and Ice damage Spells; advantage against elemental creatures and can breathe underwater, burrow, and fly.",
+  "class_type": "Mage, Monk",
+  "kind": "class",
+  "name": "Elemental Monk",
+  "prerequisites": null,
+  "source_book_page": 154,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+5 Constitution, +2 Strength, -2 Intelligence and Charisma; +5 Pugilism and Iron Punch Skills, with Pugilism raisable to Rank 20; gains 1 x Floor Number gold and +1 Popularity for each Mob killed with a Pugilism or Unarmed Combat attack, plus a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Bard, Monk",
+  "kind": "class",
+  "name": "Prizefighter",
+  "prerequisites": "This limited Class is only available to crawlers who have Rank 5+ in the Pugilism Skill",
+  "source_book_page": 154,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+3 Strength and Constitution, +1 Dexterity; +3 Drain Life Spell and Smush Skill and +2 Heal Others and Heal Self Spells, with Heal Others raisable to Rank 20; healing Skills and Spells heal 1 additional Health Bar slot on a single target, plus access to Club Vanquisher and a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Druid, Monk",
+  "kind": "class",
+  "name": "Spirit Healer",
+  "prerequisites": null,
+  "source_book_page": 155,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+2 Dexterity, +1 Strength and Charisma; +2 Dirty Fighting, Streetwise, and Unarmed Combat and +1 Pugilism and Dexterity-based Weapon Skills; +3 DR Buff and a Silver Earth Box with guaranteed Earth Hobby Skill Potion.",
+  "class_type": "Fighter, Monk",
+  "kind": "class",
+  "name": "Street Monk",
+  "prerequisites": null,
+  "source_book_page": 155,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+3 Charisma (listed in the book as separate +2 and +1 Charisma bullets); +3 Protective Shell, Heal Others, and Holy Aura Spells, +3 in a Weapon Skill of choice, and +2 Catcher or Shield Block; access to Club Vanquisher, must worship a deity, and cannot choose this Class if you have access to the Desperado Club.",
+  "class_type": "Paladin",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Paladin",
+  "prerequisites": null,
+  "source_book_page": 155,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+2 Strength and Constitution; +2 Catcher, Riding, and Lance Skills and +2 Shield and Smite Spells; gains a bonded Mount one size bigger with Move 40, DR 10 barding, a Trample attack, and a pet carrier, can redirect attacks between self and Mount, and when protecting someone under its code by using Catcher, gain the benefit of Playing to the Cameras (no Disadvantage, as this is a Passive Skill); this counts as your 'once per session' usage; access to Club Vanquisher and must worship a deity.",
+  "class_type": "Fighter, Paladin",
+  "kind": "class",
+  "name": "Cavalier",
+  "prerequisites": null,
+  "source_book_page": 156,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+3 Strength, +2 Charisma; +2 Catcher, +2 in a Weapon Skill of choice, and +2 Heal Others, Smite, and Turn Undead Spells; +2 DR Buff, access to the Dungeon Book of the Floor club (Favored: Cleric or Paladin Spells only) and Club Vanquisher, must worship a deity, and cannot choose this Class if you have access to the Desperado Club.",
+  "class_type": "Paladin",
+  "kind": "class",
+  "name": "Sacred Paladin",
+  "prerequisites": null,
+  "source_book_page": 156,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+1 Intelligence, Dexterity, and Charisma; +3 Stealth, +2 Dagger, Detect Trap, Dodge, and Lockpicking, and +1 Ambush; can see in total darkness, gains 1 x Floor Number gold per Mob killed with a melee weapon, and access to the Desperado Club, but cannot choose this Class if you have access to Club Vanquisher.",
+  "class_type": "Rogue",
+  "kind": "class",
+  "name": "Boring Ol\u2019 Rogue",
+  "prerequisites": null,
+  "source_book_page": 156,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+2 Dexterity, +1 Constitution, -2 Intelligence; +3 Bomb Surgeon and Find Trap Skills, +2 in all Explosive-based Skills, and +1 DR Buff; Limb Regeneration Benefit regrows one limb in 12 days minus Con Mod, plus a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Rogue",
+  "kind": "class",
+  "name": "Bomb Squad Tech",
+  "prerequisites": "This limited Class is only available to crawlers who've earned the Boom! Achievement",
+  "source_book_page": 156,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+5 Charisma, +1 Intelligence; +2 Backfire, Escape Plan, and Find Trap, +1 Bomb Surgeon, Hide in Shadows, Trap Engineer, and Unarmed Combat, and +1 Fear Spell; drawbacks include no Stat Mod bonus damage with Edged Weapons and +3 Mana to cast damage-dealing Spells, plus end-of-floor trap and bomb Skill Advancement Check bonuses, Desperado Club and Naughty Boys Employment Agency access, and a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Monk, Rogue",
+  "kind": "class",
+  "name": "Compensated Anarchist",
+  "prerequisites": "This limited Class is only available to crawlers who have Popularity 3 or higher and have Rank 5+ in the Explosives Handling Skill",
+  "source_book_page": 157,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+1 Intelligence and Charisma; +4 Deception and Stealth, +2 Dagger and Escape Plan, and +1 Determine Value and Negotiation; access to the Desperado Club, cannot choose this Class if you have access to Club Vanquisher, and a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Rogue",
+  "kind": "class",
+  "name": "High Rise Grifter",
+  "prerequisites": null,
+  "source_book_page": 157,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+4 Charisma, +3 Dexterity; +5 Deception, +3 Dagger, and +2 Investigation; Tier 3 Makeup Table, access to the Desperado Club, cannot choose this Class if you have access to Club Vanquisher, and a Silver Earth Box with guaranteed Earth Hobby Potion.",
+  "class_type": "Rogue",
+  "kind": "class",
+  "name": "Identity Thief",
+  "prerequisites": null,
+  "source_book_page": 157,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "+3 Dexterity and Charisma; +3 Rapier or Longsword Skill (raisable to Rank 20), +2 Balance and Dodge, +1 Performance, and +1 Light on Your Feet; advantage on melee attacks from a higher position, and once per combat after killing an enemy can make an Unopposed Performance Check to gain +1 Popularity on an Amazing Success or better.",
+  "class_type": "Bard, Fighter, Rogue",
+  "kind": "class",
+  "name": "Swashbuckler",
+  "prerequisites": null,
+  "source_book_page": 158,
+  "uncertain": false,
+  "uncertain_reason": null
+ }
+]

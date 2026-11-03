@@ -1,0 +1,873 @@
+{
+  "categories": [
+    {
+      "id": "childhood",
+      "label": "Childhood",
+      "rank": 1,
+      "note": "Pick one background, then two of its three skills. Both start at Rank 1.",
+      "backgrounds": [
+        {
+          "name": "Latchkey Kid",
+          "skills": [
+            {
+              "name": "Streetwise",
+              "stat": "CHA"
+            },
+            {
+              "name": "Perception",
+              "stat": "INT"
+            },
+            {
+              "name": "Stealth",
+              "stat": "DEX"
+            }
+          ]
+        },
+        {
+          "name": "Crafty Kid",
+          "skills": [
+            {
+              "name": "Fabricate",
+              "stat": "INT"
+            },
+            {
+              "name": "Repair",
+              "stat": "INT"
+            },
+            {
+              "name": "Salvage",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Excitable Kid",
+          "skills": [
+            {
+              "name": "Escape Artist",
+              "stat": "DEX"
+            },
+            {
+              "name": "Endurance",
+              "stat": "CON"
+            },
+            {
+              "name": "Running",
+              "stat": "DEX"
+            }
+          ]
+        },
+        {
+          "name": "Gymnast",
+          "skills": [
+            {
+              "name": "Endurance",
+              "stat": "CON"
+            },
+            {
+              "name": "Jumping",
+              "stat": "STR"
+            },
+            {
+              "name": "Performance",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Military Brat",
+          "skills": [
+            {
+              "name": "Deception",
+              "stat": "CHA"
+            },
+            {
+              "name": "Streetwise",
+              "stat": "CHA"
+            },
+            {
+              "name": "Tactics",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "MMO Kid",
+          "skills": [
+            {
+              "name": "Fabricate",
+              "stat": "INT"
+            },
+            {
+              "name": "Engineering",
+              "stat": "INT"
+            },
+            {
+              "name": "Tactics",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Only Child",
+          "skills": [
+            {
+              "name": "Good First Impression",
+              "stat": "CHA"
+            },
+            {
+              "name": "Investigation",
+              "stat": "INT"
+            },
+            {
+              "name": "Negotiation",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Outdoor Kid",
+          "skills": [
+            {
+              "name": "Animal Handling",
+              "stat": "CHA"
+            },
+            {
+              "name": "Climbing",
+              "stat": "STR"
+            },
+            {
+              "name": "Swimming",
+              "stat": "STR"
+            }
+          ]
+        },
+        {
+          "name": "Problem Child",
+          "skills": [
+            {
+              "name": "Intimidate",
+              "stat": "STR"
+            },
+            {
+              "name": "Deception",
+              "stat": "CHA"
+            },
+            {
+              "name": "Pugilism",
+              "stat": "DEX"
+            }
+          ]
+        },
+        {
+          "name": "Scamp",
+          "skills": [
+            {
+              "name": "Hide in Shadows",
+              "stat": "DEX"
+            },
+            {
+              "name": "Jumping",
+              "stat": "STR"
+            },
+            {
+              "name": "Throwing",
+              "stat": "STR"
+            }
+          ]
+        },
+        {
+          "name": "Teacher's Pet",
+          "skills": [
+            {
+              "name": "Catcher",
+              "stat": null
+            },
+            {
+              "name": "Perception",
+              "stat": "INT"
+            },
+            {
+              "name": "Good First Impression",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Wild Child",
+          "skills": [
+            {
+              "name": "Stealth",
+              "stat": "DEX"
+            },
+            {
+              "name": "Survival",
+              "stat": "CON"
+            },
+            {
+              "name": "Running",
+              "stat": "DEX"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "adolescence",
+      "label": "Adolescence",
+      "rank": 1,
+      "note": "Pick one background, then two of its three skills. Both start at Rank 1.",
+      "backgrounds": [
+        {
+          "name": "Family Farm",
+          "skills": [
+            {
+              "name": "Animal Handling",
+              "stat": "CHA"
+            },
+            {
+              "name": "Fabricate",
+              "stat": "INT"
+            },
+            {
+              "name": "Tracking",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Drama Nerd",
+          "skills": [
+            {
+              "name": "Fabricate",
+              "stat": "INT"
+            },
+            {
+              "name": "Deception",
+              "stat": "CHA"
+            },
+            {
+              "name": "Performance",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Drop-Out",
+          "skills": [
+            {
+              "name": "Chopper Pilot",
+              "stat": "DEX"
+            },
+            {
+              "name": "Streetwise",
+              "stat": "CHA"
+            },
+            {
+              "name": "Survival",
+              "stat": "CON"
+            }
+          ]
+        },
+        {
+          "name": "Greek Life",
+          "skills": [
+            {
+              "name": "Negotiation",
+              "stat": "CHA"
+            },
+            {
+              "name": "Intimidate",
+              "stat": "STR"
+            },
+            {
+              "name": "Taunt",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Influencer",
+          "skills": [
+            {
+              "name": "Negotiation",
+              "stat": "CHA"
+            },
+            {
+              "name": "Persuasion",
+              "stat": "CHA"
+            },
+            {
+              "name": "Performance",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Jock",
+          "skills": [
+            {
+              "name": "Endurance",
+              "stat": "CON"
+            },
+            {
+              "name": "Jumping",
+              "stat": "STR"
+            },
+            {
+              "name": "Throwing",
+              "stat": "STR"
+            }
+          ]
+        },
+        {
+          "name": "McJob",
+          "skills": [
+            {
+              "name": "Determine Value",
+              "stat": null
+            },
+            {
+              "name": "Negotiation",
+              "stat": "CHA"
+            },
+            {
+              "name": "Repair",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Popular",
+          "skills": [
+            {
+              "name": "Good First Impression",
+              "stat": "CHA"
+            },
+            {
+              "name": "Perception",
+              "stat": "INT"
+            },
+            {
+              "name": "Persuasion",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Religious",
+          "skills": [
+            {
+              "name": "Catcher",
+              "stat": null
+            },
+            {
+              "name": "First Aid",
+              "stat": "INT"
+            },
+            {
+              "name": "Persuasion",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Student Government",
+          "skills": [
+            {
+              "name": "Deception",
+              "stat": "CHA"
+            },
+            {
+              "name": "Persuasion",
+              "stat": "CHA"
+            },
+            {
+              "name": "Investigation",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Nerd",
+          "skills": [
+            {
+              "name": "Investigation",
+              "stat": "INT"
+            },
+            {
+              "name": "Repair",
+              "stat": "INT"
+            },
+            {
+              "name": "Fabricate",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Weirdo",
+          "skills": [
+            {
+              "name": "Streetwise",
+              "stat": "CHA"
+            },
+            {
+              "name": "Intimidate",
+              "stat": "STR"
+            },
+            {
+              "name": "Fabricate",
+              "stat": "INT"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "career",
+      "label": "Career",
+      "rank": 3,
+      "note": "Pick one background, then two of its three skills. Both start at Rank 3.",
+      "backgrounds": [
+        {
+          "name": "Criminal",
+          "skills": [
+            {
+              "name": "Deception",
+              "stat": "CHA"
+            },
+            {
+              "name": "Stealth",
+              "stat": "DEX"
+            },
+            {
+              "name": "Streetwise",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Service Industry",
+          "skills": [
+            {
+              "name": "Dagger",
+              "stat": "DEX"
+            },
+            {
+              "name": "Endurance",
+              "stat": "CON"
+            },
+            {
+              "name": "Sleight of Hand",
+              "stat": "DEX"
+            }
+          ]
+        },
+        {
+          "name": "Small Business Owner",
+          "skills": [
+            {
+              "name": "Determine Value",
+              "stat": null
+            },
+            {
+              "name": "Negotiation",
+              "stat": "CHA"
+            },
+            {
+              "name": "Perception",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Medical",
+          "skills": [
+            {
+              "name": "Sleight of Hand",
+              "stat": "DEX"
+            },
+            {
+              "name": "Detect Lies",
+              "stat": "INT"
+            },
+            {
+              "name": "First Aid",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Law Enforcement",
+          "skills": [
+            {
+              "name": "Detect Lies",
+              "stat": "INT"
+            },
+            {
+              "name": "Handgun",
+              "stat": "DEX"
+            },
+            {
+              "name": "Investigation",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Gig Worker",
+          "skills": [
+            {
+              "name": "Driving",
+              "stat": "DEX"
+            },
+            {
+              "name": "Escape Artist",
+              "stat": "DEX"
+            },
+            {
+              "name": "Negotiation",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Teacher",
+          "skills": [
+            {
+              "name": "Detect Lies",
+              "stat": "INT"
+            },
+            {
+              "name": "Perception",
+              "stat": "INT"
+            },
+            {
+              "name": "Performance",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Office Drone",
+          "skills": [
+            {
+              "name": "Dumpster Diving",
+              "stat": "INT"
+            },
+            {
+              "name": "Endurance",
+              "stat": "CON"
+            },
+            {
+              "name": "Investigation",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Entertainer",
+          "skills": [
+            {
+              "name": "Deception",
+              "stat": "CHA"
+            },
+            {
+              "name": "Good First Impression",
+              "stat": "CHA"
+            },
+            {
+              "name": "Performance",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Unhoused",
+          "skills": [
+            {
+              "name": "Dumpster Diving",
+              "stat": "INT"
+            },
+            {
+              "name": "Streetwise",
+              "stat": "CHA"
+            },
+            {
+              "name": "Survival",
+              "stat": "CON"
+            }
+          ]
+        },
+        {
+          "name": "Middle Manager",
+          "skills": [
+            {
+              "name": "Deception",
+              "stat": "CHA"
+            },
+            {
+              "name": "Intimidate",
+              "stat": "STR"
+            },
+            {
+              "name": "Negotiation",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Military",
+          "skills": [
+            {
+              "name": "Handgun",
+              "stat": "DEX"
+            },
+            {
+              "name": "Survival",
+              "stat": "CON"
+            },
+            {
+              "name": "Tactics",
+              "stat": "INT"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hobby",
+      "label": "Hobby",
+      "rank": 2,
+      "note": "Pick one background, then two of its three skills. Both start at Rank 2.",
+      "backgrounds": [
+        {
+          "name": "Collector",
+          "skills": [
+            {
+              "name": "Fabricate",
+              "stat": "INT"
+            },
+            {
+              "name": "Determine Value",
+              "stat": null
+            },
+            {
+              "name": "Investigation",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Cosplay",
+          "skills": [
+            {
+              "name": "Fabricate",
+              "stat": "INT"
+            },
+            {
+              "name": "Performance",
+              "stat": "CHA"
+            },
+            {
+              "name": "Salvage",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Drinker",
+          "skills": [
+            {
+              "name": "Deception",
+              "stat": "CHA"
+            },
+            {
+              "name": "Intimidate",
+              "stat": "STR"
+            },
+            {
+              "name": "Streetwise",
+              "stat": "CHA"
+            }
+          ]
+        },
+        {
+          "name": "Gamer",
+          "skills": [
+            {
+              "name": "Aiming",
+              "stat": "DEX"
+            },
+            {
+              "name": "Perception",
+              "stat": "INT"
+            },
+            {
+              "name": "Tactics",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Gym Rat",
+          "skills": [
+            {
+              "name": "Running",
+              "stat": "DEX"
+            },
+            {
+              "name": "Endurance",
+              "stat": "CON"
+            },
+            {
+              "name": "Swimming",
+              "stat": "STR"
+            }
+          ]
+        },
+        {
+          "name": "Hunting",
+          "skills": [
+            {
+              "name": "Tracking",
+              "stat": "INT"
+            },
+            {
+              "name": "Shotgun",
+              "stat": "DEX"
+            },
+            {
+              "name": "Stealth",
+              "stat": "DEX"
+            }
+          ]
+        },
+        {
+          "name": "Music",
+          "skills": [
+            {
+              "name": "Perception",
+              "stat": "INT"
+            },
+            {
+              "name": "Performance",
+              "stat": "CHA"
+            },
+            {
+              "name": "Sleight of Hand",
+              "stat": "DEX"
+            }
+          ]
+        },
+        {
+          "name": "Motorsports",
+          "skills": [
+            {
+              "name": "Driving",
+              "stat": "DEX"
+            },
+            {
+              "name": "Repair",
+              "stat": "INT"
+            },
+            {
+              "name": "Salvage",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Climber",
+          "skills": [
+            {
+              "name": "Climbing",
+              "stat": "STR"
+            },
+            {
+              "name": "Jumping",
+              "stat": "STR"
+            },
+            {
+              "name": "Endurance",
+              "stat": "CON"
+            }
+          ]
+        },
+        {
+          "name": "Pop Culture",
+          "skills": [
+            {
+              "name": "Determine Value",
+              "stat": null
+            },
+            {
+              "name": "Investigation",
+              "stat": "INT"
+            },
+            {
+              "name": "Perception",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Tinkering",
+          "skills": [
+            {
+              "name": "Engineering",
+              "stat": "INT"
+            },
+            {
+              "name": "Repair",
+              "stat": "INT"
+            },
+            {
+              "name": "Salvage",
+              "stat": "INT"
+            }
+          ]
+        },
+        {
+          "name": "Travel",
+          "skills": [
+            {
+              "name": "Endurance",
+              "stat": "CON"
+            },
+            {
+              "name": "Negotiation",
+              "stat": "CHA"
+            },
+            {
+              "name": "Streetwise",
+              "stat": "CHA"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "combat_weapons": [
+    "Club",
+    "Improvised Weapons",
+    "Warhammer",
+    "Axe",
+    "Dagger",
+    "Longsword",
+    "Rapier",
+    "Bow",
+    "Crossbow",
+    "Handgun",
+    "Shotgun",
+    "Javelin",
+    "Shuriken",
+    "Slingshot",
+    "Lance",
+    "Polearm",
+    "Quarterstaff",
+    "Herding Weapons"
+  ],
+  "source": "Dungeon Crawler Carl RPG core rulebook, Chapter 3, Step 1 (Tables 12-15) and Step 2 (weapons). Human crawlers also start with Unarmed Combat at Rank 3."
+}
