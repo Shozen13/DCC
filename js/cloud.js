@@ -42,6 +42,11 @@ function $(id) { return document.getElementById(id); }
 function cloudStatus(msg, section) {
   var el = $(section ? ('cloud-status-' + section) : 'cloud-status');
   if (el) el.innerText = msg || '';
+  // Party/DM actions in the management tab report to 'focus' (the old
+  // Campaign-tab block, hidden for DMs) -- mirror them visibly there.
+  if (section === 'focus' && crawlerMode === 'dm') {
+    var m = $('manage-status'); if (m) m.innerText = msg || '';
+  }
 }
 function dmStatus(msg) { var el = $('dm-status'); if (el) el.innerText = msg || ''; }
 function landingStatus(msg) { var el = $('landing-status'); if (el) el.innerText = msg || ''; }
@@ -174,6 +179,409 @@ function baseStatTotal(d) {
   return ['str', 'con', 'dex', 'int', 'cha'].reduce(function (a, k) { return a + (parseInt(own[k], 10) || 0); }, 0);
 }
 
+/* ---------------- DM campaign management, character inspector,
+   dead crawlers (2026-11-03) ---------------- */
+/* The DM is an admin account, not a player: DM views never load a
+ * character, never list the DM's own characters as players (NPCs excepted),
+ * and the DM's work happens in the Management and Inspector tabs plus
+ * Send Box / Send Achievement. Character death is a flag on the
+ * character row's data object (data.dead); the player's sheet stamps
+ * itself DECEASED and locks while it is true. */
+var manageCampaignId = localStorage.getItem('manage_campaign_id') || null;
+function manageStatus(msg) { var el = $('manage-status'); if (el) el.innerText = msg || ''; }
+function selectManageCampaign(id) {
+  manageCampaignId = id;
+  localStorage.setItem('manage_campaign_id', id);
+  cloudCampaignId = id;
+  localStorage.setItem('cloud_campaign_id', id);
+  refreshManageTab();
+}
+async function refreshManageTab() {
+  var box = $('manage-content'); if (!box) return;
+  if (!cloudUser || crawlerMode !== 'dm') { box.innerHTML = '<p class="hint">Log in as DM first.</p>'; return; }
+  var res = await sb.from('campaigns').select('id, name, code').eq('dm_id', cloudUser.id).order('created_at');
+  if (res.error) { box.innerHTML = '<p class="hint">Could not list campaigns: ' + esc(res.error.message) + '</p>'; return; }
+  var list = res.data || [];
+  var html = '<div class="cloud-subhead">Create a campaign</div>'
+    + '<div><label>New campaign name <input type="text" id="manage-new-campaign" placeholder="e.g. Floor 1 - The Beginning"></label></div>'
+    + '<div class="btn-row"><button type="button" onclick="createCampaign(\'manage-new-campaign\')">Create campaign</button></div>';
+  if (!list.length) { box.innerHTML = html + '<p class="hint">No campaigns yet. Create one above.</p>'; return; }
+  if (!manageCampaignId || !list.some(function (c) { return c.id === manageCampaignId; })) {
+    manageCampaignId = list[0].id;
+    localStorage.setItem('manage_campaign_id', manageCampaignId);
+  }
+  cloudCampaignId = manageCampaignId;
+  localStorage.setItem('cloud_campaign_id', manageCampaignId);
+  var camp = list.find(function (c) { return c.id === manageCampaignId; });
+  html += '<div class="cloud-subhead">Your campaigns</div>' + list.map(function (c) {
+    return '<button type="button" onclick="selectManageCampaign(\'' + c.id + '\')">' + esc(c.name) + (c.id === manageCampaignId ? ' (selected)' : '') + '</button> ';
+  }).join('');
+  html += '<div class="cloud-subhead">' + esc(camp.name) + ' - Code ' + esc(camp.code) + ' <button type="button" onclick="deleteCampaign(\'' + camp.id + '\')">Delete campaign</button></div>';
+  var mem = await fetchCampaignMembers(camp.id);
+  var members = mem.members || [];
+  html += '<div class="cloud-subhead">Players in this campaign</div><p class="hint">Tick members to make a party, then Confirm party below. Inspect opens the full character.</p>' + (members.length ? members.map(function (m) {
+    var d = m.data || {};
+    return '<div class="cloud-row"><span><input type="checkbox" class="party-check" value="' + m.id + '"> ' + esc(m.name) + (d.npc ? ' (NPC)' : '') + (d.dead ? ' - DECEASED' : '') + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><span><button type="button" onclick="inspectCharacter(\'' + m.id + '\')">Inspect</button></span></div>';
+  }).join('') : '<p class="hint">No players in this campaign yet. Share the code with your players.</p>');
+  html += '<div class="cloud-subhead">Create a non-player character</div><p class="hint">NPCs belong to this campaign and can be inspected, edited, and marked deceased like players, but they are never a loaded player sheet.</p>'
+    + '<div><label>NPC name <input type="text" id="npc-name" placeholder="e.g. Barkeep Bruna"></label></div>'
+    + '<div><label>Level <input type="number" id="npc-level" min="1" value="1"></label></div>'
+    + '<div class="btn-row"><button type="button" onclick="createNpc()">Create NPC</button></div>';
+  var partiesRes = await sb.from('parties').select('id, name, leader_character_id').eq('campaign_id', camp.id).order('created_at');
+  var parties = partiesRes.data || [];
+  html += '<div class="cloud-subhead">Parties</div>';
+  if (!parties.length) html += '<p class="hint">No parties yet. Tick members above, then confirm.</p>';
+  else {
+    html += parties.map(function (pp) {
+      var leader = members.find(function (m) { return m.id === pp.leader_character_id; });
+      return '<div class="cloud-row"><span>' + esc(pp.name) + (leader ? ' - Leader: ' + esc(leader.name) + ' 👑' : ' - No leader yet') + '</span><span><button type="button" onclick="recalcLeader(\'' + pp.id + '\')">Recalculate leader</button> <button type="button" onclick="deleteParty(\'' + pp.id + '\')">Delete</button></span></div>';
+    }).join('');
+  }
+  html += '<div class="btn-row"><button type="button" onclick="createParty()">Confirm party</button></div>';
+  box.innerHTML = html;
+}
+async function createNpc() {
+  if (!needLogin() || crawlerMode !== 'dm') return manageStatus('DM only.');
+  var name = $('npc-name') ? $('npc-name').value.trim() : '';
+  var level = $('npc-level') ? (parseInt($('npc-level').value, 10) || 1) : 1;
+  if (!manageCampaignId) return manageStatus('Select a campaign first.');
+  if (!name) return manageStatus('Give the NPC a name first.');
+  var d = window.DCC.blankState();
+  d.name = name; d.level = level; d.npc = true;
+  var res = await sb.from('characters').insert({ owner_id: cloudUser.id, name: name, level: level, data: d, campaign_id: manageCampaignId }).select('id').single();
+  if (res.error) return manageStatus('NPC creation failed: ' + res.error.message);
+  var cc = await sb.from('campaign_characters').insert({ campaign_id: manageCampaignId, character_id: res.data.id });
+  if (cc.error) return manageStatus('NPC created, but adding it to the campaign failed: ' + cc.error.message);
+  if ($('npc-name')) $('npc-name').value = '';
+  manageStatus('NPC created: ' + name);
+  refreshManageTab();
+}
+
+/* Character Inspector tab (DM only). Shows one character completely and
+ * edits everything except name and number, which the DM may never alter.
+ * Every edit writes the whole data object back to that character's row,
+ * so the player's own sheet picks it up live through realtime. */
+var dmInspectId = null;
+function inspectStatus(msg) { var el = $('inspect-status'); if (el) el.innerText = msg || ''; }
+function inspectCharacter(id) { dmInspectId = id; window.DCC.showTab('inspect'); }
+function inspInt(id, def) { var el = $(id); if (!el) return def; var v = parseInt(el.value, 10); return isNaN(v) ? def : v; }
+async function dmUpdateCharacter(id, mutate, msg) {
+  if (!needLogin() || crawlerMode !== 'dm') return inspectStatus('DM only.');
+  var row = await sb.from('characters').select('id, name, level, data').eq('id', id).single();
+  if (row.error) return inspectStatus('Could not load that character: ' + row.error.message);
+  var d = row.data.data || {};
+  mutate(d);
+  var res = await sb.from('characters').update({ data: d, level: parseInt(d.level, 10) || 1, updated_at: new Date().toISOString() }).eq('id', id);
+  if (res.error) return inspectStatus('Update failed: ' + res.error.message);
+  if (msg) inspectStatus(msg);
+  renderInspector();
+  refreshDmDashboard();
+  refreshManageTab();
+}
+function dmBonusText(b) {
+  if (!b) return '';
+  if (typeof b === 'string') return b;
+  var parts = [];
+  if (b.type) parts.push(b.type);
+  if (b.stat) parts.push(String(b.stat).toUpperCase());
+  if (b.skill) parts.push(b.skill);
+  if (b.amount !== undefined && b.amount !== '' && b.amount !== 0) parts.push('+' + b.amount);
+  return parts.join(' ') || JSON.stringify(b);
+}
+function dmInspSaveVitals() {
+  if (!dmInspectId) return;
+  dmUpdateCharacter(dmInspectId, function (d) {
+    d.hpCurrent = Math.max(0, Math.min(10, inspInt('insp-hp', d.hpCurrent || 0)));
+    d.manaCurrent = Math.max(0, inspInt('insp-mana', d.manaCurrent || 0));
+    d.gold = inspInt('insp-gold', d.gold || 0);
+    d.popularity = inspInt('insp-pop', d.popularity || 0);
+    d.aiFavor = inspInt('insp-aifavor', d.aiFavor || 0);
+    d.moveVal = inspInt('insp-move', d.moveVal || 20);
+    d.stepVal = inspInt('insp-step', d.stepVal || 10);
+    d.bossKills = Math.max(0, inspInt('insp-boss', d.bossKills || 0));
+    d.pkKills = Math.max(0, inspInt('insp-pk', d.pkKills || 0));
+    d.level = Math.max(1, inspInt('insp-level', d.level || 1));
+    d.floor = Math.max(1, inspInt('insp-floor', d.floor || 1));
+  }, 'Vitals saved.');
+}
+function dmInspSaveStats() {
+  if (!dmInspectId) return;
+  dmUpdateCharacter(dmInspectId, function (d) {
+    ['str', 'con', 'dex', 'int', 'cha'].forEach(function (k) {
+      d.ownBase = d.ownBase || {};
+      d.ownEnh = d.ownEnh || {};
+      d.ownBase[k] = inspInt('insp-base-' + k, d.ownBase[k] || 1);
+      d.ownEnh[k] = inspInt('insp-enh-' + k, d.ownEnh[k] || 0);
+    });
+    d.ownArmor = inspInt('insp-armor', d.ownArmor || 0);
+  }, 'Stats saved.');
+}
+function dmInspAddCond(kind) {
+  if (!dmInspectId) return;
+  var inputId = kind === 'buff' ? 'insp-buff-new' : 'insp-debuff-new';
+  var el = $(inputId); var name = el ? el.value.trim() : '';
+  if (!name) return inspectStatus('Type a buff or debuff name first.');
+  dmUpdateCharacter(dmInspectId, function (d) {
+    var key = kind === 'buff' ? 'buffs' : 'debuffs';
+    if (!Array.isArray(d[key])) d[key] = [];
+    d[key].push(name);
+  }, 'Added ' + kind + ': ' + name);
+}
+function dmInspDelCond(kind, idx) {
+  if (!dmInspectId) return;
+  dmUpdateCharacter(dmInspectId, function (d) {
+    var key = kind === 'buff' ? 'buffs' : 'debuffs';
+    if (Array.isArray(d[key])) d[key].splice(idx, 1);
+  }, 'Removed.');
+}
+function dmInspSetRank(list, idx, val) {
+  if (!dmInspectId) return;
+  var rank = Math.max(0, parseInt(val, 10) || 0);
+  dmUpdateCharacter(dmInspectId, function (d) {
+    if (Array.isArray(d[list]) && d[list][idx]) d[list][idx].ownRank = rank;
+  }, 'Rank saved.');
+}
+function dmInspDelCard(list, idx) {
+  if (!dmInspectId) return;
+  dmUpdateCharacter(dmInspectId, function (d) {
+    if (Array.isArray(d[list])) d[list].splice(idx, 1);
+  }, 'Removed.');
+}
+function dmInspAddCard(list) {
+  if (!dmInspectId) return;
+  var pfx = list === 'skills' ? 'skill' : 'spell';
+  var nameEl = $('insp-add-' + pfx + '-name');
+  var statEl = $('insp-add-' + pfx + '-stat');
+  var rankEl = $('insp-add-' + pfx + '-rank');
+  var name = nameEl ? nameEl.value.trim() : '';
+  if (!name) return inspectStatus('Give the ' + pfx + ' a name first.');
+  var card = { id: 'dm-' + Date.now() + '-' + Math.floor(Math.random() * 1000000000), name: name, kind: list === 'skills' ? 'skill' : 'spell', ownRank: Math.max(0, parseInt(rankEl ? rankEl.value : '1', 10) || 0), stat: statEl ? statEl.value : (list === 'skills' ? 'str' : 'int'), checkType: 'Active Check', effect: '', used: false, gearGrants: {} };
+  dmUpdateCharacter(dmInspectId, function (d) {
+    if (!Array.isArray(d[list])) d[list] = [];
+    d[list].push(card);
+  }, 'Added ' + name + '.');
+}
+function dmInspDelAttack(idx) {
+  if (!dmInspectId) return;
+  dmUpdateCharacter(dmInspectId, function (d) {
+    if (Array.isArray(d.attacks)) d.attacks.splice(idx, 1);
+  }, 'Attack removed.');
+}
+function dmInspAddAttack() {
+  if (!dmInspectId) return;
+  var name = $('insp-atk-name') ? $('insp-atk-name').value.trim() : '';
+  if (!name) return inspectStatus('Give the attack a name first.');
+  var atk = { id: 'dm-' + Date.now() + '-' + Math.floor(Math.random() * 1000000000), name: name, toHitStat: $('insp-atk-stat') ? $('insp-atk-stat').value : 'str', damage: $('insp-atk-damage') ? $('insp-atk-damage').value : '', notes: $('insp-atk-notes') ? $('insp-atk-notes').value : '' };
+  dmUpdateCharacter(dmInspectId, function (d) {
+    if (!Array.isArray(d.attacks)) d.attacks = [];
+    d.attacks.push(atk);
+  }, 'Attack added.');
+}
+function dmInspToggleEquip(idx) {
+  if (!dmInspectId) return;
+  dmUpdateCharacter(dmInspectId, function (d) {
+    if (Array.isArray(d.items) && d.items[idx]) d.items[idx].equipped = !d.items[idx].equipped;
+  }, 'Equipment changed.');
+}
+function dmInspDelItem(idx) {
+  if (!dmInspectId) return;
+  dmUpdateCharacter(dmInspectId, function (d) {
+    if (Array.isArray(d.items)) d.items.splice(idx, 1);
+  }, 'Item removed.');
+}
+function dmInspAddItem() {
+  if (!dmInspectId) return;
+  var name = $('insp-item-name') ? $('insp-item-name').value.trim() : '';
+  if (!name) return inspectStatus('Give the item a name first.');
+  dmUpdateCharacter(dmInspectId, function (d) {
+    if (!Array.isArray(d.items)) d.items = [];
+    d.items.push({ name: name, bonuses: [], equipped: false });
+  }, 'Item added (unequipped, no bonuses).');
+}
+async function successionForCharacter(charId) {
+  // When a party leader dies, leadership passes to the next LIVING member
+  // with the highest combined base stat total (the same rule party
+  // creation uses). Runs on the DM client, which can read full rows.
+  var pm = await sb.from('party_members').select('party_id').eq('character_id', charId);
+  if (pm.error) return;
+  for (var i = 0; i < (pm.data || []).length; i++) {
+    var pid = pm.data[i].party_id;
+    var party = await sb.from('parties').select('id, leader_character_id').eq('id', pid).single();
+    if (party.error || !party.data || party.data.leader_character_id !== charId) continue;
+    var mem = await sb.from('party_members').select('character_id').eq('party_id', pid);
+    var ids = (mem.data || []).map(function (r) { return r.character_id; }).filter(function (id) { return id !== charId; });
+    if (!ids.length) { await sb.from('parties').update({ leader_character_id: null }).eq('id', pid); continue; }
+    var rows = await sb.from('characters').select('id, data').in('id', ids);
+    var living = (rows.data || []).filter(function (r) { return !(r.data && r.data.dead); });
+    if (!living.length) { await sb.from('parties').update({ leader_character_id: null }).eq('id', pid); continue; }
+    var totals = await Promise.all(living.map(function (r) { return baseStatTotalAsync(r.data); }));
+    var best = -1, bestId = living[0].id;
+    living.forEach(function (r, j) { if (totals[j] > best) { best = totals[j]; bestId = r.id; } });
+    await sb.from('parties').update({ leader_character_id: bestId }).eq('id', pid);
+  }
+}
+async function dmInspToggleDead() {
+  if (!dmInspectId) return;
+  var row = await sb.from('characters').select('id, data').eq('id', dmInspectId).single();
+  if (row.error) return inspectStatus('Could not load that character: ' + row.error.message);
+  var d = row.data.data || {};
+  var nowDead = !d.dead;
+  d.dead = nowDead;
+  var res = await sb.from('characters').update({ data: d, updated_at: new Date().toISOString() }).eq('id', dmInspectId);
+  if (res.error) return inspectStatus('Update failed: ' + res.error.message);
+  inspectStatus(nowDead ? 'Marked as deceased. The player now sees the DECEASED stamp and cannot change this character.' : 'Revived. The player can change this character again.');
+  if (nowDead) await successionForCharacter(dmInspectId);
+  renderInspector();
+  refreshDmDashboard();
+  refreshManageTab();
+}
+async function renderInspector() {
+  var box = $('inspect-content'); if (!box) return;
+  if (!cloudUser || crawlerMode !== 'dm') { box.innerHTML = '<p class="hint">Log in as DM first.</p>'; return; }
+  if (!dmInspectId) { box.innerHTML = '<p class="hint">Pick a player from the DM Dashboard or Campaign Management tab, then Inspect.</p>'; return; }
+  var row = await sb.from('characters').select('id, name, level, data, owner_id').eq('id', dmInspectId).single();
+  if (row.error) { box.innerHTML = '<p class="hint">Could not load that character: ' + esc(row.error.message) + '</p>'; return; }
+  var d = row.data.data || {};
+  var base = d.ownBase || { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
+  var enh = d.ownEnh || { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+  var num = function (id, val, min) { return '<input type="number" id="' + id + '" value="' + val + '"' + (min !== undefined ? ' min="' + min + '"' : '') + ' style="width:72px">'; };
+  var statOpts = ['str', 'con', 'dex', 'int', 'cha'].map(function (k) { return '<option value="' + k + '">' + k.toUpperCase() + '</option>'; }).join('');
+  var html = '<p><strong>' + esc(d.name || row.data.name || 'Unnamed Crawler') + '</strong>'
+    + (d.npc ? ' (NPC)' : '') + (d.dead ? ' - <strong>DECEASED</strong>' : '')
+    + ' - ' + esc(d.race || 'no race') + ' / ' + esc(d.class || 'no class')
+    + ' - Level ' + esc(d.level || 1) + ' - Floor ' + esc(d.floor || 1) + '</p>';
+  if (d.avatarUrl) html += '<p><img src="' + esc(d.avatarUrl) + '" alt="Crawler avatar" style="width:96px;height:96px;object-fit:cover;border-radius:8px"></p>';
+  html += '<p class="hint">Name and number cannot be changed by the DM. Everything else below can. Changes save to the cloud at once and the player sees them live.</p>';
+  html += '<div class="cloud-subhead">Status</div><div class="btn-row"><button type="button" onclick="dmInspToggleDead()">' + (d.dead ? 'Revive crawler' : 'Mark as deceased') + '</button></div>';
+  html += '<div class="cloud-subhead">Vitals</div>'
+    + '<div><label>Health slots (0-10) ' + num('insp-hp', d.hpCurrent === undefined ? 10 : d.hpCurrent, 0) + '</label> '
+    + '<label>Mana ' + num('insp-mana', d.manaCurrent === undefined ? 0 : d.manaCurrent, 0) + '</label> '
+    + '<label>Gold ' + num('insp-gold', d.gold || 0) + '</label></div>'
+    + '<div><label>Popularity ' + num('insp-pop', d.popularity || 0) + '</label> '
+    + '<label>AI Favor ' + num('insp-aifavor', d.aiFavor || 0) + '</label> '
+    + '<label>Move ' + num('insp-move', d.moveVal === undefined ? 20 : d.moveVal) + '</label> '
+    + '<label>Step ' + num('insp-step', d.stepVal === undefined ? 10 : d.stepVal) + '</label></div>'
+    + '<div><label>Boss kills ' + num('insp-boss', d.bossKills || 0, 0) + '</label> '
+    + '<label>Player kills ' + num('insp-pk', d.pkKills || 0, 0) + '</label> '
+    + '<label>Level ' + num('insp-level', d.level || 1, 1) + '</label> '
+    + '<label>Floor ' + num('insp-floor', d.floor || 1, 1) + '</label></div>'
+    + '<div class="btn-row"><button type="button" onclick="dmInspSaveVitals()">Save vitals</button></div>';
+  html += '<div class="cloud-subhead">Stats (base / enhance / armor)</div>';
+  ['str', 'con', 'dex', 'int', 'cha'].forEach(function (k) {
+    html += '<div><label>' + k.toUpperCase() + ' base ' + num('insp-base-' + k, base[k] === undefined ? 1 : base[k]) + '</label> '
+      + '<label>enhance ' + num('insp-enh-' + k, enh[k] || 0) + '</label></div>';
+  });
+  html += '<div><label>Own armor ' + num('insp-armor', d.ownArmor || 0) + '</label></div>'
+    + '<div class="btn-row"><button type="button" onclick="dmInspSaveStats()">Save stats</button></div>';
+  var condList = function (kind, arr) {
+    return (arr || []).map(function (c, i) {
+      return '<div class="cloud-row"><span>' + esc(typeof c === 'string' ? c : (c.name || JSON.stringify(c))) + '</span><span><button type="button" onclick="dmInspDelCond(\'' + kind + '\', ' + i + ')">Remove</button></span></div>';
+    }).join('') || '<p class="hint">None.</p>';
+  };
+  html += '<div class="cloud-subhead">Buffs</div>' + condList('buff', d.buffs)
+    + '<div><label>Add buff <input type="text" id="insp-buff-new" placeholder="e.g. Blessed"></label> <button type="button" onclick="dmInspAddCond(\'buff\')">Add buff</button></div>';
+  html += '<div class="cloud-subhead">Debuffs</div>' + condList('debuff', d.debuffs)
+    + '<div><label>Add debuff <input type="text" id="insp-debuff-new" placeholder="e.g. Poisoned"></label> <button type="button" onclick="dmInspAddCond(\'debuff\')">Add debuff</button></div>';
+  var cardRows = function (list, arr) {
+    return (arr || []).map(function (c, i) {
+      return '<div class="cloud-row"><span>' + esc(c.name) + ' - ' + esc((c.stat || '').toUpperCase()) + ' - Trained rank <input type="number" min="0" value="' + (parseInt(c.ownRank, 10) || 0) + '" onchange="dmInspSetRank(\'' + list + '\', ' + i + ', this.value)" style="width:64px"></span><span><button type="button" onclick="dmInspDelCard(\'' + list + '\', ' + i + ')">Remove</button></span></div>';
+    }).join('') || '<p class="hint">None.</p>';
+  };
+  var addCard = function (list, pfx) {
+    return '<div><label>Name <input type="text" id="insp-add-' + pfx + '-name"></label> <label>Stat <select id="insp-add-' + pfx + '-stat">' + statOpts + '</select></label> <label>Rank <input type="number" id="insp-add-' + pfx + '-rank" min="0" value="1" style="width:64px"></label> <button type="button" onclick="dmInspAddCard(\'' + list + '\')">Add</button></div>';
+  };
+  html += '<div class="cloud-subhead">Skills</div>' + cardRows('skills', d.skills) + addCard('skills', 'skill');
+  html += '<div class="cloud-subhead">Spells</div>' + cardRows('spells', d.spells) + addCard('spells', 'spell');
+  html += '<div class="cloud-subhead">Attacks (stored ones; derived attacks come from skills)</div>' + ((d.attacks || []).map(function (a, i) {
+    return '<div class="cloud-row"><span>' + esc(a.name) + ' - to-hit ' + esc((a.toHitStat || '').toUpperCase()) + ' - ' + esc(a.damage || '') + (a.notes ? ' - ' + esc(a.notes) : '') + '</span><span><button type="button" onclick="dmInspDelAttack(' + i + ')">Remove</button></span></div>';
+  }).join('') || '<p class="hint">None stored.</p>')
+    + '<div><label>Name <input type="text" id="insp-atk-name"></label> <label>To-hit stat <select id="insp-atk-stat">' + statOpts + '</select></label> <label>Damage <input type="text" id="insp-atk-damage" placeholder="e.g. 1d6 + Str"></label> <label>Notes <input type="text" id="insp-atk-notes"></label> <button type="button" onclick="dmInspAddAttack()">Add attack</button></div>';
+  html += '<div class="cloud-subhead">Inventory</div>' + ((d.items || []).map(function (it, i) {
+    var bonuses = (it.bonuses || []).map(dmBonusText).filter(Boolean).join(', ');
+    return '<div class="cloud-row"><span>' + esc(it.name) + (it.equipped ? ' - EQUIPPED' : '') + (bonuses ? ' - ' + esc(bonuses) : '') + '</span><span><button type="button" onclick="dmInspToggleEquip(' + i + ')">' + (it.equipped ? 'Unequip' : 'Equip') + '</button> <button type="button" onclick="dmInspDelItem(' + i + ')">Remove</button></span></div>';
+  }).join('') || '<p class="hint">Inventory is empty.</p>')
+    + '<div><label>Item name <input type="text" id="insp-item-name"></label> <button type="button" onclick="dmInspAddItem()">Add item (unequipped, no bonuses)</button></div>';
+  var st = d.story || {};
+  var bg = d.backgrounds || {};
+  var bgText = Object.keys(bg).map(function (cat) {
+    var b = bg[cat] || {};
+    return cat + ': ' + (b.bg || b.name || '') + ((b.skills || []).length ? ' (' + b.skills.join(', ') + ')' : '');
+  }).filter(function (t) { return t.indexOf(': ') > 0; }).join(' · ');
+  html += '<div class="cloud-subhead">Story (read-only here)</div>'
+    + '<p>Quests: ' + (st.quests || []).map(function (q) { return esc(q.name || 'Quest') + ' (' + esc(q.status || '') + ')'; }).join(', ') + '</p>'
+    + '<p>Journal entries: ' + (st.journal || []).length + ' · Pets: ' + (st.pets || []).map(function (pt) { return esc(pt.name || 'Pet'); }).join(', ') + ' · Mounts: ' + (st.mounts || []).map(function (mt) { return esc(mt.name || 'Mount'); }).join(', ') + '</p>'
+    + '<p>Sponsors: ' + (st.sponsors || []).map(function (sp) { return esc(sp.name || 'Sponsor'); }).join(', ') + ' · Faith: ' + esc((st.faith && st.faith.deity) || '') + ' ' + esc((st.faith && st.faith.tier) || '') + '</p>'
+    + (bgText ? '<p>Backgrounds: ' + esc(bgText) + '</p>' : '')
+    + '<p>Bio: ' + esc(((st.bio || {}).appearance || '') + ' ' + ((st.bio || {}).personality || '') + ' ' + ((st.bio || {}).backstory || '') + ' ' + ((st.bio || {}).notes || '')) + '</p>';
+  box.innerHTML = html;
+}
+
+/* Dead Party member tab (players only). Living members of a party with a
+ * dead member see the dead crawler's inventory here and can take items;
+ * taking removes the item from the dead crawler (even if equipped) and
+ * adds it to the taker unequipped. The party leader can also remove a
+ * dead crawler from the party. Reads and writes go through the
+ * supabase_dead_crawler.sql functions, because party mates have no
+ * direct RLS policy on each other's character rows. */
+function deadStatus(msg) { var el = $('deadparty-status'); if (el) el.innerText = msg || ''; }
+async function refreshDeadPartyTab() {
+  var btn = $('deadparty-tab-btn');
+  var box = $('deadparty-content');
+  if (!box) return;
+  if (!cloudUser || crawlerMode !== 'player' || !cloudCharacterId) { if (btn) btn.hidden = true; return; }
+  var res = await sb.rpc('dead_party_loot', { p_character_id: cloudCharacterId });
+  if (res.error) {
+    if (btn) btn.hidden = true;
+    box.innerHTML = '<p class="hint">Could not load dead party members: ' + esc(res.error.message) + ' (if this is a new site version, run supabase_dead_crawler.sql in Supabase first.)</p>';
+    return;
+  }
+  var rows = res.data || [];
+  if (btn) btn.hidden = rows.length === 0;
+  if (!rows.length) {
+    box.innerHTML = '<p class="hint">No dead crawlers in your parties.</p>';
+    var panel = $('panel-deadparty');
+    if (panel && panel.classList.contains('active')) window.DCC.showTab('vitals');
+    return;
+  }
+  box.innerHTML = rows.map(function (r) {
+    var items = r.items || [];
+    var itemsHtml = items.length ? items.map(function (it, i) {
+      return '<div class="cloud-row"><span>' + esc(it.name || 'Item') + '</span><span><button type="button" onclick="takeDeadItem(\'' + r.dead_id + '\', ' + i + ')">Take</button></span></div>';
+    }).join('') : '<p class="hint">Nothing left in this inventory.</p>';
+    return '<div class="cloud-subhead">Dead: ' + esc(r.dead_name) + ' (party: ' + esc(r.party_name) + ')</div>'
+      + itemsHtml
+      + (r.caller_is_leader ? '<div class="btn-row"><button type="button" onclick="removeDeadFromParty(\'' + r.party_id + '\', \'' + r.dead_id + '\')">Remove dead crawler from party</button></div>' : '');
+  }).join('');
+}
+async function takeDeadItem(deadId, idx) {
+  if (!needLogin()) return;
+  var res = await sb.rpc('take_dead_item', { p_dead_id: deadId, p_item_index: idx, p_taker_id: cloudCharacterId });
+  if (res.error) return deadStatus('Take failed: ' + res.error.message);
+  deadStatus('Took ' + (res.data || 'item') + ' from the dead crawler. It is now in your inventory, unequipped.');
+  var row = await sb.from('characters').select('data').eq('id', cloudCharacterId).single();
+  if (!row.error && row.data) {
+    // Refresh the taker's own sheet without leaving this tab
+    // (applyCloudState would jump back to the saved active tab).
+    try {
+      var st = Object.assign(window.DCC.blankState(), row.data.data || {});
+      window.DCC.setState(st);
+      window.DCC.ensureUnarmed();
+      window.DCC.syncGearGrants();
+      window.DCC.saveNow();
+      window.DCC.renderAll();
+    } catch (e) {}
+  }
+  refreshDeadPartyTab();
+}
+async function removeDeadFromParty(partyId, deadId) {
+  if (!needLogin()) return;
+  if (!confirm('Remove this dead crawler from the party?')) return;
+  var res = await sb.rpc('remove_dead_from_party', { p_party_id: partyId, p_dead_id: deadId, p_leader_id: cloudCharacterId });
+  if (res.error) return deadStatus('Remove failed: ' + res.error.message);
+  deadStatus('Dead crawler removed from the party.');
+  refreshDeadPartyTab();
+}
+
 /* ---------------- background slider (original, verbatim behaviour) ---------------- */
 var bgImages = ['DCC_GN_Cover.jpg', 'DCC_Cover.jpg', 'DCC_Cover_0.jpg'];
 function setupBackgroundSlider() {
@@ -300,7 +708,13 @@ async function afterRoleLogin(role) {
   setMode(role);
   hideLanding();
   startRealtime();
-  if (role === 'dm') { refreshCloudAll(); window.DCC.showTab('dm'); return; }
+  if (role === 'dm') {
+    // A DM is an admin account, not a player: no character is loaded in.
+    // (Switching back to Player re-loads that account's characters.)
+    cloudCharacterId = null;
+    localStorage.removeItem('crawler_cloud_id');
+    refreshCloudAll(); window.DCC.showTab('dm'); return;
+  }
   await playerAutoLoad();
 }
 async function cloudSignUp() {
@@ -347,6 +761,7 @@ async function cloudSave() {
   if (!needLogin()) return null;
   var data = getSheetCopy();
   if (!data) return cloudStatus('Nothing to save yet. Fill in your crawler first.', 'crawlers');
+  if (data.dead) return cloudStatus('This crawler is deceased and cannot be changed.', 'crawlers');
   var name = data.name || 'Unnamed Crawler';
   var level = parseInt(data.level, 10) || 1;
   var res;
@@ -438,7 +853,7 @@ function onWizardFinished() {
 
 /* ---------------- campaigns, parties, DM tools ---------------- */
 async function refreshMyCrawlers() {
-  if (!cloudUser) return;
+  if (!cloudUser || crawlerMode === 'dm') return;
   var res = await sb.from('characters').select('id, name, level, updated_at').eq('owner_id', cloudUser.id).order('updated_at', { ascending: false });
   var box = $('cloud-crawlers');
   if (!box) return;
@@ -455,10 +870,11 @@ function makeCode() {
   for (var i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
-async function createCampaign() {
+async function createCampaign(inputId) {
   if (!needLogin()) return;
   if (crawlerMode !== 'dm') return cloudStatus('Campaign creation is DM only. Switch to DM view to create a campaign.', 'join');
-  var name = $('cloud-new-campaign').value.trim();
+  var field = $(inputId || 'cloud-new-campaign');
+  var name = field ? field.value.trim() : '';
   if (!name) return cloudStatus('Give the campaign a name first.', 'join');
   var res = null;
   for (var attempt = 0; attempt < 5; attempt++) {
@@ -469,7 +885,8 @@ async function createCampaign() {
   cloudCampaignId = res.data.id;
   localStorage.setItem('cloud_campaign_id', cloudCampaignId);
   cloudStatus('Campaign created. Share this code with your players: ' + res.data.code, 'join');
-  $('cloud-new-campaign').value = '';
+  if (field) field.value = '';
+  if (crawlerMode === 'dm') { manageCampaignId = res.data.id; localStorage.setItem('manage_campaign_id', manageCampaignId); }
   refreshCloudAll();
 }
 async function joinCampaign() {
@@ -528,9 +945,14 @@ function selectCampaign(id) {
 async function fetchCampaignMembers(campaignId) {
   var cc = await sb.from('campaign_characters').select('character_id, characters(id, name, level, data, owner_id)').eq('campaign_id', campaignId);
   if (cc.error) return { error: cc.error };
-  return { members: (cc.data || []).map(function (r) { return r.characters; }).filter(Boolean) };
+  var members = (cc.data || []).map(function (r) { return r.characters; }).filter(Boolean);
+  if (crawlerMode === 'dm' && cloudUser) {
+    members = members.filter(function (m) { return m.owner_id !== cloudUser.id || (m.data && m.data.npc); });
+  }
+  return { members: members };;
 }
 async function refreshCampaign() {
+  if (crawlerMode === 'dm') return;
   var detail = $('cloud-campaign-detail');
   var partiesBox = $('cloud-parties');
   var dmBox = $('cloud-dm-tools');
@@ -618,6 +1040,7 @@ async function createParty() {
   if (pm.error) return cloudStatus('Party created, but adding members failed: ' + pm.error.message, 'focus');
   cloudStatus('Party created. Its leader is prompted to name it in their own Campaign panel.', 'focus');
   refreshCampaign();
+  refreshManageTab();
 }
 async function recalcLeader(partyId) {
   var pm = await sb.from('party_members').select('character_id, characters(id, data)').eq('party_id', partyId);
@@ -633,6 +1056,7 @@ async function recalcLeader(partyId) {
   if (res.error) return cloudStatus('Leader update failed: ' + res.error.message, 'focus');
   cloudStatus('Leader recalculated. The party name stays as it was; the new leader can change it.', 'focus');
   refreshCampaign();
+  refreshManageTab();
 }
 async function deleteParty(partyId) {
   if (!confirm('Delete this party? Its members stay in the campaign.')) return;
@@ -640,6 +1064,7 @@ async function deleteParty(partyId) {
   var res = await sb.from('parties').delete().eq('id', partyId);
   if (res.error) return cloudStatus('Delete failed: ' + res.error.message, 'focus');
   refreshCampaign();
+  refreshManageTab();
 }
 async function dmAdjust(characterId, field, delta) {
   var row = await sb.from('characters').select('id, data').eq('id', characterId).single();
@@ -651,6 +1076,7 @@ async function dmAdjust(characterId, field, delta) {
   if (res.error) return cloudStatus('Update failed: ' + res.error.message, 'focus');
   refreshCampaign();
   try { refreshDmDashboard(); } catch (e) {}
+  refreshManageTab();
 }
 async function dmAddCondition(characterId, kind, inputId) {
   var input = $(inputId || ('dm-cond-' + characterId));
@@ -670,13 +1096,16 @@ async function dmAddCondition(characterId, kind, inputId) {
   if (input) input.value = '';
   refreshCampaign();
   try { refreshDmDashboard(); } catch (e) {}
+  refreshManageTab();
 }
 async function refreshCloudAll() {
   if (!cloudUser) return;
+  if (crawlerMode === 'dm') { refreshDmDashboard(); refreshManageTab(); return; }
   await refreshMyCrawlers();
   await loadMyCampaigns();
   await refreshCampaign();
   renderCampaignLayout();
+  refreshDeadPartyTab();
 }
 async function leaveCampaign(campaignId) {
   if (!needLogin()) return;
@@ -709,6 +1138,7 @@ async function deleteCampaign(id) {
   loadMyCampaigns();
   refreshCampaign();
   renderCampaignLayout();
+  refreshManageTab();
 }
 
 /* ---------------- DM dashboard ---------------- */
@@ -762,7 +1192,7 @@ async function refreshDmDashboard() {
   }
   htmlOut += '<div class="cloud-subhead">Players (select one to alter)</div>' + (members.length ? members.map(function (m) {
     var d = m.data || {};
-    return '<div class="cloud-row"><span>' + esc(m.name) + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><button type="button" onclick="selectDmPlayer(\'' + m.id + '\')">' + (m.id === dmSelectedPlayerId ? 'Selected' : 'Select') + '</button></div>';
+    return '<div class="cloud-row"><span>' + esc(m.name) + (d.npc ? ' (NPC)' : '') + (d.dead ? ' - DECEASED' : '') + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><span><button type="button" onclick="selectDmPlayer(\'' + m.id + '\')">' + (m.id === dmSelectedPlayerId ? 'Selected' : 'Select') + '</button> <button type="button" onclick="inspectCharacter(\'' + m.id + '\')">Inspect</button></span></div>';
   }).join('') : '<p class="hint">No players in this campaign yet.</p>');
   var sel = members.find(function (m) { return m.id === dmSelectedPlayerId; });
   if (sel) {
@@ -778,6 +1208,7 @@ async function refreshDmDashboard() {
 /* ---------------- realtime + autosave ---------------- */
 function onLocalSave() {
   if (!cloudUser || crawlerMode !== 'player' || !cloudCharacterId || applyingRemote) return;
+  try { if (window.DCC.getState().dead) return; } catch (e) {}
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function () {
     try {
@@ -816,6 +1247,7 @@ function startRealtime() {
           window.DCC.syncGearGrants();
           window.DCC.saveNow();
           window.DCC.renderAll();
+          refreshDeadPartyTab();
         } finally { applyingRemote = false; }
       } else if (crawlerMode === 'dm') {
         refreshDmDashboard();
@@ -825,6 +1257,9 @@ function startRealtime() {
 }
 function onTabShown(tab) {
   if (tab === 'dm') refreshDmDashboard();
+  if (tab === 'manage') refreshManageTab();
+  if (tab === 'inspect') renderInspector();
+  if (tab === 'deadparty') refreshDeadPartyTab();
   if (tab === 'loot') refreshLoot();
   if (tab === 'sendbox' || tab === 'sendach') refreshAchCampaigns();
   if (tab === 'achievements') { refreshAchPlayerList(); checkUnviewedAchievements(); }

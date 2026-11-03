@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=25">
+<link rel="stylesheet" href="css/style.css?v=26">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -96,8 +96,11 @@
       <button type="button" data-tab="dm" class="tab-btn">DM Dashboard</button>
       <button type="button" data-tab="sendbox" class="tab-btn">Send Box</button>
       <button type="button" data-tab="sendach" class="tab-btn">Send Achievement</button>
+      <button type="button" data-tab="manage" class="tab-btn">Campaign Management</button>
+      <button type="button" data-tab="inspect" class="tab-btn">Character Inspector</button>
       <button type="button" data-tab="loot" class="tab-btn">Loot Boxes</button>
       <button type="button" data-tab="achievements" class="tab-btn">Achievements</button>
+      <button type="button" data-tab="deadparty" class="tab-btn" id="deadparty-tab-btn" hidden>Dead Party member</button>
       <button type="button" data-tab="all" class="tab-btn">All</button>
     </nav>
 
@@ -433,14 +436,28 @@
 
     <section class="panel" id="panel-dm">
       <h2>DM Dashboard</h2>
-      <p class="hint">Campaigns you control, with their players and parties. HP and mana here update live as players change, and your HP/mana buttons here update players live. Party creation, buffs and debuffs are still in the Campaign tab.</p>
+      <p class="hint">Campaigns you control, with their players and parties. HP and mana here update live as players change, and your HP/mana buttons here update players live. Party creation and campaign management are in the Campaign Management tab.</p>
       <div class="btn-row">
         <button type="button" onclick="refreshDmDashboard()">Refresh dashboard</button>
-        <button type="button" onclick="DCC.showTab('campaign')">Open Campaign tab</button>
+        <button type="button" onclick="DCC.showTab('manage')">Open Campaign Management</button>
       </div>
       <p id="dm-status" class="hint"></p>
       <div id="dm-dashboard"></div>
       <div class="btn-row"><button type="button" onclick="Cloud.showLanding()">Start screen</button></div>
+    </section>
+
+    <section class="panel" id="panel-manage">
+      <h2>Campaign Management</h2>
+      <p class="hint">Create campaigns, see the ones you run, pick one to see its players, make and manage its parties, and create non-player characters for it. Players never see this tab.</p>
+      <p id="manage-status" class="hint"></p>
+      <div id="manage-content"></div>
+    </section>
+
+    <section class="panel" id="panel-inspect">
+      <h2>Character Inspector</h2>
+      <p class="hint">The full character, as the DM sees it. Changes save to the cloud at once and the player sees them live. Name and number cannot be changed by the DM.</p>
+      <p id="inspect-status" class="hint"></p>
+      <div id="inspect-content"></div>
     </section>
 
     <section class="panel" id="panel-loot">
@@ -497,6 +514,15 @@
       <p class="hint">Your achievements, from boxes you have opened. Click an achievement name to see its message.</p>
       <div id="ach-player-items"></div>
     </section>
+
+    <section class="panel" id="panel-deadparty">
+      <h2>Dead Party member</h2>
+      <p class="hint">A crawler in your party has died. You can take anything from their inventory here. Taken items leave the dead crawler (even if they were equipped) and arrive in your inventory unequipped. Only the party leader can remove a dead crawler from the party.</p>
+      <p id="deadparty-status" class="hint"></p>
+      <div id="deadparty-content"></div>
+    </section>
+
+    <div id="dead-stamp" hidden>Deceased</div>
 
     <section class="panel" id="panel-all">
       <h2>All</h2>
@@ -609,10 +635,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=25"></script>
-<script src="js/convert.js?v=25"></script>
-<script src="js/app.js?v=25"></script>
-<script src="js/wizard.js?v=25"></script>
-<script src="js/cloud.js?v=25"></script>
+<script src="js/rules.js?v=26"></script>
+<script src="js/convert.js?v=26"></script>
+<script src="js/app.js?v=26"></script>
+<script src="js/wizard.js?v=26"></script>
+<script src="js/cloud.js?v=26"></script>
 </body>
 </html>

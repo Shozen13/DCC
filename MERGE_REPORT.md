@@ -180,6 +180,77 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## DM view redo: admin DM, Inspector tab, NPCs, Dead Crawlers (2026-11-03, ?v=26, built locally)
+
+Antony's rules: a DM is an admin account, never a loaded player; the
+Inspector is a tab; the DM may alter everything except name and
+number; Campaign Management is its own tab; DMs can create NPCs; and
+a new Dead Crawler status with looting.
+
+**DM is admin, not a player.** Entering DM mode clears the loaded
+cloud character pointer (switching back to Player re-loads that
+account's characters; nothing is deleted). DM refreshes no longer
+touch My Crawlers, DM-owned characters are filtered out of every
+member list (NPCs excepted, since the DM owns them), and the player
+Campaign tab is hidden in DM mode (tab guard + CSS). The DM's tabs
+are DM Dashboard, Campaign Management, Character Inspector, Send Box,
+Send Achievement.
+
+**Campaign Management tab (DM only).** Create a campaign (the old
+create flow, generalized to take an input id), list the DM's own
+campaigns, select one to see its players (Inspect buttons, NPC and
+DECEASED badges), tick members to make a party (Confirm party,
+Recalculate leader, Delete party — the old Campaign-tab DM tools
+block no longer renders for DMs, so its checkboxes cannot leak into
+party creation), and create NPCs (name + level; a characters row
+owned by the DM, flagged data.npc, joined to the campaign — no schema
+change needed, the DM already has those policies).
+
+**Character Inspector tab (DM only).** Opened from any Inspect button
+on the Dashboard or in Management. Shows the character completely:
+identity line, avatar, vitals (HP slots, mana, gold, popularity, AI
+Favor, move, step, kills, level, floor), stats (base / enhance /
+armor), buffs and debuffs (add/remove), skills and spells (trained
+rank edit, remove, add), stored attacks (remove, add), inventory
+(equip toggle, remove, add unequipped), and story read-only
+(quests, journal count, pets, mounts, sponsors, faith, backgrounds,
+bio). Name and number are displayed, never editable. Every edit
+writes the whole data object to that character's row, so the player's
+sheet picks it up live through realtime. Avatar is shown, not
+editable from the Inspector; item bonus internals are shown, not
+edited (remove + re-add covers it).
+
+**Dead Crawlers.** The DM marks a character deceased (or revives it)
+from the Inspector, which sets data.dead on the row. On death, if the
+crawler led any party, leadership passes to the next living member
+with the highest combined base stat total (exact rule, computed on
+the DM client); with no living members the leader is cleared to null
+for the DM to recalculate. The player's sheet, on load, stamps itself
+with a big rotated red DECEASED overlay and locks: every sidebar,
+topbar, and panel control goes dead by CSS while tabs stay clickable,
+so the player can cycle through and see the character but change
+nothing; player-side autosave and cloud save also refuse a dead
+sheet, so a stray edit cannot persist over a DM edit.
+
+**Dead Party member tab (players only, hidden otherwise).** Appears
+for a living party member when any party they are in has a dead
+member. It lists each dead member's inventory with Take buttons, and
+a Remove button for the party leader. Take removes the item from the
+dead crawler — even if it was equipped — and adds it to the taker
+unequipped, then refreshes the taker's own sheet in place (no tab
+jump). Because party mates have no direct RLS policy on each other's
+rows, the tab runs through three new security-definer functions in
+`supabase_dead_crawler.sql` (NOT pushed to the repo; run it once in
+the Supabase SQL editor, like the leave-campaign file before it):
+dead_party_loot (read), take_dead_item (validated move), and
+remove_dead_from_party (leader-only). Until that file is run, the tab
+reports the lookup failure and Take/Remove fail; nothing else breaks.
+One honest approximation: if a dead leader is removed from a party
+before death-time succession moved leadership (a legacy edge only —
+marking dead always succeeds first), leadership clears to null for
+the DM to recalculate, because the exact base-total rule needs the
+rulebook library, which SQL does not have.
+
 ## Campaign tab optimizations (2026-11-03, ?v=25, built locally)
 
 Antony asked for the Campaign tab optimizations. Built, all five:

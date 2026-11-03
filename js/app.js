@@ -1220,15 +1220,25 @@
     // Keep Choices button in sync even when another tab is active.
     var btn = $('choices-tab-btn');
     if (choiceSections().length === 0 && activeTab === 'choices') { /* renderChoices already fell back */ }
+    // Deceased lock: a dead crawler's sheet is view-only for its player.
+    // Tabs live outside .panel/.sidebar, so they stay clickable and the
+    // player can cycle through and see the character; every control that
+    // would change it is deadened by CSS instead, and the DM edits
+    // through the Inspector. DM mode never locks (the DM has no sheet).
+    var deadLocked = !!state.dead && !(window.Cloud && window.Cloud.isDm());
+    document.body.classList.toggle('dead-lock', deadLocked);
+    var stamp = $('dead-stamp'); if (stamp) stamp.hidden = !deadLocked;
   }
   function showTab(tab) {
     // Tab guards, ported from the original sheet: DM-only tabs fall back to
     // Vitals for non-DMs, and in DM mode every character-sheet tab falls
-    // back to the DM Dashboard (only dm/campaign/sendbox/sendach are DM
-    // tabs). The cloud layer refreshes tab content via onTabShown.
+    // back to the DM Dashboard (DM tabs are dm/manage/inspect/sendbox/
+    // sendach; the player Campaign tab is replaced by Management for DMs,
+    // and Dead Party member is a player-only tab). The cloud layer
+    // refreshes tab content via onTabShown.
     if (window.Cloud) {
-      if ((tab === 'dm' || tab === 'sendbox' || tab === 'sendach') && !window.Cloud.isDm()) tab = 'vitals';
-      else if (window.Cloud.isDm() && ['dm', 'campaign', 'sendbox', 'sendach'].indexOf(tab) === -1) tab = 'dm';
+      if ((tab === 'dm' || tab === 'manage' || tab === 'inspect' || tab === 'sendbox' || tab === 'sendach') && !window.Cloud.isDm()) tab = 'vitals';
+      else if (window.Cloud.isDm() && ['dm', 'manage', 'inspect', 'sendbox', 'sendach'].indexOf(tab) === -1) tab = 'dm';
       if (typeof window.Cloud.onTabShown === 'function') window.Cloud.onTabShown(tab);
     }
     activeTab = tab;

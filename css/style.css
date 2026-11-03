@@ -120,6 +120,23 @@ body.dm-mode .tab-btn[data-tab="loot"], body.dm-mode .tab-btn[data-tab="all"] { 
 body:not(.dm-mode) #cloud-create-campaign-box { display:none; }
 body:not(.dm-mode) .tab-btn[data-tab="dm"], body:not(.dm-mode) .tab-btn[data-tab="sendbox"], body:not(.dm-mode) .tab-btn[data-tab="sendach"] { display:none; }
 body:not(.dm-mode) #panel-dm, body:not(.dm-mode) #panel-sendbox, body:not(.dm-mode) #panel-sendach { display:none !important; }
+/* DM redo (2026-11-03): Management + Inspector are DM-only; the player
+ * Campaign tab and the Dead Party member tab are hidden in DM mode
+ * (the DM is an admin account, never a loaded player). */
+body:not(.dm-mode) .tab-btn[data-tab="manage"], body:not(.dm-mode) .tab-btn[data-tab="inspect"] { display:none; }
+body:not(.dm-mode) #panel-manage, body:not(.dm-mode) #panel-inspect { display:none !important; }
+body.dm-mode .tab-btn[data-tab="campaign"], body.dm-mode .tab-btn[data-tab="deadparty"] { display:none; }
+body.dm-mode #panel-campaign, body.dm-mode #panel-deadparty { display:none !important; }
+/* Deceased stamp: big red rubber-stamp overlay, pointer-transparent so
+ * it never blocks the tabs the player may still cycle through. */
+#dead-stamp { position:fixed; top:38%; left:50%; transform:translate(-50%,-50%) rotate(-14deg); font-size:clamp(64px, 14vw, 160px); font-weight:900; letter-spacing:.12em; color:rgba(200,20,20,.5); border:6px solid rgba(200,20,20,.55); border-radius:12px; padding:.05em .3em; pointer-events:none; z-index:40; text-transform:uppercase; white-space:nowrap; }
+/* Deceased lock: every sheet control goes dead except, for safety, the
+ * Dead Party member tab's own controls (a dead player never sees that
+ * tab, but its Take buttons must never be caught by this rule). */
+body.dead-lock .sidebar input, body.dead-lock .sidebar button, body.dead-lock .sidebar .avatar-box,
+body.dead-lock .topbar button,
+body.dead-lock .panel input, body.dead-lock .panel button, body.dead-lock .panel select, body.dead-lock .panel textarea { pointer-events:none; opacity:.55; }
+body.dead-lock #panel-deadparty input, body.dead-lock #panel-deadparty button { pointer-events:auto; opacity:1; }
 /* Cloud rows (original class names, styled to the merged theme). */
 .cloud-row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); }
 .cloud-subhead { font-weight:700; margin:14px 0 6px; }
