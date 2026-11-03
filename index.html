@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=24">
+<link rel="stylesheet" href="css/style.css?v=25">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -378,42 +378,57 @@
 
     <section class="panel" id="panel-campaign">
       <h2>Campaign</h2>
-      <p class="hint">Log in, save your crawler to the cloud, then join a campaign with the code your DM gave you. When a player is signed in with a cloud crawler loaded, changes sync live: a DM heal shows on the player's sheet right away, and player changes show on the DM dashboard right away.</p>
-      <h3>Account</h3>
-      <div id="cloud-signedout-box">
-        <label>Email <input type="email" id="cloud-email" placeholder="you@example.com" autocomplete="email"></label>
-        <label>Password <input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password"></label>
+      <p class="hint" id="cloud-intro-hint">Log in, save your crawler to the cloud, then join a campaign with the code your DM gave you. When a player is signed in with a cloud crawler loaded, changes sync live: a DM heal shows on the player's sheet right away, and player changes show on the DM dashboard right away.</p>
+      <div id="cloud-account-section">
+        <h3>Account</h3>
+        <div id="cloud-signedout-box">
+          <label>Email <input type="email" id="cloud-email" placeholder="you@example.com" autocomplete="email"></label>
+          <label>Password <input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password"></label>
+          <div class="btn-row">
+            <button type="button" onclick="cloudSignUp()">Sign up</button>
+            <button type="button" onclick="cloudLogIn()">Log in</button>
+          </div>
+        </div>
+        <div id="cloud-signedin-box" hidden>
+          <p>Signed in as <strong id="cloud-signedin-email"></strong></p>
+          <div class="btn-row">
+            <button type="button" id="cloud-switch-btn" onclick="switchMode()">Switch to DM view</button>
+            <button type="button" onclick="cloudLogOut()">Log out</button>
+          </div>
+        </div>
+        <p id="cloud-status" class="hint"></p>
+      </div>
+      <div id="cloud-crawlers-section">
+        <h3>My Crawlers (cloud)</h3>
         <div class="btn-row">
-          <button type="button" onclick="cloudSignUp()">Sign up</button>
-          <button type="button" onclick="cloudLogIn()">Log in</button>
+          <button type="button" onclick="cloudSave()">Save this sheet to cloud</button>
+          <button type="button" onclick="cloudSaveAsNew()">Save as new crawler</button>
+          <button type="button" onclick="refreshCloudAll()">Refresh</button>
+        </div>
+        <p id="cloud-status-crawlers" class="hint"></p>
+        <div id="cloud-crawlers"></div>
+      </div>
+      <div id="cloud-join-section">
+        <h3>Campaign</h3>
+        <div id="cloud-create-campaign-box">
+          <label>New campaign name (DM only) <input type="text" id="cloud-new-campaign" placeholder="e.g. Floor 1 - The Beginning"></label>
+          <button type="button" onclick="createCampaign()">Create campaign</button>
+        </div>
+        <label>Join with a code <input type="text" id="cloud-join-code" placeholder="e.g. K7Q2XA"></label>
+        <button type="button" id="cloud-join-btn" onclick="joinCampaign()">Join campaign with this crawler</button>
+        <p id="cloud-join-hint" class="hint"></p>
+        <p id="cloud-status-join" class="hint"></p>
+      </div>
+      <div id="cloud-campaigns-section">
+        <div id="cloud-campaigns"></div>
+        <p id="cloud-status-campaign" class="hint"></p>
+        <div id="cloud-focus-wrap">
+          <p id="cloud-status-focus" class="hint"></p>
+          <div id="cloud-campaign-detail"></div>
+          <div id="cloud-parties"></div>
+          <div id="cloud-dm-tools"></div>
         </div>
       </div>
-      <div id="cloud-signedin-box" hidden>
-        <p>Signed in as <strong id="cloud-signedin-email"></strong></p>
-        <div class="btn-row">
-          <button type="button" id="cloud-switch-btn" onclick="switchMode()">Switch to DM view</button>
-          <button type="button" onclick="cloudLogOut()">Log out</button>
-        </div>
-      </div>
-      <p id="cloud-status" class="hint"></p>
-      <h3>My Crawlers (cloud)</h3>
-      <div class="btn-row">
-        <button type="button" onclick="cloudSave()">Save this sheet to cloud</button>
-        <button type="button" onclick="cloudSaveAsNew()">Save as new crawler</button>
-        <button type="button" onclick="refreshCloudAll()">Refresh</button>
-      </div>
-      <div id="cloud-crawlers"></div>
-      <h3>Campaign</h3>
-      <div id="cloud-create-campaign-box">
-        <label>New campaign name (DM only) <input type="text" id="cloud-new-campaign" placeholder="e.g. Floor 1 - The Beginning"></label>
-        <button type="button" onclick="createCampaign()">Create campaign</button>
-      </div>
-      <label>Join with a code <input type="text" id="cloud-join-code" placeholder="e.g. K7Q2XA"></label>
-      <button type="button" onclick="joinCampaign()">Join campaign with this crawler</button>
-      <div id="cloud-campaigns"></div>
-      <div id="cloud-campaign-detail"></div>
-      <div id="cloud-parties"></div>
-      <div id="cloud-dm-tools"></div>
     </section>
 
     <section class="panel" id="panel-dm">
@@ -594,10 +609,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=24"></script>
-<script src="js/convert.js?v=24"></script>
-<script src="js/app.js?v=24"></script>
-<script src="js/wizard.js?v=24"></script>
-<script src="js/cloud.js?v=24"></script>
+<script src="js/rules.js?v=25"></script>
+<script src="js/convert.js?v=25"></script>
+<script src="js/app.js?v=25"></script>
+<script src="js/wizard.js?v=25"></script>
+<script src="js/cloud.js?v=25"></script>
 </body>
 </html>

@@ -180,6 +180,47 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Campaign tab optimizations (2026-11-03, ?v=25, built locally)
+
+Antony asked for the Campaign tab optimizations. Built, all five:
+
+1. **Show only the step you are on** (`renderCampaignLayout`): the
+   tab is now grouped into Account / My Crawlers / Campaign-join /
+   campaign-list sections plus a focus block (detail + parties + DM
+   tools). Signed out, only Account shows. Signed in, crawlers +
+   join + list show. With a campaign selected, the focus block moves
+   to the top of the tab, above Account, and is hidden entirely when
+   no campaign is selected (no more "Select a campaign above" noise).
+   The long intro hint hides once signed in. Layout re-runs on
+   auth/mode changes, every cloud refresh, campaign select/leave/
+   delete, and whenever the Campaign tab itself is opened.
+2. **Feedback where you clicked** (`cloudStatus(msg, section)`):
+   separate status lines under Crawlers, under Join, under the
+   campaign list, and at the top of the focus block. Save/load/
+   delete messages go to Crawlers, create/join to Join, leave/delete
+   to the campaign list, party/DM/buff actions to the focus block.
+   Account and global auth messages still use the original top line.
+3. **Auto-select the only campaign**: after the campaign list loads,
+   a single campaign is selected automatically (same behaviour the
+   DM dashboard already had for its first campaign). Two
+   corrections to the original proposal, found while building: the
+   crawler list already marked the loaded crawler ("(this sheet)")
+   and loading already asked for confirmation, so those were left
+   alone, not rebuilt.
+4. **Join names the crawler**: the button now reads "Join campaign
+   as <name>" (refreshed on tab open and every cloud refresh) with a
+   hint when the sheet is not cloud-saved yet. Joining was NOT
+   disabled for unsaved sheets, because `joinCampaign` already
+   saves the sheet first when there is no cloud crawler — disabling
+   it would have been a regression.
+5. **One member list, one Leave**: DM party checkboxes now sit on
+   the DM member rows themselves (with base totals), and the second
+   member list under "create a party" is gone; `createParty` reads
+   the same `.party-check` boxes unchanged. The duplicate "Leave
+   this campaign (this crawler)" button in the campaign detail is
+   removed — the campaign-list row's Leave is the same action with
+   the same confirmation.
+
 ## Avatar upload via the ? box (2026-11-03, ?v=24, built locally)
 
 Antony's report: no way to add a profile image — only "Remove
