@@ -789,10 +789,13 @@ async function cloudLoad(id) {
   if (res.error) return cloudStatus('Cloud load failed: ' + res.error.message, 'crawlers');
   localStorage.setItem('crawler_cloud_id', res.data.id);
   cloudCharacterId = res.data.id;
-  if (res.data.campaign_id) {
-    cloudCampaignId = res.data.campaign_id;
-    localStorage.setItem('cloud_campaign_id', cloudCampaignId);
-  }
+  // The Campaign tab always reflects the LOADED crawler: sync the
+  // selection to this crawler's campaign, clearing a stale selection
+  // left by a different crawler (which used to leak its campaign,
+  // members and parties into this crawler's view).
+  cloudCampaignId = res.data.campaign_id || null;
+  if (cloudCampaignId) localStorage.setItem('cloud_campaign_id', cloudCampaignId);
+  else localStorage.removeItem('cloud_campaign_id');
   applyCloudState(res.data.data);
   refreshCloudAll(); refreshLoot(); refreshAchPlayerList();
 }
@@ -801,10 +804,13 @@ async function cloudLoadSilent(id) {
   if (res.error) { cloudStatus('Cloud load failed: ' + res.error.message); return; }
   localStorage.setItem('crawler_cloud_id', res.data.id);
   cloudCharacterId = res.data.id;
-  if (res.data.campaign_id) {
-    cloudCampaignId = res.data.campaign_id;
-    localStorage.setItem('cloud_campaign_id', cloudCampaignId);
-  }
+  // The Campaign tab always reflects the LOADED crawler: sync the
+  // selection to this crawler's campaign, clearing a stale selection
+  // left by a different crawler (which used to leak its campaign,
+  // members and parties into this crawler's view).
+  cloudCampaignId = res.data.campaign_id || null;
+  if (cloudCampaignId) localStorage.setItem('cloud_campaign_id', cloudCampaignId);
+  else localStorage.removeItem('cloud_campaign_id');
   applyCloudState(res.data.data);
 }
 async function cloudDelete(id) {
@@ -840,6 +846,11 @@ async function playerAutoLoad() {
     return;
   }
   if (res.data.length === 1) { cloudLoadSilent(res.data[0].id); return; }
+  // Several crawlers, none picked yet: nothing is loaded, so neither
+  // the character pointer nor a campaign selection may survive from a
+  // previous session to leak another crawler's campaign into this view.
+  cloudCharacterId = null; localStorage.removeItem('crawler_cloud_id');
+  cloudCampaignId = null; localStorage.removeItem('cloud_campaign_id');
   refreshCloudAll();
   window.DCC.showTab('campaign');
   cloudStatus('You have ' + res.data.length + ' crawlers. Pick one to load in My Crawlers.');
@@ -898,6 +909,23 @@ async function joinCampaign() {
     id = await cloudSave();
     if (!id) return;
   }
+  // One campaign per crawler: refuse here, naming the campaign when it
+  // can be read, instead of silently stacking memberships. The server
+  // function enforces the same rule, so this is the friendly message
+  // for a rule the database also holds.
+  var memberOf = null;
+  var already = await sb.from('characters').select('campaign_id').eq('id', id).single();
+  if (!already.error && already.data && already.data.campaign_id) memberOf = already.data.campaign_id;
+  if (!memberOf) {
+    var ccRows = await sb.from('campaign_characters').select('campaign_id').eq('character_id', id).limit(1);
+    if (!ccRows.error && ccRows.data && ccRows.data.length) memberOf = ccRows.data[0].campaign_id;
+  }
+  if (memberOf) {
+    var campName = null;
+    var campRow = await sb.from('campaigns').select('name').eq('id', memberOf).single();
+    if (!campRow.error && campRow.data) campName = campRow.data.name;
+    return cloudStatus('This crawler is already in a campaign' + (campName ? ' (' + campName + ')' : '') + '. Leave that campaign first, then join another.', 'join');
+  }
   var res = await sb.rpc('join_campaign_by_code', { p_code: code, p_character_id: id });
   if (res.error) return cloudStatus('Join failed: ' + res.error.message, 'join');
   cloudCampaignId = res.data;
@@ -907,19 +935,27 @@ async function joinCampaign() {
 }
 async function loadMyCampaigns() {
   if (!cloudUser) return;
-  var dmRes = await sb.from('campaigns').select('id, name, code, dm_id').eq('dm_id', cloudUser.id);
-  var list = dmRes.data || [];
-  var myChars = await sb.from('characters').select('id').eq('owner_id', cloudUser.id);
-  var charIds = (myChars.data || []).map(function (c) { return c.id; });
-  if (charIds.length) {
-    var cc = await sb.from('campaign_characters').select('campaign_id').in('character_id', charIds);
+  var list = [];
+  if (crawlerMode === 'dm') {
+    // DM mode keeps the old behaviour (own campaigns); the player
+    // Campaign tab is hidden for DMs anyway.
+    var dmRes = await sb.from('campaigns').select('id, name, code, dm_id').eq('dm_id', cloudUser.id);
+    list = dmRes.data || [];
+  } else if (cloudCharacterId) {
+    // One campaign per crawler, and the tab shows ONLY the loaded
+    // crawler's campaign: other crawlers' campaigns, members and
+    // parties must never leak into this crawler's view.
+    var cc = await sb.from('campaign_characters').select('campaign_id').eq('character_id', cloudCharacterId);
     var ids = Array.from(new Set((cc.data || []).map(function (r) { return r.campaign_id; })));
     if (ids.length) {
       var camp = await sb.from('campaigns').select('id, name, code, dm_id').in('id', ids);
-      (camp.data || []).forEach(function (c) {
-        if (!list.some(function (x) { return x.id === c.id; })) list.push(c);
-      });
+      list = camp.data || [];
     }
+  }
+  // Drop a stale selection that no longer belongs to the loaded crawler.
+  if (crawlerMode !== 'dm' && cloudCampaignId && !list.some(function (c) { return c.id === cloudCampaignId; })) {
+    cloudCampaignId = null;
+    localStorage.removeItem('cloud_campaign_id');
   }
   cloudCampaignsCache = list;
   if (list.length === 1 && cloudCampaignId !== list[0].id) {
@@ -1239,9 +1275,22 @@ function startRealtime() {
           lastOwnAutosaveAt = null;
           return;
         }
+        // Joining or leaving a campaign updates this row's campaign_id
+        // but NOT its sheet data, and a partial realtime payload can
+        // arrive with data missing entirely. Either way the sheet must
+        // never be replaced by a blank: skip empty payloads, and skip
+        // when the incoming data is identical to the sheet on screen
+        // (a membership-only change). Only a real, different sheet
+        // (a DM edit) replaces the local one.
+        var incoming = row.data;
+        if (!incoming || typeof incoming !== 'object' || !Object.keys(incoming).length) return;
+        try {
+          var current = window.DCC.getState ? JSON.stringify(window.DCC.getState()) : '';
+          if (current && JSON.stringify(incoming) === current) return;
+        } catch (e) {}
         applyingRemote = true;
         try {
-          var st = Object.assign(window.DCC.blankState(), row.data || {});
+          var st = Object.assign(window.DCC.blankState(), incoming);
           window.DCC.setState(st);
           window.DCC.ensureUnarmed();
           window.DCC.syncGearGrants();

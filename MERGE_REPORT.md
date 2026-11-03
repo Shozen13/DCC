@@ -180,6 +180,45 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Join/leave blanking + one campaign per crawler (2026-11-03, ?v=27, built locally)
+
+Antony's report: joining a campaign as a player joined it but blanked
+the loaded crawler's sheet (loading the cloud copy restored it), and
+leaving did the same; plus a crawler must belong to at most one
+campaign, and one crawler's campaign must never leak into another
+crawler's view.
+
+**Blanking root cause.** Joining and leaving update the character
+row's campaign_id but not its sheet data, and that update reaches
+the player through the realtime characters subscription — whose
+handler replaced the entire local sheet with whatever data the
+payload carried, including an empty one. The handler now refuses to
+replace the sheet from an empty or missing payload, and skips updates
+whose data is identical to the sheet on screen (a membership-only
+change). Only a real, different sheet — a DM edit — replaces the
+local one. DM edits are unaffected.
+
+**One campaign per crawler, enforced twice.** Joining first checks
+the loaded crawler on the client and refuses with the campaign's
+name when it is already in one ("Leave that campaign first, then
+join another"). The server function enforces the same rule in
+`supabase_join_one_campaign.sql` (NOT pushed to the repo; run it once
+in the Supabase SQL editor, one function, single paste): it refuses
+when the character has a campaign_id or any membership row. Leaving
+still removes the crawler from one campaign at a time, which is also
+the escape hatch for memberships stacked before this rule.
+
+**No cross-crawler leakage.** The campaign list is now scoped to the
+loaded crawler only (it used to list every campaign any of the
+account's crawlers had joined). Loading a crawler always syncs the
+campaign selection to that crawler's campaign — clearing a stale
+selection left by another crawler — and with several crawlers and
+none picked yet, no character and no campaign stays selected from a
+previous session. Switching crawlers therefore switches campaigns,
+and a crawler in no campaign sees no members or parties at all.
+DM-mode listing is unchanged (own campaigns; Send Box and
+Achievement pickers query DM campaigns directly and are untouched).
+
 ## DM view redo: admin DM, Inspector tab, NPCs, Dead Crawlers (2026-11-03, ?v=26, built locally)
 
 Antony's rules: a DM is an admin account, never a loaded player; the
