@@ -828,6 +828,23 @@
             justify-content: center;
         }
 
+        .creation-stat-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 148px;
+            margin: 0 auto 12px;
+        }
+        .creation-stat-row span {
+            display: inline-block;
+            width: 44px;
+            text-align: right;
+            font-weight: bold;
+        }
+        .creation-stat-row input {
+            width: 80px;
+        }
+
         /* Hotlist & Gear Styles */
         .hotlist-grid {
             display: grid;
@@ -4640,7 +4657,7 @@
         if (!content) return;
         let rows = '';
         [['str', 'STR'], ['con', 'CON'], ['dex', 'DEX'], ['int', 'INT'], ['cha', 'CHA']].forEach(pair => {
-            rows += '<p>' + pair[1] + ': <input type="number" id="create-stat-' + pair[0] + '" value="1" min="1" style="width: 80px;"></p>';
+            rows += '<div class="creation-stat-row"><span>' + pair[1] + ':</span><input type="number" id="create-stat-' + pair[0] + '" value="1" min="1"></div>';
         });
         content.innerHTML = '<h3>New Crawler &mdash; Level 1 Base Stats</h3><p>Every crawler starts at Level 1 with all base stats at 1. Set your Level 1 base stats here. This prompt appears only once for this character; it will not come back on reload.</p>' + rows + '<div class="modal-actions"><button type="button" onclick="confirmCreationStats()">Confirm Base Stats</button></div>';
         document.getElementById('creationModal').style.display = 'flex';
