@@ -98,8 +98,18 @@
     cols: { item: { x: 27, w: 228 }, qtyCX: 285.7, notes: { x: 316, w: 460 } }
   };
 
+  /* Final page layout: base pages 0 (stats) and 1 (hotlist/gear), then
+   * one skills page per 20 cards (base + extras), then one inventory page
+   * per 20 items (base + extras). Extra pages are copies of their base
+   * page, inserted right after it, so overflow rows always have a page. */
+  function pagePlan(data) {
+    var skillsPages = Math.max(1, Math.ceil((data.skills.length + data.spells.length) / P3.rows));
+    var invPages = Math.max(1, Math.ceil(data.inventory.length / P4.rows));
+    return { skillsPages: skillsPages, invPages: invPages, invBase: 2 + skillsPages };
+  }
   function buildCommands(data, fonts, crops) {
-    var cmds = [], overflow = { attacks: [], cards: [], items: [] };
+    var cmds = [], overflow = { attacks: [] };
+    var plan = pagePlan(data);
     var txt = function (page, fx, fy, size, font, text, opts) {
       if (text === '' || text == null) return;
       var c = crops[page];
@@ -180,27 +190,27 @@
       txt(1, P2.notes.x, P2.notes.y0 + i * P2.notes.step, P2.notes.size, H, line);
     });
 
-    /* ---- page 3: skills, then spells in the same table ---- */
+    /* ---- skills pages: skills, then spells, in the same table ---- */
     var cards = data.skills.concat(data.spells);
-    cards.slice(0, P3.rows).forEach(function (c, i) {
-      var y = P3.rowY0 + i * P3.rowStep, col = P3.cols;
-      txt(2, col.name.x, y, 10, H, fit(H, c.name, 10, col.name.w));
-      txt(2, col.rankCX, y, 10, H, String(c.rank), { center: true });
-      txt(2, col.statMod.x, y, 10, H, fit(H, c.statMod, 10, col.statMod.w));
-      txt(2, col.check.x, y, 10, H, fit(H, c.check, 10, col.check.w));
-      txt(2, col.notes.x, y, 9, H, fit(H, c.notes, 9, col.notes.w));
-      if (c.used) cmds.push({ page: 2, kind: 'check', cx: col.usedCX, fy: y });
+    cards.forEach(function (c, i) {
+      var page = 2 + Math.floor(i / P3.rows), row = i % P3.rows;
+      var y = P3.rowY0 + row * P3.rowStep, col = P3.cols;
+      txt(page, col.name.x, y, 10, H, fit(H, c.name, 10, col.name.w));
+      txt(page, col.rankCX, y, 10, H, String(c.rank), { center: true });
+      txt(page, col.statMod.x, y, 10, H, fit(H, c.statMod, 10, col.statMod.w));
+      txt(page, col.check.x, y, 10, H, fit(H, c.check, 10, col.check.w));
+      txt(page, col.notes.x, y, 9, H, fit(H, c.notes, 9, col.notes.w));
+      if (c.used) cmds.push({ page: page, kind: 'check', cx: col.usedCX, fy: y });
     });
-    overflow.cards = cards.slice(P3.rows).map(function (c) { return c.name; });
 
-    /* ---- page 4: inventory ---- */
-    data.inventory.slice(0, P4.rows).forEach(function (it, i) {
-      var y = P4.rowY0 + i * P4.rowStep, col = P4.cols;
-      txt(3, col.item.x, y, 10, H, fit(H, it.name, 10, col.item.w));
-      txt(3, col.qtyCX, y, 10, H, String(it.qty), { center: true });
-      txt(3, col.notes.x, y, 9, H, fit(H, it.notes, 9, col.notes.w));
+    /* ---- inventory pages ---- */
+    data.inventory.forEach(function (it, i) {
+      var page = plan.invBase + Math.floor(i / P4.rows), row = i % P4.rows;
+      var y = P4.rowY0 + row * P4.rowStep, col = P4.cols;
+      txt(page, col.item.x, y, 10, H, fit(H, it.name, 10, col.item.w));
+      txt(page, col.qtyCX, y, 10, H, String(it.qty), { center: true });
+      txt(page, col.notes.x, y, 9, H, fit(H, it.notes, 9, col.notes.w));
     });
-    overflow.items = data.inventory.slice(P4.rows).map(function (it) { return it.name; });
 
     return { commands: cmds, overflow: overflow };
   }
@@ -241,7 +251,7 @@
     return Promise.all(jobs);
   }
 
-  var api = { buildCommands: buildCommands, applyCommands: applyCommands };
+  var api = { buildCommands: buildCommands, applyCommands: applyCommands, pagePlan: pagePlan };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof window !== 'undefined') window.DCCPdfExport = api;
 
@@ -267,13 +277,36 @@
           doc.embedFont(PDFLib.StandardFonts.ZapfDingbats)
         ]).then(function (embedded) {
           var fonts = { regular: embedded[0], bold: embedded[1], dingbats: embedded[2] };
-          var crops = [];
-          for (var i = 0; i < 4; i++) crops.push(doc.getPage(i).getCropBox());
-          doc.__crops = crops;
-          doc.__rgbBlack = PDFLib.rgb(0, 0, 0);
           var data = window.DCC.getExportData();
-          var built = buildCommands(data, fonts, crops);
-          return applyCommands(doc, built.commands, fonts).then(function () { return { doc: doc, overflow: built.overflow }; });
+          var plan = pagePlan(data);
+          /* Extra pages: copies of the skills page (index 2) inserted
+           * right after it, then copies of the inventory page (which
+           * shifts to index plan.invBase) inserted right after it. */
+          var chain = Promise.resolve();
+          var s;
+          for (s = 1; s < plan.skillsPages; s++) {
+            (function (at) {
+              chain = chain.then(function () {
+                return doc.copyPages(doc, [2]).then(function (copied) { doc.insertPage(at, copied[0]); });
+              });
+            })(2 + s);
+          }
+          var invAt = plan.invBase;
+          for (s = 1; s < plan.invPages; s++) {
+            (function (at) {
+              chain = chain.then(function () {
+                return doc.copyPages(doc, [invAt]).then(function (copied) { doc.insertPage(at, copied[0]); });
+              });
+            })(invAt + s);
+          }
+          return chain.then(function () {
+            var crops = [];
+            for (var i = 0; i < doc.getPageCount(); i++) crops.push(doc.getPage(i).getCropBox());
+            doc.__crops = crops;
+            doc.__rgbBlack = PDFLib.rgb(0, 0, 0);
+            var built = buildCommands(data, fonts, crops);
+            return applyCommands(doc, built.commands, fonts).then(function () { return { doc: doc, overflow: built.overflow }; });
+          });
         });
       }).then(function (res) {
         if (!res) return;
@@ -286,11 +319,10 @@
           a.click();
           setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
           toast('Exported ' + a.download);
-          var o = res.overflow, notes = [];
-          if (o.attacks.length) notes.push(o.attacks.length + ' attack(s) did not fit: ' + o.attacks.join(', '));
-          if (o.cards.length) notes.push(o.cards.length + ' skill(s)/spell(s) did not fit: ' + o.cards.join(', '));
-          if (o.items.length) notes.push(o.items.length + ' item(s) did not fit: ' + o.items.join(', '));
-          if (notes.length) alert('Exported, but some things did not fit on the sheet:\n\n' + notes.join('\n'));
+          /* Skills/spells and items now get extra pages, so only attacks
+           * can still overflow (page 1 is the whole stats sheet and has
+           * no extra-page form). */
+          if (res.overflow.attacks.length) alert('Exported, but ' + res.overflow.attacks.length + ' attack(s) did not fit on the Attacks table: ' + res.overflow.attacks.join(', '));
         });
       }).catch(function (e) {
         alert('Could not fill that PDF: ' + (e && e.message ? e.message : e));
