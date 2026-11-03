@@ -260,6 +260,96 @@
     document.body.appendChild(t);
     setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3000);
   }
+  /* Data for the PDF export (js/pdfexport.js): everything the paper sheet
+   * has a box for, already in display form. The paper sheet has no boxes
+   * for Gold, Boss Kills, Player Kills, Pets, Mounts, Sponsors, Faith or
+   * Crafting, so those are left out; Gender/Pronouns and Size have no site
+   * field and are left blank by the exporter. */
+  function getExportData() {
+    var stats = computeStats();
+    var fmtMod = function (m) { return (m >= 0 ? '+' : '') + m; };
+    var statRows = ['str', 'int', 'con', 'dex', 'cha'].map(function (k) {
+      var s = stats[k];
+      return { key: k, unenh: s.derived, enh: (s.ownEnh || 0) + (s.gear || 0), mod: fmtMod(s.mod) };
+    });
+    var gearBon = equippedBonuses();
+    var evadeDice = R.evadeDiceCount(raceEntry(), classEntry());
+    var evadeBuffs = (state.evadeBuffs || 0) + (gearBon.evade || 0);
+    var armor = (state.ownArmor || 0) + (gearBon.dr || 0);
+    var drBuffs = (state.drBuffs || 0) + raceClassDR();
+    var drTotal = R.totalDR(armor, state.drBuffs, raceClassDR());
+    var maxMana = R.maxMana(stats.int.total);
+    // Attacks: the same rows the Attacks tab shows — manual attacks first,
+    // then ranked attack skills/spells not already listed manually.
+    var manualNames = {};
+    state.attacks.forEach(function (a) { manualNames[R.normName(a.name)] = true; });
+    var attacks = state.attacks.map(function (a) {
+      var override = R.attackDamageStat(a.name, state.race, state.class);
+      var thStat = a.toHitStat || 'str';
+      var mod = stats[thStat] ? stats[thStat].mod : 0;
+      return { name: a.name, toHit: thStat.toUpperCase() + ' ' + fmtMod(mod), damage: a.damage || '', effects: (override ? 'Damage uses ' + override.toUpperCase() + ' Mod. ' : '') + (a.notes || '') };
+    });
+    state.skills.concat(state.spells).forEach(function (c) {
+      if (cardRank(c) < 1 || !isAttackCard(c) || manualNames[R.normName(c.name)]) return;
+      var lib = findLib(c.name);
+      var cStat = c.stat || 'str';
+      var mod = stats[cStat] ? stats[cStat].mod : 0;
+      var override = R.attackDamageStat(c.name, state.race, state.class);
+      var adj = lib ? R.adjustedDamage(lib.base_damage, lib.upgrades, cardRank(c)) : { damage: '—', additions: [] };
+      var adjNote = adj.additions.length ? ' (includes ' + adj.additions.map(function (a) { return '+' + a.count + 'd' + a.sides + ' at Rank ' + a.tier; }).join(', ') + ')' : '';
+      attacks.push({ name: c.name,
+        toHit: cardRank(c) + ' ' + cStat.toUpperCase() + ' ' + fmtMod(mod),
+        damage: adj.damage,
+        effects: (override ? 'Damage uses ' + override.toUpperCase() + ' Mod. ' : '') + adjNote + ((lib && lib.mana_cost) ? ' Mana: ' + lib.mana_cost : '') });
+    });
+    var cardRow = function (c) {
+      var lib = findLib(c.name);
+      var cStat = c.stat || 'str';
+      var mod = stats[cStat] ? stats[cStat].mod : 0;
+      return { name: c.name, rank: cardRank(c),
+        statMod: cStat.toUpperCase() + ' ' + fmtMod(mod),
+        check: c.checkType || '',
+        notes: c.effect || (lib ? (lib.base_effect || '') : ''),
+        used: !!c.used };
+    };
+    var skills = state.skills.filter(function (c) { return cardRank(c) >= 1; }).map(cardRow);
+    var spells = state.spells.filter(function (c) { return cardRank(c) >= 1; }).map(cardRow);
+    // Gear: placements resolved to item names per paper slot.
+    var placed = R.derivePlacements(state.items);
+    var byId = {};
+    state.items.forEach(function (it) { byId[it.id] = it; });
+    var itemAt = function (pl) { var it = byId[placed[pl]]; return it ? it.name : ''; };
+    var acc = Object.keys(placed).filter(function (pl) { return /^Accessory \d+$/.test(pl); })
+      .sort(function (a, b) { return parseInt(a.split(' ')[1], 10) - parseInt(b.split(' ')[1], 10); })
+      .map(function (pl) { return byId[placed[pl]].name; });
+    var hands = placed['Both Hands'] ? 'Both Hands: ' + byId[placed['Both Hands']].name
+      : [itemAt('Left Hand'), itemAt('Right Hand')].filter(Boolean).join(' / ');
+    var bio = (state.story && state.story.bio) || {};
+    var avatar = (typeof state.avatarUrl === 'string' && state.avatarUrl.indexOf('data:image/') === 0) ? state.avatarUrl : null;
+    return {
+      name: state.name || '', number: state.number || '', race: state.race || '', className: state.class || '',
+      level: state.level, floor: state.floor,
+      stats: statRows, hpCurrent: state.hpCurrent,
+      evade: { dexMod: fmtMod(stats.dex.mod), buffs: evadeBuffs, dice: evadeDice, total: stats.dex.mod + evadeBuffs },
+      move: state.moveVal, step: state.stepVal,
+      dr: { armor: armor, buffs: drBuffs, total: drTotal },
+      aiFavor: state.aiFavor,
+      mana: { current: Math.max(0, Math.min(maxMana, state.manaCurrent)), max: maxMana },
+      debuffs: (state.debuffs || []).slice(), buffs: (state.buffs || []).slice(),
+      attacks: attacks,
+      hotlist: (state.hotlist || []).map(function (e) { return e.name || ''; }),
+      gear: { head: itemAt('Head'), torso: itemAt('Torso'), arms: itemAt('Arms'), hands: hands, legs: itemAt('Legs'), feet: itemAt('Feet'), accessories: acc },
+      popularity: state.popularity,
+      notes: bio.notes || bio.backstory || '',
+      skills: skills, spells: spells,
+      inventory: state.items.map(function (it) {
+        var bs = bonusSummary(it);
+        return { name: it.name, qty: it.kind === 'consumable' ? getQty(it) : 1,
+          notes: (it.effect || '') + (bs ? ' (' + bs + ')' : '') };
+      }),
+      avatar: avatar
+    };
+  }
   function importFile(file) {
     var reader = new FileReader();
     reader.onload = function () {
@@ -1868,6 +1958,7 @@
     renderAll: renderAll, showTab: showTab, saveNow: saveNow, saveSoon: saveSoon,
     ensureSkills: ensureSkills, ensureItems: ensureItems, ensureRaces: ensureRaces, ensureKeywords: ensureKeywords,
     findLib: findLib, cardRank: cardRank, setRaceClass: setRaceClass, choiceSections: choiceSections,
+    getExportData: getExportData,
     openSkillPicker: openSkillPicker, openItemPicker: openItemPicker, openRaceClassPicker: openRaceClassPicker,
     showRaceClassInfo: showRaceClassInfo, openChoicePicker: openChoicePicker, pickerPick: pickerPick,
     setOwnBase: setOwnBase, setOwnEnh: setOwnEnh,
