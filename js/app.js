@@ -8,7 +8,8 @@
  * not repeated here.
  *
  * Rank model (see rules.js): displayed Rank = ownRank + gearGiven +
- * raceGiven + groupGiven. ownRank is what the player trained; given
+ * raceGiven + groupGiven + backgroundGiven. ownRank is what the player
+ * trained; given
  * amounts are recomputed from live records on every render, so removing
  * a source can never double-count or leave a stale bonus behind.
  */
@@ -179,11 +180,14 @@
     var kw = keywordCache[R.normName(card.name)] || [];
     return R.groupBonusFor(card, state.race, state.class, lib, kw);
   }
+  function backgroundGivenFor(card) {
+    return (card.backgroundRank || 0);
+  }
   function cardRank(card) {
-    return R.displayRank(card, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card));
+    return R.displayRank(card, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
   }
   function cardFloor(card) {
-    return R.combinedFloor(gearGivenFor(card), raceGivenFor(card), groupGivenFor(card));
+    return R.combinedFloor(gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
   }
   function findCard(name, kind) {
     var list = kind === 'spell' ? state.spells : state.skills;
@@ -209,6 +213,8 @@
       var data = JSON.parse(raw);
       if (!data || typeof data !== 'object') return false;
       state = Object.assign(blankState(), data);
+      (state.skills || []).forEach(function (c) { R.splitBackgroundRank(c); });
+      (state.spells || []).forEach(function (c) { R.splitBackgroundRank(c); });
       // Ensure every field exists even for older v2 saves.
       var b = blankState();
       Object.keys(b).forEach(function (k) { if (state[k] === undefined) state[k] = b[k]; });
@@ -336,7 +342,7 @@
   function pruneBonusCards() {
     function keep(list) {
       return list.filter(function (card) {
-        return !R.shouldRemoveCard(card, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card));
+        return !R.shouldRemoveCard(card, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
       });
     }
     state.skills = keep(state.skills);
@@ -625,7 +631,7 @@
       + '<label>Used <input type="checkbox"' + (card.used ? ' checked' : '') + ' onchange="DCC.toggleUsed(\'' + card.kind + '\',\'' + card.id + '\',this.checked)"></label>'
       + '<button type="button" onclick="DCC.rollCard(\'' + card.kind + '\',\'' + card.id + '\')">Roll d20</button>'
       + '<button type="button" onclick="DCC.delCard(\'' + card.kind + '\',\'' + card.id + '\')">Delete</button></div>'
-      + '<p>Rank ' + rank + (group ? ' (Group +' + group + ' in rank)' : '') + (eff !== rank ? ' — effective Rank ' + eff + ' (Mage −3)' : '') + (floor ? ' — floor ' + floor : '') + '</p>'
+      + '<p>Rank ' + rank + (group ? ' (Group +' + group + ' in rank)' : '') + (backgroundGivenFor(card) ? ' (Background +' + backgroundGivenFor(card) + ' in rank)' : '') + (eff !== rank ? ' — effective Rank ' + eff + ' (Mage −3)' : '') + (floor ? ' — floor ' + floor : '') + '</p>'
       + cardRelationHtml(card)
       + '<label>Notes <input type="text" value="' + esc(card.effect || '') + '" onchange="DCC.setCardEffect(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
       + rulebookBox(card) + '</div>';
@@ -817,6 +823,36 @@
     $('bio-personality').value = b.personality || '';
     $('bio-backstory').value = b.backstory || '';
     $('bio-notes').value = b.notes || '';
+    // Creation background, as chosen in the wizard: category, background
+    // name, the two skills picked from it and their starting rank, plus
+    // the combat choice (Unarmed Combat Rank 3 and any weapon/spell
+    // Rank 3). This is a record of the choices, not editable here —
+    // re-running the wizard changes it.
+    var bg = state.backgrounds;
+    var el = $('bio-background');
+    if (el) {
+      if (!bg) {
+        el.innerHTML = '<p class="hint">No background choices recorded yet. They appear here after you finish the guided creation wizard.</p>';
+      } else {
+        var cats = [
+          { id: 'childhood', label: 'Childhood', rank: 1 },
+          { id: 'adolescence', label: 'Adolescence', rank: 1 },
+          { id: 'career', label: 'Career', rank: 3 },
+          { id: 'hobby', label: 'Hobby', rank: 2 }
+        ];
+        var html = cats.map(function (cat) {
+          var sel = bg[cat.id] || {};
+          var skills = (sel.skills || []).join(', ') || '—';
+          return '<p><strong>' + cat.label + ':</strong> ' + esc(sel.bg || '—') + ' — ' + esc(skills) + ' (Rank ' + cat.rank + ')</p>';
+        }).join('');
+        var combat = bg.combat || {};
+        var combatLine = 'Unarmed Combat (Rank 3)';
+        if (combat.type === 'weapon' && combat.name) combatLine += ' + ' + combat.name + ' (Rank 3)';
+        else if (combat.type === 'spell' && combat.name) combatLine += ' + ' + combat.name + ' spell (Rank 3)';
+        html += '<p><strong>Combat:</strong> ' + esc(combatLine) + '</p>';
+        el.innerHTML = html;
+      }
+    }
   }
   /* Derived attacks: every ranked skill whose Chapter 4 Type line says
    * "Melee Attack" or "Ranged Attack", and every ranked spell whose
@@ -964,7 +1000,7 @@
       card = { id: uid(), name: effectLib ? effectLib.name : effectName, kind: 'skill', ownRank: 1, stat: effectLib && effectLib.stat ? effectLib.stat.toLowerCase() : 'str', checkType: 'Passive Effect', effect: '', used: false, gearGrants: {} };
       state.skills.push(card);
     } else if (wasRank < 1) {
-      card.ownRank = R.ownRankForTotal(1, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card));
+      card.ownRank = R.ownRankForTotal(1, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
     } else {
       card.used = true;
     }
@@ -1136,6 +1172,17 @@
     if (cache.keywords === null) {
       ensureKeywords().then(function (kw) { keywordCache = kw; renderAll(); }).catch(function () {});
     }
+    // The race/class library is needed for EVERY derived race/class
+    // effect (fixed stats like Human +2 all, split pools, race/class DR,
+    // Evade dice, fixed skill bonuses, Choices) — but nothing loaded it
+    // on render. Previously it was only loaded when a picker was opened,
+    // so on a fresh load of a sheet whose race was already Human, every
+    // derived benefit silently computed as zero until a picker was
+    // opened. The original sheet could never do this: its library was
+    // embedded in the single file. Load it here, same lazy pattern.
+    if (cache.races === null) {
+      ensureRaces().then(function () { renderAll(); }).catch(function () {});
+    }
     if (activeTab === 'vitals') renderVitals(stats);
     else if (activeTab === 'attacks') renderAttacks();
     else if (activeTab === 'gear') renderGear();
@@ -1214,7 +1261,7 @@
       var list = kind === 'spell' ? state.spells : state.skills;
       var existing = list.find(function (x) { return R.normName(x.name) === R.normName(c.name); });
       if (existing && cardRank(existing) < 1) {
-        existing.ownRank = R.ownRankForTotal(1, gearGivenFor(existing), raceGivenFor(existing), groupGivenFor(existing));
+        existing.ownRank = R.ownRankForTotal(1, gearGivenFor(existing), raceGivenFor(existing), groupGivenFor(existing), backgroundGivenFor(existing));
       } else {
         var bc = bookCheckFor(c.name);
         var card = { id: uid(), name: c.name, kind: kind === 'spell' ? 'spell' : 'skill', ownRank: 1, stat: c.stat ? c.stat.toLowerCase() : (kind === 'spell' ? 'int' : 'str'), checkType: (bc && bc.check) || 'Active Check', effect: '', used: false, gearGrants: {} };
@@ -1358,11 +1405,18 @@
     openSkillPicker: openSkillPicker, openItemPicker: openItemPicker, openRaceClassPicker: openRaceClassPicker,
     showRaceClassInfo: showRaceClassInfo, openChoicePicker: openChoicePicker, pickerPick: pickerPick,
     setOwnBase: setOwnBase, setOwnEnh: setOwnEnh,
+    killDelta: function (which, delta) {
+      // Boss/Player kills are raised one at a time (a kill is an event,
+      // not a number to type); the number input stays for corrections.
+      if (which === 'boss') state.bossKills = Math.max(0, state.bossKills + delta);
+      else state.pkKills = Math.max(0, state.pkKills + delta);
+      saveSoon(); renderAll();
+    },
     setRank: function (kind, id, value) {
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
       if (!card) return;
-      card.ownRank = R.ownRankForTotal(num(value, 1), gearGivenFor(card), raceGivenFor(card), groupGivenFor(card));
+      card.ownRank = R.ownRankForTotal(num(value, 1), gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
       saveSoon(); renderAll();
     },
     setCardStat: function (kind, id, value) {
@@ -1396,7 +1450,7 @@
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
       if (!card) return;
-      if (cardFloor(card) > 0) { alert('This card is granted by a race, class, choice, or equipped item. Remove that source (or unequip the item) to remove the card; its rank cannot go below its given floor.'); return; }
+      if (cardFloor(card) > 0) { alert('This card is granted by a background, race, class, choice, or equipped item. Remove that source (or unequip the item) to remove the card; its rank cannot go below its given floor.'); return; }
       if (kind === 'spell') state.spells = state.spells.filter(function (c) { return c.id !== id; });
       else state.skills = state.skills.filter(function (c) { return c.id !== id; });
       saveSoon(); renderAll();

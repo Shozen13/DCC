@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=16">
+<link rel="stylesheet" href="css/style.css?v=17">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -162,8 +162,8 @@
         <label>AI Favor <input type="number" id="t-favor" value="0"></label>
         <label>Move (ft) <input type="number" id="t-move" value="20"></label>
         <label>Step (ft) <input type="number" id="t-step" value="10"></label>
-        <label>Boss Kills <input type="number" id="t-boss" min="0" value="0"></label>
-        <label>Player Kills <input type="number" id="t-pk" min="0" value="0"></label>
+        <label>Boss Kills <span class="btn-row"><button type="button" onclick="DCC.killDelta('boss',-1)">−</button><input type="number" id="t-boss" min="0" value="0"><button type="button" onclick="DCC.killDelta('boss',1)">+</button></span></label>
+        <label>Player Kills <span class="btn-row"><button type="button" onclick="DCC.killDelta('pk',-1)">−</button><input type="number" id="t-pk" min="0" value="0"><button type="button" onclick="DCC.killDelta('pk',1)">+</button></span></label>
       </div>
       <p>Stat Bank: <strong id="bank-text">0</strong> points available.
         <button type="button" id="btn-distribute">Distribute stat points</button></p>
@@ -351,6 +351,8 @@
     <section class="panel" id="panel-bio">
       <h2>Bio</h2>
       <p class="hint">Free text about your crawler. Nothing here affects stats or rolls; it is saved with the sheet and exported with it.</p>
+      <h3>Background</h3>
+      <div id="bio-background"></div>
       <label>Appearance <textarea id="bio-appearance" rows="3"></textarea></label>
       <label>Personality <textarea id="bio-personality" rows="3"></textarea></label>
       <label>Backstory <textarea id="bio-backstory" rows="4"></textarea></label>
@@ -572,10 +574,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=16"></script>
-<script src="js/convert.js?v=16"></script>
-<script src="js/app.js?v=16"></script>
-<script src="js/wizard.js?v=16"></script>
-<script src="js/cloud.js?v=16"></script>
+<script src="js/rules.js?v=17"></script>
+<script src="js/convert.js?v=17"></script>
+<script src="js/app.js?v=17"></script>
+<script src="js/wizard.js?v=17"></script>
+<script src="js/cloud.js?v=17"></script>
 </body>
 </html>

@@ -180,6 +180,46 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Post-launch fix (2026-11-03, ?v=17, built locally)
+
+Three reports from live use of the merged site, all fixed here:
+
+1. **Background ranks are now a true given floor.** Root cause: the wizard
+   stored the background rank inside `ownRank` and `cardRank`/`cardFloor`
+   ignored `backgroundRank`, so a background skill, Unarmed Combat Rank 3,
+   or a combat weapon/spell Rank 3 could be lowered to 1. Fix: `rules.js`
+   rank functions take a fifth `backgroundGiven` amount; `app.js` supplies
+   it from `card.backgroundRank`; the wizard now creates background cards
+   split (`ownRank` = trained only, `backgroundRank` = given); `loadSaved`
+   runs the one-time idempotent `splitBackgroundRank` migration, which
+   also repairs cards already lowered below their given rank (ownRank 1 +
+   backgroundRank 3 displays 3 again). Cards show "(Background +N in
+   rank)" and the delete guard mentions backgrounds. Tests: 130 passed
+   (10 new background assertions).
+2. **Boss/Player Kills get −/+ buttons.** The number inputs already
+   existed in Vitals Trackers but were buried below Dice/Buffs and
+   typing-only. Trackers now has −/+ buttons (`DCC.killDelta`) that
+   clamp at 0, update the header counters, and save; the number input
+   stays for corrections.
+3. **Bio shows the creation background.** The Bio tab now renders the
+   wizard record (`state.backgrounds`): Childhood/Adolescence/Career/
+   Hobby background name + the two skills picked + starting rank
+   (1/1/3/2), and the combat choice (Unarmed Combat Rank 3 + any
+   weapon/spell Rank 3). Sheets with no wizard record show a note
+   instead. Backgrounds data has no prose descriptions in the book
+   extraction, so the record is names + skills + ranks, not flavour text.
+4. **Race/class benefits missing on fresh load (Human +2).** Root cause:
+   race/class benefits are derived from the library, but `renderAll`
+   never loaded the library — it was only fetched when a picker was
+   opened. So on a fresh load of a sheet whose race was already Human,
+   `findRaceClass` returned null and every derived benefit (fixed
+   stats, DR, Evade dice, Choices) silently computed as zero. The
+   original sheet could never do this because its library was embedded
+   in the single file. Fix: `renderAll` now lazy-loads the races file
+   on first render and re-renders when it arrives, mirroring the
+   existing keywords pattern. Verified at logic level: Human parses to
+   +2 all stats and derived Base adds it (own 4 → derived 6).
+
 ## Known-unfinished / uncertain (human review should cover these)
 
 1. **No live test has been run.** The app cannot be verified in a

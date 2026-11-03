@@ -165,5 +165,23 @@ bg.categories.forEach(c => c.backgrounds.forEach(b => {
 eq(bgBad, [], 'backgrounds: every skill in Chapter 4 library');
 eq(bg.combat_weapons.every(w => libNames.has(w.toUpperCase())), true, 'background combat weapons in library');
 
+// Background given source (merged fix 2026-11-03)
+eq(R.displayRank({ ownRank: 1 }, 0, 0, 0, 3), 4, 'display rank trained 1 + background 3 = 4');
+eq(R.combinedFloor(0, 0, 0, 3), 3, 'background floor 3 alone');
+eq(R.ownRankForTotal(2, 0, 0, 0, 3), 0, 'lowering below background floor snaps to floor (own 0, display 3)');
+eq(R.ownRankForTotal(5, 0, 0, 0, 3), 2, 'rank 5 with background 3 -> own 2');
+eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0, 3), false, 'background-only card survives while background gives it');
+(function () {
+  var c = R.splitBackgroundRank({ background: true, backgroundRank: 3, ownRank: 3 });
+  eq(c.ownRank, 0, 'split: old ownRank 3 + bg 3 -> own 0');
+  eq(R.displayRank(c, 0, 0, 0, 3), 3, 'split card still displays 3');
+  var lowered = R.splitBackgroundRank({ background: true, backgroundRank: 3, ownRank: 1 });
+  eq(lowered.ownRank, 0, 'split repairs a card wrongly lowered to 1 (own 0, display 3)');
+  eq(R.displayRank(lowered, 0, 0, 0, 3), 3, 'repaired card displays its given rank 3');
+  var twice = R.splitBackgroundRank(c);
+  eq(twice.ownRank, 0, 'split is idempotent');
+})();
+
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -241,7 +241,9 @@
       return list.filter(function (c) {
         if (!c.background) return true;
         if (wanted[c.name.toLowerCase()] !== undefined) return true;
-        return c.ownRank > (c.backgroundRank || 0);
+        // Split model: ownRank is the trained part only, so any trained
+        // rank (or a live gear grant) means the card is the player's now.
+        return c.ownRank > 0 || Object.keys(c.gearGrants || {}).length > 0;
       });
     }
     s.skills = prune(s.skills); s.spells = prune(s.spells);
@@ -258,11 +260,11 @@
         var list = s.skills;
         var card = list.find(function (c) { return c.name.toLowerCase() === name.toLowerCase(); });
         if (card) {
-          card.ownRank = Math.max(card.ownRank, rank);
-          card.background = true; card.backgroundRank = rank;
+          // Trained rank untouched; the background rank is a given floor.
+          card.background = true; card.backgroundRank = Math.max(card.backgroundRank || 0, rank); card.bgSplit = true;
         } else {
           var lib = window.DCC.findLib(name);
-          list.push({ id: 'id' + Date.now() + Math.random().toString(36).slice(2), name: name, kind: 'skill', ownRank: rank, stat: (bgSk.stat || (lib && lib.stat) || 'STR').toLowerCase(), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, background: true, backgroundRank: rank });
+          list.push({ id: 'id' + Date.now() + Math.random().toString(36).slice(2), name: name, kind: 'skill', ownRank: 0, stat: (bgSk.stat || (lib && lib.stat) || 'STR').toLowerCase(), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, background: true, backgroundRank: rank, bgSplit: true });
         }
       });
     });
@@ -270,10 +272,10 @@
     function addCombat(name, kind) {
       var list = kind === 'spell' ? s.spells : s.skills;
       var card = list.find(function (c) { return c.name.toLowerCase() === name.toLowerCase(); });
-      if (card) { card.ownRank = Math.max(card.ownRank, 3); card.background = true; card.backgroundRank = Math.max(card.backgroundRank || 0, 3); }
+      if (card) { card.background = true; card.backgroundRank = Math.max(card.backgroundRank || 0, 3); card.bgSplit = true; }
       else {
         var lib = window.DCC.findLib(name);
-        list.push({ id: 'id' + Date.now() + Math.random().toString(36).slice(2), name: name, kind: kind, ownRank: 3, stat: (lib && lib.stat ? lib.stat : (kind === 'spell' ? 'INT' : 'STR')).toLowerCase(), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, background: true, backgroundRank: 3 });
+        list.push({ id: 'id' + Date.now() + Math.random().toString(36).slice(2), name: name, kind: kind, ownRank: 0, stat: (lib && lib.stat ? lib.stat : (kind === 'spell' ? 'INT' : 'STR')).toLowerCase(), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, background: true, backgroundRank: 3, bgSplit: true });
       }
     }
     addCombat('UNARMED COMBAT', 'skill');

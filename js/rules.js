@@ -124,30 +124,47 @@
   }
 
   /* ---- Rank / given-amount model ------------------------------------
-   * A card's displayed Rank = ownRank + gearGiven + raceGiven + groupGiven.
-   * ownRank is what the player trained. Given amounts are what sources
-   * provide. The combined floor = gearGiven + raceGiven + groupGiven.
+   * A card's displayed Rank = ownRank + gearGiven + raceGiven + groupGiven
+   * + backgroundGiven. ownRank is what the player trained. Given amounts
+   * are what sources provide. The combined floor = the sum of all givens.
    * Manual lowering can never go below that floor (so ownRank >= 0).
-   * On removal of a source, its given amount simply stops counting:
-   * rank = trained total minus given, and a card with ownRank 0 and no
-   * remaining given amounts is removed. This is the model the user
-   * specified; it is much simpler than the old sheet's delta bookkeeping
-   * and cannot double-count, because given amounts are recomputed from
-   * live records on every render instead of being added/subtracted. */
-  function displayRank(card, gearGiven, raceGiven, groupGiven) {
-    return (card.ownRank || 0) + gearGiven + raceGiven + groupGiven;
+   * Background ranks are a given source exactly like race/class: a
+   * background skill at Rank 3, Unarmed Combat at Rank 3, and a combat
+   * weapon/spell at Rank 3 all floor their cards at 3. On removal of a
+   * source, its given amount simply stops counting: rank = trained total
+   * minus given, and a card with ownRank 0 and no remaining given amounts
+   * is removed. This is the model the user specified; it is much simpler
+   * than the old sheet's delta bookkeeping and cannot double-count,
+   * because given amounts are recomputed from live records on every
+   * render instead of being added/subtracted. */
+  function displayRank(card, gearGiven, raceGiven, groupGiven, backgroundGiven) {
+    return (card.ownRank || 0) + gearGiven + raceGiven + groupGiven + (backgroundGiven || 0);
   }
-  function combinedFloor(gearGiven, raceGiven, groupGiven) {
-    return gearGiven + raceGiven + groupGiven;
+  function combinedFloor(gearGiven, raceGiven, groupGiven, backgroundGiven) {
+    return gearGiven + raceGiven + groupGiven + (backgroundGiven || 0);
   }
-  function ownRankForTotal(total, gearGiven, raceGiven, groupGiven) {
-    var floor = combinedFloor(gearGiven, raceGiven, groupGiven);
+  function ownRankForTotal(total, gearGiven, raceGiven, groupGiven, backgroundGiven) {
+    var floor = combinedFloor(gearGiven, raceGiven, groupGiven, backgroundGiven);
     var t = Math.max(1, clampInt(total, 1));
     if (t < floor) t = floor;
     return t - floor;
   }
-  function shouldRemoveCard(card, gearGiven, raceGiven, groupGiven) {
-    return (card.ownRank || 0) <= 0 && combinedFloor(gearGiven, raceGiven, groupGiven) <= 0;
+  function shouldRemoveCard(card, gearGiven, raceGiven, groupGiven, backgroundGiven) {
+    return (card.ownRank || 0) <= 0 && combinedFloor(gearGiven, raceGiven, groupGiven, backgroundGiven) <= 0;
+  }
+  /* One-time split for cards created before background ranks became a
+   * given source: those cards stored the background rank inside ownRank
+   * (e.g. ownRank 3 with backgroundRank 3). Split it out so the display
+   * stays identical (ownRank 0 + background 3 = 3) while the floor now
+   * protects it. A card a player had wrongly lowered below its given
+   * rank (ownRank 1, backgroundRank 3) is repaired by this to display 3.
+   * Idempotent via bgSplit; new background cards are created split. */
+  function splitBackgroundRank(card) {
+    if (card.background && (card.backgroundRank || 0) > 0 && !card.bgSplit) {
+      card.ownRank = Math.max(0, (card.ownRank || 0) - card.backgroundRank);
+      card.bgSplit = true;
+    }
+    return card;
   }
 
   /* ---- Race/class text parsing (data-driven, benefits text only) ---- */
@@ -620,6 +637,7 @@
     rankDamageDie: rankDamageDie, naturesBreathHealFormula: naturesBreathHealFormula,
     displayRank: displayRank, combinedFloor: combinedFloor,
     ownRankForTotal: ownRankForTotal, shouldRemoveCard: shouldRemoveCard,
+    splitBackgroundRank: splitBackgroundRank,
     parseRaceClassStats: parseRaceClassStats, parseRaceClassSplit: parseRaceClassSplit,
     parseRaceClassDR: parseRaceClassDR, evadeDiceCount: evadeDiceCount,
     healthBarUsesCha: healthBarUsesCha, parseFixedSkillBonuses: parseFixedSkillBonuses,
