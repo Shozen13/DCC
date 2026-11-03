@@ -180,6 +180,14 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Profile class line (2026-11-03, ?v=19, built locally)
+
+Antony's correction to the v18 profile header: the line under the name
+now reads "Race • Class • Floor N", with "Unassigned" when no class is
+picked (e.g. "Human • Unassigned • Floor 1" on his current sheet, and
+"— • Unassigned • Floor 1" on a blank sheet). Race still shows "—"
+when none is picked.
+
 ## Profile + readability pass (2026-11-03, ?v=18, built locally)
 
 From Antony's screenshots of his sheet vs CrawlerCo:

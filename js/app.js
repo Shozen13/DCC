@@ -460,7 +460,7 @@
   var activeTab = 'vitals';
   function renderSidebar() {
     $('profile-name').textContent = state.name || 'Unnamed Crawler';
-    $('profile-sub').textContent = (state.race || '—') + ' • Floor ' + state.floor;
+    $('profile-sub').textContent = (state.race || '—') + ' • ' + (state.class || 'Unassigned') + ' • Floor ' + state.floor;
     $('pk-count').textContent = state.pkKills;
     $('boss-count').textContent = state.bossKills;
     $('pk-marks').textContent = state.pkKills ? '💀 ×' + state.pkKills : 'No marks';
