@@ -180,6 +180,21 @@ What was actually run:
     the main column; centering could not be visually confirmed without
     a browser — see below)
 
+## Avatar upload via the ? box (2026-11-03, ?v=24, built locally)
+
+Antony's report: no way to add a profile image — only "Remove
+avatar" was visible. Root cause: the upload input existed, but its
+only trigger was a bare "Avatar" label with no button styling (no
+`.file-label` CSS at all), so it read as plain sidebar text and was
+easy to miss entirely. Fix, exactly as asked: clicking the avatar
+box — the "?" placeholder, or the image once one is set — now opens
+the file picker (keyboard: Enter/Space on the focused box, which has
+a "Click to upload an avatar" tooltip). The confusing bare label is
+gone; the hidden file input and the existing upload handler are
+unchanged, so the image still saves with the sheet and "Remove
+avatar" clears it. The box keeps its flex-center layout, so the "?"
+stays centered.
+
 ## Campaign creation hidden from players (2026-11-03, ?v=23, built locally)
 
 Antony's correction: as a player he should not even see the "New

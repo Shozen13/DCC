@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=23">
+<link rel="stylesheet" href="css/style.css?v=24">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -28,7 +28,7 @@
       <img src="DCC_Banner.png" alt="Dungeon Crawler Carl Roleplaying Game">
     </div>
     <div class="profile-head">
-      <div class="avatar-box">
+      <div class="avatar-box" id="avatar-box" role="button" tabindex="0" title="Click to upload an avatar" aria-label="Upload crawler avatar">
         <img id="avatar-img" alt="Crawler avatar" hidden>
         <div id="avatar-placeholder" aria-hidden="true">?</div>
       </div>
@@ -38,7 +38,7 @@
         <span id="profile-sub">— • Unassigned • Floor 1</span>
       </div>
     </div>
-    <label class="file-label">Avatar <input type="file" id="avatar-file" accept="image/*" hidden></label>
+    <input type="file" id="avatar-file" accept="image/*" hidden>
     <button type="button" id="avatar-remove">Remove avatar</button>
     <div class="kill-row"><span class="kill-label">💀 Player Killer</span><span class="kill-marks" id="pk-marks">No marks</span><span class="btn-row kill-btns"><button type="button" onclick="DCC.killDelta('pk',-1)">−</button><strong id="pk-count">0</strong><button type="button" onclick="DCC.killDelta('pk',1)">+</button></span></div>
     <div class="kill-row"><span class="kill-label">⭐ Boss Kills</span><span class="kill-marks" id="boss-marks">No stars</span><span class="btn-row kill-btns"><button type="button" onclick="DCC.killDelta('boss',-1)">−</button><strong id="boss-count">0</strong><button type="button" onclick="DCC.killDelta('boss',1)">+</button></span></div>
@@ -594,10 +594,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=23"></script>
-<script src="js/convert.js?v=23"></script>
-<script src="js/app.js?v=23"></script>
-<script src="js/wizard.js?v=23"></script>
-<script src="js/cloud.js?v=23"></script>
+<script src="js/rules.js?v=24"></script>
+<script src="js/convert.js?v=24"></script>
+<script src="js/app.js?v=24"></script>
+<script src="js/wizard.js?v=24"></script>
+<script src="js/cloud.js?v=24"></script>
 </body>
 </html>

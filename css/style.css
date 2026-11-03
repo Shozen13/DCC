@@ -31,7 +31,7 @@ input[type=number] { width:90px; }
 .sidebar { width:260px; flex-shrink:0; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px; }
 .sidebar label { display:flex; flex-direction:column; gap:4px; font-size:.9rem; color:var(--muted); }
 .sidebar label input { color:var(--text); }
-.avatar-box { width:140px; height:140px; margin:0 auto; border:1px solid var(--line); border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--panel2); }
+.avatar-box { width:140px; height:140px; margin:0 auto; border:1px solid var(--line); border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--panel2); cursor:pointer; }
 .avatar-box img { width:100%; height:100%; object-fit:cover; }
 #avatar-placeholder { font-size:64px; color:var(--teal); }
 .raceclass-row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:.9rem; }

@@ -1883,6 +1883,13 @@
     var imp = $('import-file');
     if (imp) imp.addEventListener('change', function () { if (imp.files[0]) importFile(imp.files[0]); imp.value = ''; });
     var av = $('avatar-file');
+    var avBox = $('avatar-box');
+    if (av && avBox) {
+      avBox.addEventListener('click', function () { av.click(); });
+      avBox.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); av.click(); }
+      });
+    }
     if (av) av.addEventListener('change', function () {
       var f = av.files[0];
       if (!f) return;
