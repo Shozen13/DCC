@@ -191,6 +191,25 @@
   function cardFloor(card) {
     return R.combinedFloor(gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
   }
+  /* Rank math for a character row the DM is inspecting (cloud.js): the
+   * same displayed rank the player sees, computed from that row's own
+   * data instead of the loaded sheet's. The caller must have loaded the
+   * library and spell keywords first (ensureSkills/ensureKeywords), so
+   * findLib and the keyword cache cover the card. */
+  function remoteCardRank(card, d) {
+    var gear = 0;
+    Object.keys(card.gearGrants || {}).forEach(function (k) { gear += num(card.gearGrants[k], 0); });
+    var race = 0, key = R.normName(card.name);
+    (d.raceClassApplied || []).forEach(function (a) {
+      if (a.kind === card.kind && R.normName(a.skillName) === key) race += num(a.amount, 0);
+    });
+    var lib = findLib(card.name);
+    var kw = keywordCache[R.normName(card.name)] || [];
+    var group = R.groupBonusFor(card, d.race, d.class, lib, kw);
+    var bg = card.backgroundRank || 0;
+    var rank = R.displayRank(card, gear, race, group, bg);
+    return { rank: rank, gear: gear, race: race, group: group, bg: bg, eff: R.effectiveRank(rank, card, d.race, d.class) };
+  }
   function findCard(name, kind) {
     var list = kind === 'spell' ? state.spells : state.skills;
     var n = R.normName(name);
@@ -723,7 +742,6 @@
   function cardHtml(card) {
     var rank = cardRank(card);
     var eff = R.effectiveRank(rank, card, state.race, state.class);
-    var floor = cardFloor(card);
     var group = groupGivenFor(card);
     var lib = findLib(card.name);
     var statLocked = !!(lib && lib.stat);
@@ -749,7 +767,7 @@
       + '<label>Used <input type="checkbox"' + (card.used ? ' checked' : '') + ' onchange="DCC.toggleUsed(\'' + card.kind + '\',\'' + card.id + '\',this.checked)"></label>'
       + '<button type="button" onclick="DCC.rollCard(\'' + card.kind + '\',\'' + card.id + '\')">Roll d20</button>'
       + '<button type="button" onclick="DCC.delCard(\'' + card.kind + '\',\'' + card.id + '\')">Delete</button></div>'
-      + '<p>Rank ' + rank + (group ? ' (Group +' + group + ' in rank)' : '') + (backgroundGivenFor(card) ? ' (Background +' + backgroundGivenFor(card) + ' in rank)' : '') + (eff !== rank ? ' — effective Rank ' + eff + ' (Mage −3)' : '') + (floor ? ' — floor ' + floor : '') + '</p>'
+      + '<p>Rank ' + rank + (group ? ' (Group +' + group + ' in rank)' : '') + (backgroundGivenFor(card) ? ' (Background +' + backgroundGivenFor(card) + ' in rank)' : '') + (eff !== rank ? ' — effective Rank ' + eff + ' (Mage −3)' : '') + '</p>'
       + cardRelationHtml(card)
       + '<label>Notes <input type="text" value="' + esc(card.effect || '') + '" onchange="DCC.setCardEffect(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
       + rulebookBox(card) + '</details>';
@@ -1957,7 +1975,7 @@
     blankState: blankState,
     renderAll: renderAll, showTab: showTab, saveNow: saveNow, saveSoon: saveSoon,
     ensureSkills: ensureSkills, ensureItems: ensureItems, ensureRaces: ensureRaces, ensureKeywords: ensureKeywords,
-    findLib: findLib, cardRank: cardRank, setRaceClass: setRaceClass, choiceSections: choiceSections,
+    findLib: findLib, cardRank: cardRank, remoteCardRank: remoteCardRank, setRaceClass: setRaceClass, choiceSections: choiceSections,
     getExportData: getExportData,
     openSkillPicker: openSkillPicker, openItemPicker: openItemPicker, openRaceClassPicker: openRaceClassPicker,
     showRaceClassInfo: showRaceClassInfo, openChoicePicker: openChoicePicker, pickerPick: pickerPick,
@@ -2022,7 +2040,7 @@
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
       if (!card) return;
-      if (cardFloor(card) > 0) { alert('This card is granted by a background, race, class, choice, or equipped item. Remove that source (or unequip the item) to remove the card; its rank cannot go below its given floor.'); return; }
+      if (cardFloor(card) > 0) { alert('This card is granted by a background, race, class, choice, or equipped item. Remove that source (or unequip the item) to remove the card.'); return; }
       if (kind === 'spell') state.spells = state.spells.filter(function (c) { return c.id !== id; });
       else state.skills = state.skills.filter(function (c) { return c.id !== id; });
       saveSoon(); renderAll();

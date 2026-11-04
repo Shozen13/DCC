@@ -339,9 +339,16 @@ function dmInspDelCond(kind, idx) {
 }
 function dmInspSetRank(list, idx, val) {
   if (!dmInspectId) return;
-  var rank = Math.max(0, parseInt(val, 10) || 0);
+  var total = Math.max(1, parseInt(val, 10) || 1);
   dmUpdateCharacter(dmInspectId, function (d) {
-    if (Array.isArray(d[list]) && d[list][idx]) d[list][idx].ownRank = rank;
+    if (!Array.isArray(d[list]) || !d[list][idx]) return;
+    var card = d[list][idx];
+    if (window.DCC.remoteCardRank) {
+      var r = window.DCC.remoteCardRank(card, d);
+      card.ownRank = R.ownRankForTotal(total, r.gear, r.race, r.group, r.bg);
+    } else {
+      card.ownRank = total;
+    }
   }, 'Rank saved.');
 }
 function dmInspDelCard(list, idx) {
@@ -450,18 +457,35 @@ async function dmInspToggleDead() {
   refreshDmDashboard();
   refreshManageTab();
 }
+/* Character picker for the Inspector tab: the members of the campaign
+ * currently selected in Campaign Management, so the DM can switch
+ * characters here instead of going back to the Dashboard each time. */
+async function inspectPickerHtml() {
+  if (!manageCampaignId) return '<p class="hint">Pick a campaign in Campaign Management first, then choose a character to inspect here.</p>';
+  var res = await fetchCampaignMembers(manageCampaignId);
+  var members = (res && res.members) || [];
+  if (!members.length) return '<p class="hint">No crawlers in the selected campaign yet.</p>';
+  var opts = members.map(function (m) {
+    var md = m.data || {};
+    return '<option value="' + m.id + '"' + (m.id === dmInspectId ? ' selected' : '') + '>' + esc(m.name || 'Unnamed') + (md.npc ? ' (NPC)' : '') + (md.dead ? ' - DECEASED' : '') + '</option>';
+  }).join('');
+  return '<div><label>Inspect character <select onchange="inspectCharacter(this.value)">' + opts + '</select></label></div>';
+}
 async function renderInspector() {
   var box = $('inspect-content'); if (!box) return;
   if (!cloudUser || crawlerMode !== 'dm') { box.innerHTML = '<p class="hint">Log in as DM first.</p>'; return; }
-  if (!dmInspectId) { box.innerHTML = '<p class="hint">Pick a player from the DM Dashboard or Campaign Management tab, then Inspect.</p>'; return; }
+  if (!dmInspectId) { box.innerHTML = await inspectPickerHtml() + '<p class="hint">Or pick a player from the DM Dashboard or Campaign Management tab, then Inspect.</p>'; return; }
   var row = await sb.from('characters').select('id, name, level, data, owner_id').eq('id', dmInspectId).single();
   if (row.error) { box.innerHTML = '<p class="hint">Could not load that character: ' + esc(row.error.message) + '</p>'; return; }
   var d = row.data.data || {};
+  /* Rank math for the rows below needs the library + spell keywords. */
+  try { await window.DCC.ensureSkills(); } catch (e) {}
+  try { await window.DCC.ensureKeywords(); } catch (e) {}
   var base = d.ownBase || { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
   var enh = d.ownEnh || { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
   var num = function (id, val, min) { return '<input type="number" id="' + id + '" value="' + val + '"' + (min !== undefined ? ' min="' + min + '"' : '') + ' style="width:72px">'; };
   var statOpts = ['str', 'con', 'dex', 'int', 'cha'].map(function (k) { return '<option value="' + k + '">' + k.toUpperCase() + '</option>'; }).join('');
-  var html = '<p><strong>' + esc(d.name || row.data.name || 'Unnamed Crawler') + '</strong>'
+  var html = await inspectPickerHtml() + '<p><strong>' + esc(d.name || row.data.name || 'Unnamed Crawler') + '</strong>'
     + (d.npc ? ' (NPC)' : '') + (d.dead ? ' - <strong>DECEASED</strong>' : '')
     + ' - ' + esc(d.race || 'no race') + ' / ' + esc(d.class || 'no class')
     + ' - Level ' + esc(d.level || 1) + ' - Floor ' + esc(d.floor || 1) + '</p>';
@@ -497,9 +521,21 @@ async function renderInspector() {
     + '<div><label>Add buff <input type="text" id="insp-buff-new" placeholder="e.g. Blessed"></label> <button type="button" onclick="dmInspAddCond(\'buff\')">Add buff</button></div>';
   html += '<div class="cloud-subhead">Debuffs</div>' + condList('debuff', d.debuffs)
     + '<div><label>Add debuff <input type="text" id="insp-debuff-new" placeholder="e.g. Poisoned"></label> <button type="button" onclick="dmInspAddCond(\'debuff\')">Add debuff</button></div>';
+  /* Card rows show the rank the player sees (displayed rank + the same
+   * Group/Background annotations), with the trained rank as a note. The
+   * rank input sets the DISPLAYED rank, like the player's own rank
+   * control — it used to set the trained rank, so typing the rank the
+   * player sees overshot it by the given ranks (a background skill
+   * showing Trained 0 while the player sees Rank 1). */
   var cardRows = function (list, arr) {
     return (arr || []).map(function (c, i) {
-      return '<div class="cloud-row"><span>' + esc(c.name) + ' - ' + esc((c.stat || '').toUpperCase()) + ' - Trained rank <input type="number" min="0" value="' + (parseInt(c.ownRank, 10) || 0) + '" onchange="dmInspSetRank(\'' + list + '\', ' + i + ', this.value)" style="width:64px"></span><span><button type="button" onclick="dmInspDelCard(\'' + list + '\', ' + i + ')">Remove</button></span></div>';
+      var r = window.DCC.remoteCardRank ? window.DCC.remoteCardRank(c, d)
+        : { rank: parseInt(c.ownRank, 10) || 0, group: 0, bg: 0, eff: parseInt(c.ownRank, 10) || 0 };
+      var line = 'Rank <input type="number" min="1" value="' + r.rank + '" onchange="dmInspSetRank(\'' + list + '\', ' + i + ', this.value)" style="width:64px">'
+        + (r.group ? ' (Group +' + r.group + ' in rank)' : '') + (r.bg ? ' (Background +' + r.bg + ' in rank)' : '')
+        + (r.eff !== r.rank ? ' — effective Rank ' + r.eff + ' (Mage −3)' : '')
+        + ' (Trained ' + (parseInt(c.ownRank, 10) || 0) + ')';
+      return '<div class="cloud-row"><span>' + esc(c.name) + ' - ' + esc((c.stat || '').toUpperCase()) + ' - ' + line + '</span><span><button type="button" onclick="dmInspDelCard(\'' + list + '\', ' + i + ')">Remove</button></span></div>';
     }).join('') || '<p class="hint">None.</p>';
   };
   var addCard = function (list, pfx) {
