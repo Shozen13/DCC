@@ -211,3 +211,14 @@ details.card summary::-webkit-details-marker { color:var(--teal); }
 /* Creation-form bonus rows sit inline (the modal's own label/input rules stack everything). */
 #item-create-bonuses .bonus-row select, #item-create-bonuses .bonus-row input { width:auto; }
 #item-create-bonuses .bonus-row label { display:inline-block; width:auto; margin:0; }
+
+/* Messages tab (?v=36) */
+#msg-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #222; color: #fff; border: 1px solid var(--line); padding: 10px 16px; border-radius: 8px; z-index: 60; max-width: 90vw; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+.msg-unread { font-weight: 700; }
+.msg-thread { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 8px; }
+.msg-line { margin: 6px 0; }
+.msg-line .msg-who { font-weight: 700; }
+.msg-line .msg-time { opacity: .6; font-size: .85em; }
+.msg-ai .msg-who { color: var(--accent); }
+.msg-input-row { display: flex; gap: 8px; margin-top: 10px; }
+.msg-input-row input { flex: 1; }

@@ -142,10 +142,17 @@ function racesData() {
     racesCache = list; return list;
   });
 }
-function baseStatTotalAsync(d) {
+/* Combined TOTAL stat (the sum of the five displayed stat Totals) for a
+ * character data object — the same Total the sheet shows: Base (own +
+ * positive race/class bonuses + splits) + Enhance + equipped gear stat
+ * bonuses, minus race/class penalties, minimum 1 per stat, then the
+ * Hobgoblin CHA / Pocket Kuma STR caps. This is what picks a party
+ * leader (Antony, 2026-11-06: total, not base — the old base-only rule
+ * was a mistake). Needs the race/class library, which is why it is async. */
+function totalStatAsync(d) {
   if (!d) return Promise.resolve(0);
-  if (typeof d.baseTotal === 'number') return Promise.resolve(d.baseTotal);
   var own = d.ownBase || {};
+  var enh = d.ownEnh || {};
   var ownSum = ['str', 'con', 'dex', 'int', 'cha'].reduce(function (a, k) { return a + (parseInt(own[k], 10) || 0); }, 0);
   return racesData().then(function (list) {
     var R = window.DCCRules;
@@ -167,16 +174,18 @@ function baseStatTotalAsync(d) {
       var ch = d.raceClassChoices[cid];
       if (ch && ch.split) R.STAT_KEYS.forEach(function (k) { splits[k] += parseInt(ch.split[k], 10) || 0; });
     });
-    return R.STAT_KEYS.reduce(function (a, k) { return a + Math.max(0, own[k] + Math.max(0, fixed[k]) + splits[k]); }, 0);
+    var gear = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+    (d.items || []).forEach(function (it) {
+      if (!it.equipped) return;
+      (it.bonuses || []).forEach(function (b) {
+        if (b.type === 'stat' && gear[b.stat] !== undefined) gear[b.stat] += parseInt(b.amount, 10) || 0;
+      });
+    });
+    var derived = R.derivedBase(own, fixed, splits);
+    return R.STAT_KEYS.reduce(function (a, k) {
+      return a + R.statTotal(derived[k], parseInt(enh[k], 10) || 0, gear[k], Math.min(0, fixed[k]), R.statCapFor(d.race, d.class, k));
+    }, 0);
   }).catch(function () { return ownSum; });
-}
-/* Synchronous approximation used only where an async total is impractical
- * (it is replaced by baseStatTotalAsync wherever a leader is chosen). */
-function baseStatTotal(d) {
-  if (!d) return 0;
-  if (typeof d.baseTotal === 'number') return d.baseTotal;
-  var own = d.ownBase || {};
-  return ['str', 'con', 'dex', 'int', 'cha'].reduce(function (a, k) { return a + (parseInt(own[k], 10) || 0); }, 0);
 }
 
 /* ---------------- DM campaign management, character inspector,
@@ -422,7 +431,7 @@ function dmInspAddItem() {
 }
 async function successionForCharacter(charId) {
   // When a party leader dies, leadership passes to the next LIVING member
-  // with the highest combined base stat total (the same rule party
+  // with the highest combined total stat (the same rule party
   // creation uses). Runs on the DM client, which can read full rows.
   var pm = await sb.from('party_members').select('party_id').eq('character_id', charId);
   if (pm.error) return;
@@ -436,7 +445,7 @@ async function successionForCharacter(charId) {
     var rows = await sb.from('characters').select('id, data').in('id', ids);
     var living = (rows.data || []).filter(function (r) { return !(r.data && r.data.dead); });
     if (!living.length) { await sb.from('parties').update({ leader_character_id: null }).eq('id', pid); continue; }
-    var totals = await Promise.all(living.map(function (r) { return baseStatTotalAsync(r.data); }));
+    var totals = await Promise.all(living.map(function (r) { return totalStatAsync(r.data); }));
     var best = -1, bestId = living[0].id;
     living.forEach(function (r, j) { if (totals[j] > best) { best = totals[j]; bestId = r.id; } });
     await sb.from('parties').update({ leader_character_id: bestId }).eq('id', pid);
@@ -1097,14 +1106,18 @@ async function refreshCampaign() {
     partiesBox.innerHTML = '<p class="hint">You are not in a party in this campaign yet. Your DM will put you in one.</p>';
   }
   if (isDm) {
+    var totalMap = {};
+    await Promise.all(members.map(function (m) {
+      return totalStatAsync(m.data).then(function (t) { totalMap[m.id] = t; });
+    }));
     var dmHtml = '<div class="cloud-subhead">DM tools - members</div><p class="hint">Damage and healing change health slots. Buffs and debuffs are added to that crawler and show when they load it from the cloud.</p>';
     dmHtml += members.map(function (m) {
-      return '<div class="cloud-row"><span><input type="checkbox" class="party-check" value="' + m.id + '"> ' + esc(m.name) + ' - Level ' + esc(m.level) + ' - HP ' + esc(hpSlotsText(m.data)) + ' - Mana ' + esc(m.data && m.data.manaCurrent !== undefined ? m.data.manaCurrent : '?') + ' (base total ' + baseStatTotal(m.data) + ')</span></div>' +
+      return '<div class="cloud-row"><span><input type="checkbox" class="party-check" value="' + m.id + '"> ' + esc(m.name) + ' - Level ' + esc(m.level) + ' - HP ' + esc(hpSlotsText(m.data)) + ' - Mana ' + esc(m.data && m.data.manaCurrent !== undefined ? m.data.manaCurrent : '?') + ' (total ' + totalMap[m.id] + ')</span></div>' +
         '<div class="btn-row" style="margin-bottom: 6px;"><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'hp\', -1)">HP -1</button><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'hp\', 1)">HP +1</button><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'mana\', -1)">Mana -1</button><button type="button" onclick="dmAdjust(\'' + m.id + '\', \'mana\', 1)">Mana +1</button></div>' +
         '<div><label>Buff / debuff for ' + esc(m.name) + '</label><input type="text" id="dm-cond-' + m.id + '" placeholder="e.g. Blessed, Poisoned"></div>' +
         '<div class="btn-row" style="margin-bottom: 12px;"><button type="button" onclick="dmAddCondition(\'' + m.id + '\', \'buff\')">Add buff</button><button type="button" onclick="dmAddCondition(\'' + m.id + '\', \'debuff\')">Add debuff</button></div>';
     }).join('');
-    dmHtml += '<div class="cloud-subhead">DM tools - create a party</div><p class="hint">Tick the players above, then confirm. The leader is the player with the highest combined base stat total, and the party name stays even if the leader later changes.</p>';
+    dmHtml += '<div class="cloud-subhead">DM tools - create a party</div><p class="hint">Tick the players above, then confirm. The leader is the player with the highest combined total stat, and the party name stays even if the leader later changes.</p>';
     dmHtml += '<div style="margin-top: 8px;"><button type="button" onclick="createParty()">Confirm party</button></div>';
     dmHtml += '<div class="cloud-subhead">DM tools - parties</div>';
     dmHtml += parties.map(function (p) {
@@ -1128,7 +1141,7 @@ async function createParty() {
   if (!ids.length) return cloudStatus('Tick at least one player for the party.', 'focus');
   var res = await sb.from('characters').select('id, data').in('id', ids);
   if (res.error) return cloudStatus('Could not read party members: ' + res.error.message, 'focus');
-  var totals = await Promise.all(res.data.map(function (c) { return baseStatTotalAsync(c.data); }));
+  var totals = await Promise.all(res.data.map(function (c) { return totalStatAsync(c.data); }));
   var leaderId = ids[0]; var best = -1;
   res.data.forEach(function (c, i) {
     if (totals[i] > best) { best = totals[i]; leaderId = c.id; }
@@ -1145,7 +1158,7 @@ async function createParty() {
 async function recalcLeader(partyId) {
   var pm = await sb.from('party_members').select('character_id, characters(id, data)').eq('party_id', partyId);
   if (pm.error) return cloudStatus('Could not read party: ' + pm.error.message, 'focus');
-  var totals = await Promise.all((pm.data || []).map(function (r) { return r.characters ? baseStatTotalAsync(r.characters.data) : Promise.resolve(-1); }));
+  var totals = await Promise.all((pm.data || []).map(function (r) { return r.characters ? totalStatAsync(r.characters.data) : Promise.resolve(-1); }));
   var leaderId = null; var best = -1;
   (pm.data || []).forEach(function (r, i) {
     if (!r.characters) return;
@@ -1305,6 +1318,260 @@ async function refreshDmDashboard() {
   box.innerHTML = htmlOut;
 }
 
+/* ---------------- campaign messaging (?v=36) ---------------- */
+/* Players message other players in their campaign; the DM picks
+ * recipients the same way. Every conversation also includes the campaign
+ * DM as a member (shown as "Dungeon A.I."), so the DM can read every
+ * chat, and anything the DM sends shows as coming from "Dungeon A.I.".
+ * Needs supabase_messages.sql run once. Delivery is live over the same
+ * realtime channel as loot and character edits, and the Messages tab
+ * carries an unread count plus a toast when a message lands while you
+ * are looking elsewhere. Compose and thread views are mutually exclusive,
+ * and live updates never re-render the input you are typing in. */
+var msgInbox = []; /* [{id, lastRead, latest, unread, names}] */
+var msgOpenId = null;
+var msgOpenMessages = [];
+var msgComposeOpen = false;
+function msgCampaignId() { return crawlerMode === 'dm' ? manageCampaignId : cloudCampaignId; }
+function msgMyName() {
+  if (crawlerMode === 'dm') return 'Dungeon A.I.';
+  try { var st = window.DCC.getState(); if (st && st.name) return st.name; } catch (e) {}
+  return 'Unnamed Crawler';
+}
+function msgDmId() {
+  if (crawlerMode === 'dm') return cloudUser ? cloudUser.id : null;
+  var camp = cloudCampaignsCache.find(function (c) { return c.id === cloudCampaignId; });
+  return camp ? camp.dm_id : null;
+}
+function msgStatus(msg) { var el = $('msg-status'); if (el) el.textContent = msg || ''; }
+function msgTime(ts) {
+  try { return new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; }
+}
+function showMsgToast(text) {
+  var t = $('msg-toast'); if (!t) return;
+  t.textContent = text; t.hidden = false;
+  clearTimeout(showMsgToast._t);
+  showMsgToast._t = setTimeout(function () { t.hidden = true; }, 4500);
+}
+function updateMsgBadge() {
+  var btn = $('messages-tab-btn'); if (!btn) return;
+  var n = msgInbox.reduce(function (a, c) { return a + (c.unread || 0); }, 0);
+  btn.textContent = n > 0 ? 'Messages (' + n + ')' : 'Messages';
+}
+/* Recipients for a new message: campaign players (never NPCs, never
+ * yourself). DM reads them from the member list; players use the
+ * campaign_member_list RPC because they cannot read other players'
+ * character rows directly. */
+async function listMessageRecipients() {
+  var cid = msgCampaignId();
+  if (!cid) return { error: 'No campaign selected.' };
+  if (crawlerMode === 'dm') {
+    var mem = await fetchCampaignMembers(cid);
+    if (mem.error) return { error: mem.error.message || 'Could not load members.' };
+    return { members: (mem.members || []).filter(function (m) { return !(m.data && m.data.npc); }).map(function (m) {
+      return { character_id: m.id, name: m.name, owner_id: m.owner_id };
+    }) };
+  }
+  var res = await sb.rpc('campaign_member_list', { p_campaign_id: cid });
+  if (res.error) return { error: res.error.message || 'Could not load members.' };
+  return { members: (res.data || []).filter(function (m) { return !m.is_npc && m.character_id !== cloudCharacterId; }).map(function (m) {
+    return { character_id: m.character_id, name: m.name, owner_id: m.owner_id };
+  }) };
+}
+function msgDisplayNames(memberRows, nameMap) {
+  var names = [];
+  memberRows.forEach(function (r) {
+    if (r.is_dm) return; /* the DM is in every chat; shown in the header, not the title */
+    if (r.user_id === (cloudUser && cloudUser.id) && r.character_id === cloudCharacterId) return;
+    var n = nameMap[r.character_id] || (r.character_id ? 'Unknown' : null);
+    if (n && names.indexOf(n) === -1) names.push(n);
+  });
+  return names.length ? names.join(', ') : 'Dungeon A.I.';
+}
+async function refreshMessages() {
+  var box = $('messages-content'); if (!box) return;
+  if (!cloudUser) { box.innerHTML = '<p class="hint">Sign in to message your campaign.</p>'; msgInbox = []; updateMsgBadge(); return; }
+  var cid = msgCampaignId();
+  if (!cid) {
+    box.innerHTML = crawlerMode === 'dm'
+      ? '<p class="hint">Pick a campaign in Campaign Management first, then your conversations will show here.</p>'
+      : '<p class="hint">Join a campaign first, then your conversations will show here.</p>';
+    msgInbox = []; updateMsgBadge(); return;
+  }
+  var mine = await sb.from('conversation_members').select('conversation_id, last_read_at, conversations(id, campaign_id, created_at)').eq('user_id', cloudUser.id);
+  if (mine.error) {
+    box.innerHTML = '<p class="hint">Messaging is not set up yet — run supabase_messages.sql in Supabase, then refresh. (' + esc(mine.error.message || 'load failed') + ')</p>';
+    msgInbox = []; updateMsgBadge(); return;
+  }
+  var rows = (mine.data || []).filter(function (r) { return r.conversations && r.conversations.campaign_id === cid; });
+  var ids = rows.map(function (r) { return r.conversation_id; });
+  var lastReadByConv = {};
+  rows.forEach(function (r) { lastReadByConv[r.conversation_id] = r.last_read_at ? Date.parse(r.last_read_at) : 0; });
+  var nameMap = {};
+  var recips = await listMessageRecipients();
+  (recips.members || []).forEach(function (m) { nameMap[m.character_id] = m.name; });
+  if (crawlerMode !== 'dm' && cloudCharacterId) nameMap[cloudCharacterId] = msgMyName();
+  var latestByConv = {}, unreadByConv = {}, memberRowsByConv = {};
+  if (ids.length) {
+    var mres = await sb.from('messages').select('id, conversation_id, sender_id, sender_name, body, created_at').in('conversation_id', ids).order('created_at', { ascending: false }).limit(200);
+    (mres.data || []).forEach(function (m) {
+      if (!latestByConv[m.conversation_id]) latestByConv[m.conversation_id] = m;
+      if (m.sender_id !== cloudUser.id && Date.parse(m.created_at) > (lastReadByConv[m.conversation_id] || 0)) {
+        unreadByConv[m.conversation_id] = (unreadByConv[m.conversation_id] || 0) + 1;
+      }
+    });
+    var memres = await sb.from('conversation_members').select('conversation_id, user_id, character_id, is_dm').in('conversation_id', ids);
+    (memres.data || []).forEach(function (r) {
+      (memberRowsByConv[r.conversation_id] = memberRowsByConv[r.conversation_id] || []).push(r);
+    });
+  }
+  msgInbox = rows.map(function (r) {
+    return {
+      id: r.conversation_id, lastRead: lastReadByConv[r.conversation_id],
+      latest: latestByConv[r.conversation_id] || null,
+      unread: unreadByConv[r.conversation_id] || 0,
+      names: msgDisplayNames(memberRowsByConv[r.conversation_id] || [], nameMap)
+    };
+  }).sort(function (a, b) {
+    var ta = a.latest ? Date.parse(a.latest.created_at) : 0, tb = b.latest ? Date.parse(b.latest.created_at) : 0;
+    return tb - ta;
+  });
+  updateMsgBadge();
+  /* Never re-render while the user is typing: a half-written message or
+   * checked recipients must survive a live update. The data is fresh;
+   * the view refreshes next time the tab opens or Refresh is hit. */
+  if (!msgComposeOpen && !msgOpenId) renderMsgInbox();
+}
+function renderMsgInbox() {
+  var box = $('messages-content'); if (!box) return;
+  var html = '<p id="msg-status" class="hint"></p>';
+  html += '<div class="btn-row"><button type="button" onclick="toggleMsgCompose()">New message</button>'
+    + '<button type="button" onclick="refreshMessages()">Refresh</button></div>';
+  html += '<div id="msg-compose"></div><div id="msg-list"></div>';
+  if (msgOpenId) html += '<div id="msg-thread"></div>';
+  box.innerHTML = html;
+  renderMsgList();
+  if (msgComposeOpen) renderMsgCompose();
+  if (msgOpenId) renderMsgThread();
+}
+function renderMsgList() {
+  var list = $('msg-list'); if (!list) return;
+  if (!msgInbox.length) { list.innerHTML = '<p class="hint">No conversations yet. Start one with New message.</p>'; return; }
+  list.innerHTML = msgInbox.map(function (c) {
+    var latest = c.latest ? esc(c.latest.sender_name) + ': ' + esc((c.latest.body || '').slice(0, 80)) + ' <span class="msg-time">' + esc(msgTime(c.latest.created_at)) + '</span>' : 'No messages yet.';
+    return '<div class="cloud-row"><span class="' + (c.unread ? 'msg-unread' : '') + '">' + esc(c.names) + (c.unread ? ' (' + c.unread + ' new)' : '') + '<br><span class="hint">' + latest + '</span></span>'
+      + '<span><button type="button" onclick="openConversation(\'' + c.id + '\')">Open</button></span></div>';
+  }).join('');
+}
+async function renderMsgCompose() {
+  var box = $('msg-compose'); if (!box) return;
+  box.innerHTML = '<p class="hint">Loading recipients…</p>';
+  var recips = await listMessageRecipients();
+  if (recips.error) { box.innerHTML = '<p class="hint">' + esc(recips.error) + '</p>'; return; }
+  if (!recips.members.length) { box.innerHTML = '<p class="hint">No one else in this campaign to message yet.</p>'; return; }
+  box.innerHTML = '<div><label>To</label>' + recips.members.map(function (m) {
+    return '<div><label><input type="checkbox" class="msg-recip" value="' + m.character_id + '" data-owner="' + m.owner_id + '"> ' + esc(m.name) + '</label></div>';
+  }).join('') + '</div>'
+    + '<div class="msg-input-row"><input type="text" id="msg-first-body" placeholder="Write your message…" maxlength="2000">'
+    + '<button type="button" onclick="createConversation()">Send</button></div>';
+}
+function toggleMsgCompose() {
+  msgComposeOpen = !msgComposeOpen;
+  if (msgComposeOpen) msgOpenId = null; /* compose and thread are exclusive */
+  renderMsgInbox();
+}
+function renderMsgThread() {
+  var box = $('msg-thread'); if (!box) return;
+  var conv = msgInbox.find(function (c) { return c.id === msgOpenId; });
+  box.innerHTML = '<div class="msg-thread"><p><strong>' + esc(conv ? conv.names : 'Conversation') + '</strong>'
+    + ' <span class="hint">— the DM (Dungeon A.I.) can see this chat</span></p>'
+    + '<div id="msg-lines"></div>'
+    + '<div class="msg-input-row"><input type="text" id="msg-body" placeholder="Write a reply…" maxlength="2000">'
+    + '<button type="button" onclick="sendMsg()">Send</button></div></div>';
+  renderMsgLines();
+}
+function renderMsgLines() {
+  var lines = $('msg-lines'); if (!lines) return;
+  lines.innerHTML = msgOpenMessages.length ? msgOpenMessages.map(function (m) {
+    var ai = m.sender_name === 'Dungeon A.I.';
+    return '<div class="msg-line' + (ai ? ' msg-ai' : '') + '"><span class="msg-who">' + esc(m.sender_name) + '</span> <span class="msg-time">' + esc(msgTime(m.created_at)) + '</span><br>' + esc(m.body) + '</div>';
+  }).join('') : '<p class="hint">No messages yet.</p>';
+}
+async function openConversation(id) {
+  msgOpenId = id; msgComposeOpen = false;
+  var res = await sb.from('messages').select('id, sender_id, sender_name, body, created_at').eq('conversation_id', id).order('created_at', { ascending: true }).limit(200);
+  if (res.error) return msgStatus('Could not load messages: ' + res.error.message);
+  msgOpenMessages = res.data || [];
+  renderMsgInbox();
+  /* Mark read: everything up to now is seen. */
+  var now = new Date().toISOString();
+  await sb.from('conversation_members').update({ last_read_at: now }).eq('conversation_id', id).eq('user_id', cloudUser.id);
+  var conv = msgInbox.find(function (c) { return c.id === id; });
+  if (conv) { conv.unread = 0; conv.lastRead = Date.parse(now); }
+  updateMsgBadge();
+}
+async function sendMsg() {
+  var input = $('msg-body'); if (!input || !msgOpenId) return;
+  if (crawlerMode !== 'dm' && !cloudCharacterId) return msgStatus('Load a crawler first — messages are sent as your character.');
+  var body = input.value.trim();
+  if (!body) return;
+  var res = await sb.from('messages').insert({
+    conversation_id: msgOpenId, sender_id: cloudUser.id,
+    sender_character_id: crawlerMode === 'dm' ? null : cloudCharacterId,
+    sender_name: msgMyName(), body: body
+  }).select('id, sender_id, sender_name, body, created_at').single();
+  if (res.error) return msgStatus('Send failed: ' + res.error.message);
+  input.value = '';
+  msgOpenMessages.push(res.data);
+  var conv = msgInbox.find(function (c) { return c.id === msgOpenId; });
+  if (conv) conv.latest = res.data;
+  renderMsgLines();
+  renderMsgList();
+}
+async function createConversation() {
+  var checked = Array.from(document.querySelectorAll('.msg-recip:checked'));
+  if (!checked.length) return msgStatus('Pick at least one person to message.');
+  var first = $('msg-first-body'); var body = first ? first.value.trim() : '';
+  if (!body) return msgStatus('Write your message first.');
+  if (crawlerMode !== 'dm' && !cloudCharacterId) return msgStatus('Load a crawler first — messages are sent as your character.');
+  var cid = msgCampaignId();
+  if (!cid) return msgStatus('No campaign selected.');
+  var dmId = msgDmId();
+  var conv = await sb.from('conversations').insert({ campaign_id: cid, created_by: cloudUser.id }).select('id').single();
+  if (conv.error) return msgStatus('Could not start the conversation: ' + conv.error.message);
+  var convId = conv.data.id;
+  var members = checked.map(function (c) {
+    return { conversation_id: convId, user_id: c.dataset.owner, character_id: c.value, is_dm: false };
+  });
+  members.push({ conversation_id: convId, user_id: cloudUser.id, character_id: crawlerMode === 'dm' ? null : cloudCharacterId, is_dm: crawlerMode === 'dm' });
+  if (dmId && dmId !== cloudUser.id) members.push({ conversation_id: convId, user_id: dmId, character_id: null, is_dm: true });
+  var mres = await sb.from('conversation_members').insert(members);
+  if (mres.error) return msgStatus('Conversation created, but adding members failed: ' + mres.error.message);
+  var m = await sb.from('messages').insert({
+    conversation_id: convId, sender_id: cloudUser.id,
+    sender_character_id: crawlerMode === 'dm' ? null : cloudCharacterId,
+    sender_name: msgMyName(), body: body
+  }).select('id, sender_id, sender_name, body, created_at').single();
+  if (m.error) return msgStatus('Conversation created, but the first message failed: ' + m.error.message);
+  msgComposeOpen = false;
+  await refreshMessages();
+  openConversation(convId);
+}
+function onIncomingMessage(m) {
+  if (!m || !cloudUser || m.sender_id === cloudUser.id) return; /* own echo */
+  if (msgOpenId === m.conversation_id) {
+    msgOpenMessages.push(m);
+    var conv = msgInbox.find(function (c) { return c.id === m.conversation_id; });
+    if (conv) { conv.unread = 0; conv.latest = m; }
+    renderMsgLines();
+    renderMsgList();
+    updateMsgBadge();
+    sb.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', m.conversation_id).eq('user_id', cloudUser.id);
+    return;
+  }
+  refreshMessages();
+  showMsgToast('New message from ' + (m.sender_name || 'someone') + ': ' + (m.body || '').slice(0, 80));
+}
 /* ---------------- realtime + autosave ---------------- */
 function onLocalSave() {
   if (!cloudUser || crawlerMode !== 'player' || !cloudCharacterId || applyingRemote) return;
@@ -1330,6 +1597,12 @@ function startRealtime() {
         refreshLoot();
         refreshAchPlayerList();
       }
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, function (payload) {
+      onIncomingMessage(payload.new);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations' }, function (payload) {
+      if (payload.new && payload.new.created_by !== (cloudUser && cloudUser.id)) refreshMessages();
     })
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters' }, function (payload) {
       var row = payload.new;
@@ -1367,10 +1640,12 @@ function startRealtime() {
       }
     })
     .subscribe();
+  refreshMessages(); /* loads the inbox + unread badge once signed in */
 }
 function onTabShown(tab) {
   if (tab === 'dm') refreshDmDashboard();
   if (tab === 'manage') refreshManageTab();
+  if (tab === 'messages') refreshMessages();
   if (tab === 'inspect') renderInspector();
   if (tab === 'deadparty') refreshDeadPartyTab();
   if (tab === 'loot') refreshLoot();

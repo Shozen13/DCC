@@ -86,6 +86,7 @@
       <button type="button" data-tab="spells" class="tab-btn">Spells</button>
       <button type="button" data-tab="inventory" class="tab-btn">Inventory</button>
       <button type="button" data-tab="campaign" class="tab-btn">Campaign</button>
+      <button type="button" data-tab="messages" class="tab-btn" id="messages-tab-btn">Messages</button>
       <button type="button" data-tab="quests" class="tab-btn">Quests</button>
       <button type="button" data-tab="journal" class="tab-btn">Journal</button>
       <button type="button" data-tab="pets" class="tab-btn">Pets</button>
@@ -439,6 +440,12 @@
       </div>
     </section>
 
+    <section class="panel" id="panel-messages">
+      <h2>Messages</h2>
+      <p class="hint">Chat with the other crawlers in your campaign. The DM can see every conversation here, and anything the DM sends shows up as coming from "Dungeon A.I.".</p>
+      <div id="messages-content"><p class="hint">Sign in to message your campaign.</p></div>
+    </section>
+
     <section class="panel" id="panel-dm">
       <h2>DM Dashboard</h2>
       <p class="hint">Campaigns you control, with their players and parties. HP and mana here update live as players change, and your HP/mana buttons here update players live. Party creation and campaign management are in the Campaign Management tab.</p>
@@ -537,6 +544,7 @@
 </div>
 
 <!-- Gateway -->
+<div id="msg-toast" hidden></div>
 <div class="overlay" id="gateway" hidden>
   <div class="modal">
     <h2>Welcome, crawler</h2>
@@ -693,12 +701,12 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=34"></script>
-<script src="js/convert.js?v=34"></script>
-<script src="js/app.js?v=34"></script>
-<script src="js/wizard.js?v=34"></script>
-<script src="js/cloud.js?v=34"></script>
+<script src="js/rules.js?v=36"></script>
+<script src="js/convert.js?v=36"></script>
+<script src="js/app.js?v=36"></script>
+<script src="js/wizard.js?v=36"></script>
+<script src="js/cloud.js?v=36"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-<script src="js/pdfexport.js?v=34"></script>
+<script src="js/pdfexport.js?v=36"></script>
 </body>
 </html>

@@ -1605,12 +1605,12 @@
     // Tab guards, ported from the original sheet: DM-only tabs fall back to
     // Vitals for non-DMs, and in DM mode every character-sheet tab falls
     // back to the DM Dashboard (DM tabs are dm/manage/inspect/sendbox/
-    // sendach; the player Campaign tab is replaced by Management for DMs,
-    // and Dead Party member is a player-only tab). The cloud layer
-    // refreshes tab content via onTabShown.
+    // sendach, plus Messages, which both sides use; the player Campaign
+    // tab is replaced by Management for DMs, and Dead Party member is a
+    // player-only tab). The cloud layer refreshes tab content via onTabShown.
     if (window.Cloud) {
       if ((tab === 'dm' || tab === 'manage' || tab === 'inspect' || tab === 'sendbox' || tab === 'sendach') && !window.Cloud.isDm()) tab = 'vitals';
-      else if (window.Cloud.isDm() && ['dm', 'manage', 'inspect', 'sendbox', 'sendach'].indexOf(tab) === -1) tab = 'dm';
+      else if (window.Cloud.isDm() && ['dm', 'manage', 'inspect', 'sendbox', 'sendach', 'messages'].indexOf(tab) === -1) tab = 'dm';
       if (typeof window.Cloud.onTabShown === 'function') window.Cloud.onTabShown(tab);
     }
     activeTab = tab;
