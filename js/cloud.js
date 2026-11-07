@@ -24,6 +24,17 @@ var sb = null;
 var cloudUser = null;
 var cloudCharacterId = localStorage.getItem('crawler_cloud_id') || null;
 var cloudCampaignId = localStorage.getItem('cloud_campaign_id') || null;
+/* The cloud row's updated_at as of this device's last sync (read or
+ * write). A device whose marker matches the row is in sync; a device
+ * whose marker differs is stale and must load the cloud copy instead
+ * of pushing its own. Compared by equality, never by ordering, so
+ * clock differences between devices cannot fool it. */
+var cloudUpdatedAt = localStorage.getItem('crawler_cloud_updated_at') || null;
+/* False while the first cloud sync after sign-in is still running, so
+ * a stale sheet cannot autosave over the cloud before the sync lands. */
+var cloudSyncReady = true;
+function setCloudMarker(ts) { cloudUpdatedAt = ts || null; if (ts) localStorage.setItem('crawler_cloud_updated_at', ts); else localStorage.removeItem('crawler_cloud_updated_at'); }
+function clearCloudMarker() { setCloudMarker(null); }
 var cloudCampaignsCache = [];
 var crawlerMode = localStorage.getItem('crawler_mode') || null;
 var pendingRole = null;
@@ -61,6 +72,32 @@ function selfAchStatus(msg) { var el = $('self-ach-status'); if (el) el.innerTex
  * states through the sheet's own setState/renderAll. */
 function getSheetCopy() {
   try { return JSON.parse(JSON.stringify(window.DCC.getState())); } catch (e) { return null; }
+}
+/* A sheet with nothing done on it yet: no name, no skills beyond the
+ * default Unarmed Combat, no spells or items, stats still at their
+ * starting 1s, no race/class, Level 1, no gold. A blank sheet must
+ * never be written to the cloud over a real character, and a fresh
+ * device must never settle for a blank cloud copy while a real one
+ * exists. */
+function isBlankSheet(data) {
+  if (!data || typeof data !== 'object') return true;
+  if ((data.name || '').trim()) return false;
+  var skills = data.skills || [];
+  for (var i = 0; i < skills.length; i++) {
+    var n = (skills[i].name || '').trim().toLowerCase();
+    if (n && n !== 'unarmed combat') return false;
+  }
+  if ((data.spells || []).length) return false;
+  if ((data.items || []).length) return false;
+  var base = data.ownBase || {}, enh = data.ownEnh || {};
+  var keys = ['str', 'int', 'con', 'dex', 'cha'];
+  for (var j = 0; j < keys.length; j++) {
+    if (parseInt(base[keys[j]], 10) > 1 || parseInt(enh[keys[j]], 10) > 0) return false;
+  }
+  if (data.race || data.class) return false;
+  if (parseInt(data.level, 10) > 1) return false;
+  if (parseInt(data.gold, 10) > 0) return false;
+  return true;
 }
 function hpSlotsText(d) {
   if (!d) return '?';
@@ -713,6 +750,7 @@ function initCloud() {
       refreshCloudAll(); startRealtime();
       applyModeClass();
       if (crawlerMode === 'dm') window.DCC.showTab('dm');
+      else if (crawlerMode === 'player') maybeAutoLoad();
     } else if (!crawlerMode) {
       showLanding();
     }
@@ -721,7 +759,10 @@ function initCloud() {
     cloudUser = session ? session.user : null;
     cloudStatus(cloudUser ? ('Signed in as ' + cloudUser.email) : 'Signed out.');
     renderAccountSection();
-    if (cloudUser) { refreshCloudAll(); startRealtime(); }
+    if (cloudUser) {
+      refreshCloudAll(); startRealtime();
+      if (crawlerMode === 'player') maybeAutoLoad();
+    }
   });
 }
 function hideLanding() { var el = $('landing-screen'); if (el) el.style.display = 'none'; }
@@ -819,9 +860,19 @@ async function afterRoleLogin(role) {
     // (Switching back to Player re-loads that account's characters.)
     cloudCharacterId = null;
     localStorage.removeItem('crawler_cloud_id');
+    clearCloudMarker();
     refreshCloudAll(); window.DCC.showTab('dm'); return;
   }
-  await playerAutoLoad();
+  await maybeAutoLoad();
+}
+/* Detach the sheet on screen from its cloud character (New / guided
+ * creation): the blank sheet that follows is local-only, so it can
+ * never autosave over the cloud character it replaced. */
+function detachCloudCharacter() {
+  cloudCharacterId = null; localStorage.removeItem('crawler_cloud_id');
+  cloudCampaignId = null; localStorage.removeItem('cloud_campaign_id');
+  clearCloudMarker();
+  try { var st = window.DCC.getState(); if (st) st.cloudId = null; } catch (e) {}
 }
 async function cloudSignUp() {
   if (!sb) return cloudStatus('Supabase library failed to load. Reload the page and try again.');
@@ -854,8 +905,11 @@ async function cloudLogOut() {
 /* ---------------- cloud save / load / delete ---------------- */
 /* Apply a downloaded merged state to the sheet without a page reload
  * (the original reloaded the page; the merged sheet can swap state live). */
-function applyCloudState(data) {
+function applyCloudState(data, id) {
   var st = Object.assign(window.DCC.blankState(), data || {});
+  // Stamp which cloud character this sheet is, so the auto-load can
+  // tell an already-loaded sheet from a different local one.
+  st.cloudId = id || (data && data.cloudId) || null;
   window.DCC.setState(st);
   window.DCC.ensureUnarmed();
   window.DCC.syncGearGrants();
@@ -865,20 +919,24 @@ function applyCloudState(data) {
 }
 async function cloudSave() {
   if (!needLogin()) return null;
+  if (!cloudSyncReady) return cloudStatus('Still syncing with the cloud — try again in a moment.', 'crawlers');
   var data = getSheetCopy();
-  if (!data) return cloudStatus('Nothing to save yet. Fill in your crawler first.', 'crawlers');
+  if (!data || isBlankSheet(data)) return cloudStatus('Nothing to save yet. Fill in your crawler first.', 'crawlers');
   if (data.dead) return cloudStatus('This crawler is deceased and cannot be changed.', 'crawlers');
   var name = data.name || 'Unnamed Crawler';
   var level = parseInt(data.level, 10) || 1;
   var res;
+  var sentAt = new Date().toISOString();
   if (cloudCharacterId) {
-    res = await sb.from('characters').update({ name: name, level: level, data: data, updated_at: new Date().toISOString() }).eq('id', cloudCharacterId).select('id').single();
+    res = await sb.from('characters').update({ name: name, level: level, data: data, updated_at: sentAt }).eq('id', cloudCharacterId).select('id').single();
   } else {
-    res = await sb.from('characters').insert({ owner_id: cloudUser.id, name: name, level: level, data: data }).select('id').single();
+    res = await sb.from('characters').insert({ owner_id: cloudUser.id, name: name, level: level, data: data }).select('id, updated_at').single();
   }
   if (res.error) return cloudStatus('Cloud save failed: ' + res.error.message, 'crawlers');
   cloudCharacterId = res.data.id;
   localStorage.setItem('crawler_cloud_id', cloudCharacterId);
+  setCloudMarker((res.data && res.data.updated_at) || sentAt);
+  try { var st = window.DCC.getState(); st.cloudId = cloudCharacterId; window.DCC.saveNow(); } catch (e) {}
   cloudStatus('Saved to cloud: ' + name, 'crawlers');
   refreshCloudAll();
   return cloudCharacterId;
@@ -891,12 +949,13 @@ async function cloudSaveAsNew() {
   // living crawler in no campaign, fully editable, and the sheet on
   // screen becomes the copy. The original row is untouched (still
   // dead, still in its campaign, if it was).
-  var st = Object.assign({}, window.DCC.getState(), { name: '', number: '', dead: false });
+  var st = Object.assign({}, window.DCC.getState(), { name: '', number: '', dead: false, cloudId: null });
   window.DCC.setState(st);
   cloudCharacterId = null;
   localStorage.removeItem('crawler_cloud_id');
   cloudCampaignId = null;
   localStorage.removeItem('cloud_campaign_id');
+  clearCloudMarker();
   window.DCC.renderAll();
   window.DCC.saveNow();
   return cloudSave();
@@ -904,8 +963,14 @@ async function cloudSaveAsNew() {
 async function cloudLoad(id) {
   if (!needLogin()) return;
   if (!confirm('Loading will replace the sheet on this device with the cloud version. Continue?')) return;
-  var res = await sb.from('characters').select('id, campaign_id, data').eq('id', id).single();
+  var res = await sb.from('characters').select('id, campaign_id, updated_at, data').eq('id', id).single();
   if (res.error) return cloudStatus('Cloud load failed: ' + res.error.message, 'crawlers');
+  // A saved crawler that looks empty is usually a blank duplicate, not
+  // the real character — say so before it replaces the sheet on screen.
+  if (isBlankSheet(res.data.data)) {
+    if (!confirm('That saved crawler looks empty — Level 1 with no skills, spells or items. Load it anyway? (If this is not the crawler you meant, cancel and pick another in My Crawlers.)')) return;
+  }
+  setCloudMarker(res.data.updated_at);
   localStorage.setItem('crawler_cloud_id', res.data.id);
   cloudCharacterId = res.data.id;
   // The Campaign tab always reflects the LOADED crawler: sync the
@@ -915,12 +980,13 @@ async function cloudLoad(id) {
   cloudCampaignId = res.data.campaign_id || null;
   if (cloudCampaignId) localStorage.setItem('cloud_campaign_id', cloudCampaignId);
   else localStorage.removeItem('cloud_campaign_id');
-  applyCloudState(res.data.data);
+  applyCloudState(res.data.data, res.data.id);
   refreshCloudAll(); refreshLoot(); refreshAchPlayerList();
 }
 async function cloudLoadSilent(id) {
-  var res = await sb.from('characters').select('id, campaign_id, data').eq('id', id).single();
+  var res = await sb.from('characters').select('id, campaign_id, updated_at, data').eq('id', id).single();
   if (res.error) { cloudStatus('Cloud load failed: ' + res.error.message); return; }
+  setCloudMarker(res.data.updated_at);
   localStorage.setItem('crawler_cloud_id', res.data.id);
   cloudCharacterId = res.data.id;
   // The Campaign tab always reflects the LOADED crawler: sync the
@@ -930,7 +996,7 @@ async function cloudLoadSilent(id) {
   cloudCampaignId = res.data.campaign_id || null;
   if (cloudCampaignId) localStorage.setItem('cloud_campaign_id', cloudCampaignId);
   else localStorage.removeItem('cloud_campaign_id');
-  applyCloudState(res.data.data);
+  applyCloudState(res.data.data, res.data.id);
 }
 async function cloudDelete(id) {
   if (!needLogin()) return;
@@ -940,39 +1006,101 @@ async function cloudDelete(id) {
   if (id === cloudCharacterId) {
     cloudCharacterId = null;
     localStorage.removeItem('crawler_cloud_id');
+    clearCloudMarker();
   }
   cloudStatus('Crawler deleted from the cloud.', 'crawlers');
   refreshCloudAll();
 }
 async function playerAutoLoad() {
   if (!needLogin()) return;
-  var res = await sb.from('characters').select('id, name, level, updated_at').eq('owner_id', cloudUser.id).order('updated_at', { ascending: false });
+  var res = await sb.from('characters').select('id, name, level, updated_at, data').eq('owner_id', cloudUser.id).order('updated_at', { ascending: false });
   if (res.error) { cloudStatus('Could not list crawlers: ' + res.error.message); window.DCC.showTab('campaign'); return; }
   if (!res.data.length) {
     // No crawler yet: the wizard (not a blocking modal) is the creation
     // path. When it finishes, onWizardFinished saves the fresh character.
-    localStorage.removeItem('dcc-sheet-v2');
     localStorage.removeItem('crawler_cloud_id');
     localStorage.removeItem('cloud_campaign_id');
     cloudCharacterId = null; cloudCampaignId = null;
+    clearCloudMarker();
     localStorage.setItem('player_autoload_pending', 'create');
-    window.DCC.setState(window.DCC.blankState());
-    window.DCC.ensureUnarmed();
-    window.DCC.saveNow();
+    // A local sheet with real progress IS the character: keep it and
+    // let the wizard finish it (finishing saves it to the cloud).
+    // Only a blank sheet is reset.
+    try {
+      if (isBlankSheet(window.DCC.getState())) {
+        localStorage.removeItem('dcc-sheet-v2');
+        window.DCC.setState(window.DCC.blankState());
+        window.DCC.ensureUnarmed();
+        window.DCC.saveNow();
+      }
+    } catch (e) {}
     var gw = $('gateway'); if (gw) gw.hidden = true;
     if (window.Wizard) window.Wizard.start();
     window.DCC.renderAll();
     return;
   }
-  if (res.data.length === 1) { cloudLoadSilent(res.data[0].id); return; }
-  // Several crawlers, none picked yet: nothing is loaded, so neither
-  // the character pointer nor a campaign selection may survive from a
-  // previous session to leak another crawler's campaign into this view.
-  cloudCharacterId = null; localStorage.removeItem('crawler_cloud_id');
-  cloudCampaignId = null; localStorage.removeItem('cloud_campaign_id');
-  refreshCloudAll();
-  window.DCC.showTab('campaign');
-  cloudStatus('You have ' + res.data.length + ' crawlers. Pick one to load in My Crawlers.');
+  // The character this browser was already using wins; otherwise the
+  // most recently updated NON-BLANK one, so a fresh device never lands
+  // on a blank sheet (or a blank duplicate) while a real character
+  // exists. A blank duplicate is only picked when it is the only one.
+  var pick = null, i;
+  if (cloudCharacterId) {
+    for (i = 0; i < res.data.length; i++) if (res.data[i].id === cloudCharacterId) { pick = res.data[i]; break; }
+  }
+  if (!pick) {
+    for (i = 0; i < res.data.length; i++) { if (!isBlankSheet(res.data[i].data)) { pick = res.data[i]; break; } }
+  }
+  if (!pick) pick = res.data[0];
+  await syncPickedCharacter(pick);
+  if (res.data.length > 1) cloudStatus('Loaded ' + (pick.name || 'Unnamed Crawler') + '. Pick another crawler in My Crawlers to switch.');
+}
+/* Reconcile the sheet on screen with the picked cloud row. Two devices
+ * can hold different copies of the same crawler, and the stale one must
+ * never win: a refresh on the device that has not worked on the
+ * character lately loads the cloud copy; a device whose own edits have
+ * not reached the cloud yet pushes them instead. Decided through the
+ * updated_at marker (equality, never ordering, so clock differences
+ * between devices cannot fool it) plus a content check, so a timestamp
+ * bump with identical data is a no-op. */
+function canonicalSheet(data) {
+  return Object.assign(window.DCC.blankState(), data || {});
+}
+function sheetJson(st) { try { return JSON.stringify(st); } catch (e) { return ''; } }
+async function syncPickedCharacter(pick) {
+  var local = null;
+  try { local = window.DCC.getState(); } catch (e) {}
+  var localCanon = canonicalSheet(local);
+  var cloudCanon = canonicalSheet(pick.data);
+  // The identity stamp is not a content difference.
+  localCanon.cloudId = pick.id; cloudCanon.cloudId = pick.id;
+  if (sheetJson(localCanon) === sheetJson(cloudCanon)) return;
+  // A different character on screen is never pushed over this row.
+  if (local && local.cloudId && local.cloudId !== pick.id) { await cloudLoadSilent(pick.id); return; }
+  if (pick.updated_at && cloudUpdatedAt && pick.updated_at === cloudUpdatedAt) {
+    // The cloud has not changed since this device last synced, so the
+    // difference is this device's own unsaved edits — push them. The
+    // sync decision is made, so saves are unblocked for the push.
+    cloudSyncReady = true;
+    window.DCC.saveNow();
+    return;
+  }
+  // The cloud changed since this device last synced (or this device
+  // never synced): the cloud copy wins.
+  await cloudLoadSilent(pick.id);
+}
+/* Load the player's cloud character when a player session becomes
+ * active — on a fresh sign-in, on a page reload with a saved session,
+ * and on sign-in from the Campaign tab — reconciling the sheet on
+ * screen with the cloud copy (see syncPickedCharacter), so a stale
+ * device refreshes instead of overwriting. While the sync runs, local
+ * saves are held back so a stale sheet cannot reach the cloud first. */
+var autoLoadRunning = false;
+async function maybeAutoLoad() {
+  if (!cloudUser || crawlerMode !== 'player' || autoLoadRunning) return;
+  autoLoadRunning = true;
+  cloudSyncReady = false;
+  var syncTimer = setTimeout(function () { cloudSyncReady = true; }, 10000);
+  try { await playerAutoLoad(); } finally { clearTimeout(syncTimer); autoLoadRunning = false; cloudSyncReady = true; }
 }
 function onWizardFinished() {
   if (localStorage.getItem('player_autoload_pending') === 'create' && cloudUser && crawlerMode === 'player') {
@@ -1620,16 +1748,21 @@ function onIncomingMessage(m) {
 }
 /* ---------------- realtime + autosave ---------------- */
 function onLocalSave() {
-  if (!cloudUser || crawlerMode !== 'player' || !cloudCharacterId || applyingRemote) return;
+  if (!cloudUser || crawlerMode !== 'player' || !cloudCharacterId || applyingRemote || !cloudSyncReady) return;
   try { if (window.DCC.getState().dead) return; } catch (e) {}
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function () {
     try {
       var data = getSheetCopy();
       if (!data) return;
+      // A blank sheet must never overwrite a real cloud character —
+      // this is how a fresh device (or a stray New/blank) used to be
+      // able to wipe progress.
+      if (isBlankSheet(data)) return;
       var sentAt = new Date().toISOString();
       lastOwnAutosaveAt = Date.parse(sentAt);
-      await sb.from('characters').update({ name: data.name || 'Unnamed Crawler', level: parseInt(data.level, 10) || 1, data: data, updated_at: sentAt }).eq('id', cloudCharacterId);
+      var res = await sb.from('characters').update({ name: data.name || 'Unnamed Crawler', level: parseInt(data.level, 10) || 1, data: data, updated_at: sentAt }).eq('id', cloudCharacterId);
+      if (!res.error) setCloudMarker(sentAt);
     } catch (e) {}
   }, 800);
 }
@@ -1674,6 +1807,8 @@ function startRealtime() {
         applyingRemote = true;
         try {
           var st = Object.assign(window.DCC.blankState(), incoming);
+          st.cloudId = row.id;
+          setCloudMarker(row.updated_at);
           window.DCC.setState(st);
           window.DCC.ensureUnarmed();
           window.DCC.syncGearGrants();
@@ -1706,7 +1841,8 @@ window.Cloud = {
   isDm: function () { return crawlerMode === 'dm'; },
   onLocalSave: onLocalSave,
   onWizardFinished: onWizardFinished,
-  onTabShown: onTabShown
+  onTabShown: onTabShown,
+  detach: detachCloudCharacter
 };
 
 document.addEventListener('DOMContentLoaded', function () {

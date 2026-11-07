@@ -34,7 +34,7 @@
   /* ---------------- state ---------------- */
   function blankState() {
     return {
-      name: '', number: '', race: '', class: '', level: 1, floor: 1, avatarUrl: '',
+      name: '', number: '', race: '', class: '', level: 1, floor: 1, avatarUrl: '', cloudId: null,
       ownBase: { str: 1, con: 1, dex: 1, int: 1, cha: 1 },
       ownEnh: { str: 0, con: 0, dex: 0, int: 0, cha: 0 },
       ownArmor: 0, evadeBuffs: 0, drBuffs: 0,
@@ -2929,13 +2929,17 @@
     click('btn-start-screen', function () { if (window.Cloud) window.Cloud.showLanding(); else $('gateway').hidden = false; });
     click('gw-close', function () { $('gateway').hidden = true; });
     click('gw-blank', function () {
-      if ((state.name || state.skills.length || state.spells.length) && !confirm('Start a blank sheet? This replaces the current sheet.')) return;
+      if ((state.name || state.skills.length || state.spells.length) && !confirm('Start a blank sheet? This replaces the current sheet. Your cloud crawler is kept as-is.')) return;
+      // Detach first: the blank sheet that follows is local-only, so it
+      // can never autosave over the cloud character it replaced.
+      if (window.Cloud && window.Cloud.detach) window.Cloud.detach();
       state = blankState(); ensureUnarmed(); saveNow();
       $('gateway').hidden = true; renderAll();
     });
     click('gw-import', function () { $('import-file').click(); });
     click('gw-guided', function () {
-      if ((state.name || state.skills.length || state.spells.length) && !confirm('Start guided creation? This replaces the current sheet with a blank one for the wizard.')) return;
+      if ((state.name || state.skills.length || state.spells.length) && !confirm('Start guided creation? This replaces the current sheet with a blank one for the wizard. Your cloud crawler is kept as-is.')) return;
+      if (window.Cloud && window.Cloud.detach) window.Cloud.detach();
       state = blankState(); ensureUnarmed(); saveNow();
       $('gateway').hidden = true;
       if (window.Wizard) window.Wizard.start();
