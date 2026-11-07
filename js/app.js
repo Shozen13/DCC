@@ -764,6 +764,9 @@
     return '';
   }
   function cardHtml(card) {
+    // The Rank line shows the trained (own) rank as a note, like the DM
+    // inspector does: leveling raises the trained rank, while the Rank
+    // shown and edited here is the displayed rank (trained + bonuses).
     var rank = cardRank(card);
     var eff = R.effectiveRank(rank, card, state.race, state.class);
     var group = groupGivenFor(card);
@@ -791,7 +794,7 @@
       + '<label>Used <input type="checkbox"' + (card.used ? ' checked' : '') + ' onchange="DCC.toggleUsed(\'' + card.kind + '\',\'' + card.id + '\',this.checked)"></label>'
       + '<button type="button" onclick="DCC.rollCard(\'' + card.kind + '\',\'' + card.id + '\')">Roll d20</button>'
       + '<button type="button" onclick="DCC.delCard(\'' + card.kind + '\',\'' + card.id + '\')">Delete</button></div>'
-      + '<p>Rank ' + rank + (group ? ' (Group +' + group + ' in rank)' : '') + (backgroundGivenFor(card) ? ' (Background +' + backgroundGivenFor(card) + ' in rank)' : '') + (eff !== rank ? ' — effective Rank ' + eff + ' (Mage −3)' : '') + '</p>'
+      + '<p>Rank ' + rank + (group ? ' (Group +' + group + ' in rank)' : '') + (backgroundGivenFor(card) ? ' (Background +' + backgroundGivenFor(card) + ' in rank)' : '') + (eff !== rank ? ' — effective Rank ' + eff + ' (Mage −3)' : '') + ' (Trained ' + (parseInt(card.ownRank, 10) || 0) + ')' + '</p>'
       + cardRelationHtml(card)
       + '<label>Notes <input type="text" value="' + esc(card.effect || '') + '" onchange="DCC.setCardEffect(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
       + rulebookBox(card) + '</details>';
