@@ -799,15 +799,23 @@
       + '<label>Notes <input type="text" value="' + esc(card.effect || '') + '" onchange="DCC.setCardEffect(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
       + rulebookBox(card) + '</details>';
   }
+  function byName(a, b) {
+    return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+  }
+  /* Skills/Spells list order: highest rank first, then A–Z. Display-only —
+   * state order is untouched. */
+  function byRankThenName(a, b) {
+    return cardRank(b) - cardRank(a) || byName(a, b);
+  }
   function renderSkills() {
     if (!cache.skills) { ensureSkills().then(function () { renderAll(); }).catch(function () {}); }
     if (!cache.bookChecks) { ensureBookChecks().then(function () { renderAll(); }).catch(function () {}); }
-    $('skill-list').innerHTML = state.skills.filter(function (c) { return cardRank(c) >= 1; }).map(cardHtml).join('') || '<p class="hint">No skills yet. Pick from the rulebook or add a custom skill.</p>';
+    $('skill-list').innerHTML = state.skills.filter(function (c) { return cardRank(c) >= 1; }).sort(byRankThenName).map(cardHtml).join('') || '<p class="hint">No skills yet. Pick from the rulebook or add a custom skill.</p>';
   }
   function renderSpells() {
     if (!cache.bookChecks) { ensureBookChecks().then(function () { renderAll(); }).catch(function () {}); }
     if (!cache.skills) { ensureSkills().then(function () { renderAll(); }).catch(function () {}); }
-    $('spell-list').innerHTML = state.spells.filter(function (c) { return cardRank(c) >= 1; }).map(cardHtml).join('') || '<p class="hint">No spells yet. Pick from the rulebook or add a custom spell.</p>';
+    $('spell-list').innerHTML = state.spells.filter(function (c) { return cardRank(c) >= 1; }).sort(byRankThenName).map(cardHtml).join('') || '<p class="hint">No spells yet. Pick from the rulebook or add a custom spell.</p>';
   }
   /* ---------------- story tabs ---------------- */
   function story() {
@@ -1346,7 +1354,14 @@
       return '<button type="button"' + (invKindFilter === f[0] ? ' class="active-filter"' : '') + ' onclick="DCC.setInvKindFilter(\'' + f[0] + '\')">' + f[1] + '</button>';
     }).join('');
     var list = state.items.filter(function (it) { return invKindFilter === 'all' || it.kind === invKindFilter; });
-    $('item-list').innerHTML = list.map(itemHtml).join('') || '<p class="hint">Nothing in this category yet.</p>';
+    /* Equipped gear gets its own section at the top; everything is A–Z
+     * within its section. A section only renders when it has items. */
+    var equipped = list.filter(function (it) { return it.equipped; }).sort(byName);
+    var rest = list.filter(function (it) { return !it.equipped; }).sort(byName);
+    var html = '';
+    if (equipped.length) html += '<h3>Equipped Gear</h3>' + equipped.map(itemHtml).join('');
+    if (rest.length) html += (equipped.length ? '<h3>Unequipped Items</h3>' : '') + rest.map(itemHtml).join('');
+    $('item-list').innerHTML = html || '<p class="hint">Nothing in this category yet.</p>';
   }
   /* ---------------- Gear tab: loadouts, slot board, bonuses, catalog ---------------- */
   function clearActiveLoadout() { state.activeLoadoutId = null; }
