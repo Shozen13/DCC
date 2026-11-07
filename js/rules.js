@@ -47,21 +47,31 @@
     return 10;
   }
 
-  /* Derived Base = own base + positive fixed race/class bonuses + split
-   * assignments. Penalties are NOT in Base; they subtract from Total. */
-  function derivedBase(ownBase, fixedStats, splitAssignments) {
+  /* Base = the player's own base only. Race/class bonuses (fixed +
+   * split) are NOT in Base; they add to Total instead (Antony,
+   * 2026-11-06). Penalties were never in Base either. */
+  function derivedBase(ownBase) {
     var out = {};
     STAT_KEYS.forEach(function (k) {
-      var own = Math.max(1, clampInt(ownBase[k], 1));
-      var fixed = (fixedStats[k] || 0);
-      var split = (splitAssignments[k] || 0);
-      out[k] = own + Math.max(0, fixed) + split;
+      out[k] = Math.max(1, clampInt(ownBase[k], 1));
     });
     return out;
   }
 
-  function statTotal(derived, enh, gear, penalty, cap) {
-    var total = Math.max(1, derived + enh + gear + penalty);
+  /* Back-compute the player's own enhancement from a typed Enhance
+   * total: total = base + ownEnh + gear + race/class, clamped to
+   * [1, cap]. Mirrors ownRankForTotal for the rank control. */
+  function ownEnhForTotal(target, ownBase, gear, raceClass, cap) {
+    var t = Math.max(1, clampInt(target, 1));
+    if (cap !== null && cap !== undefined && t > cap) t = cap;
+    return Math.max(0, t - Math.max(1, clampInt(ownBase, 1)) - (gear || 0) - (raceClass || 0));
+  }
+
+  /* Total = Base + Enhance + Gear + extra, minimum 1, then the
+   * race/class cap if any. `extra` is the race/class contribution
+   * (fixed + split, which may be negative for penalties). */
+  function statTotal(derived, enh, gear, extra, cap) {
+    var total = Math.max(1, derived + enh + gear + extra);
     if (cap !== null && cap !== undefined && total > cap) total = cap;
     return total;
   }
@@ -95,6 +105,31 @@
    * already inside Armor, so it is not added a second time. */
   function totalDR(armor, buffs, raceClassDR) {
     return armor + buffs + raceClassDR;
+  }
+
+  /* Evade Buffs granted by ranked skills/spells (book Ch.4): the base
+   * effect plus each rank upgrade reached may grant "+N Evade Buff"
+   * (e.g. Dodge, p.190: +1 base, +1 at Rank 5, +2 at Rank 10, +2 at
+   * Rank 15 = +6 at Rank 15). Upgrades are cumulative additional
+   * grants, like other rank upgrades. The phrasing is always "Evade
+   * Buff" in the book, so plain "+N Evade" without "Buff" does not
+   * count here. A custom effect replaces the library base text for
+   * the card; library rank upgrades still apply on top of it. */
+  function evadeBuffsInText(text) {
+    var total = 0, m, re = /\+(\d+)\s+Evade Buff/gi;
+    if (!text) return 0;
+    while ((m = re.exec(text))) total += parseInt(m[1], 10);
+    return total;
+  }
+  function skillEvadeBuff(lib, rank, customEffect) {
+    if (!lib && !customEffect) return 0;
+    var total = evadeBuffsInText(customEffect || (lib && lib.base_effect) || '');
+    if (lib && lib.upgrades) {
+      Object.keys(lib.upgrades).forEach(function (t) {
+        if (rank >= parseInt(t, 10)) total += evadeBuffsInText(lib.upgrades[t]);
+      });
+    }
+    return total;
   }
 
   /* Rank damage dice, book Table 37, p.176. */
@@ -818,9 +853,11 @@
   var api = {
     STAT_KEYS: STAT_KEYS, STAT_NAMES: STAT_NAMES, STAT_ABBR: STAT_ABBR,
     getModifier: getModifier, derivedBase: derivedBase, statTotal: statTotal,
+    ownEnhForTotal: ownEnhForTotal,
     statCapFor: statCapFor, statBank: statBank,
     maxHpSlots: maxHpSlots, totalHp: totalHp, maxMana: maxMana,
     evadeString: evadeString, totalDR: totalDR,
+    evadeBuffsInText: evadeBuffsInText, skillEvadeBuff: skillEvadeBuff,
     rankDamageDie: rankDamageDie, naturesBreathHealFormula: naturesBreathHealFormula,
     displayRank: displayRank, combinedFloor: combinedFloor,
     ownRankForTotal: ownRankForTotal, shouldRemoveCard: shouldRemoveCard,

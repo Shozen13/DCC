@@ -149,11 +149,12 @@ function racesData() {
  * Hobgoblin CHA / Pocket Kuma STR caps. This is what picks a party
  * leader (Antony, 2026-11-06: total, not base — the old base-only rule
  * was a mistake). Needs the race/class library, which is why it is async. */
-function totalStatAsync(d) {
-  if (!d) return Promise.resolve(0);
-  var own = d.ownBase || {};
-  var enh = d.ownEnh || {};
-  var ownSum = ['str', 'con', 'dex', 'int', 'cha'].reduce(function (a, k) { return a + (parseInt(own[k], 10) || 0); }, 0);
+/* Per-stat parts for a remote character row: fixed race/class bonuses,
+ * split assignments, and equipped gear stat bonuses. Shared by the
+ * leader total and the inspector stat rows, so both use the same math
+ * the player sees (Base = own base only; Total = Base + Enhance +
+ * Gear + Race/Class, min 1, cap applied). */
+function remoteStatParts(d) {
   return racesData().then(function (list) {
     var R = window.DCCRules;
     var fixed = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
@@ -181,10 +182,32 @@ function totalStatAsync(d) {
         if (b.type === 'stat' && gear[b.stat] !== undefined) gear[b.stat] += parseInt(b.amount, 10) || 0;
       });
     });
-    var derived = R.derivedBase(own, fixed, splits);
-    return R.STAT_KEYS.reduce(function (a, k) {
-      return a + R.statTotal(derived[k], parseInt(enh[k], 10) || 0, gear[k], Math.min(0, fixed[k]), R.statCapFor(d.race, d.class, k));
-    }, 0);
+    return { fixed: fixed, splits: splits, gear: gear };
+  });
+}
+function remoteStatTotals(d) {
+  return remoteStatParts(d).then(function (p) {
+    var R = window.DCCRules;
+    var derived = R.derivedBase(d.ownBase || {});
+    var out = {};
+    R.STAT_KEYS.forEach(function (k) {
+      var raceClass = (p.fixed[k] || 0) + (p.splits[k] || 0);
+      out[k] = {
+        base: derived[k],
+        total: R.statTotal(derived[k], parseInt((d.ownEnh || {})[k], 10) || 0, p.gear[k], raceClass, R.statCapFor(d.race, d.class, k)),
+        gear: p.gear[k], raceClass: raceClass
+      };
+    });
+    return out;
+  });
+}
+function totalStatAsync(d) {
+  if (!d) return Promise.resolve(0);
+  var own = d.ownBase || {};
+  var ownSum = ['str', 'con', 'dex', 'int', 'cha'].reduce(function (a, k) { return a + (parseInt(own[k], 10) || 0); }, 0);
+  return remoteStatTotals(d).then(function (t) {
+    var R = window.DCCRules;
+    return R.STAT_KEYS.reduce(function (a, k) { return a + t[k].total; }, 0);
   }).catch(function () { return ownSum; });
 }
 
@@ -316,14 +339,26 @@ function dmInspSaveVitals() {
     d.floor = Math.max(1, inspInt('insp-floor', d.floor || 1));
   }, 'Vitals saved.');
 }
-function dmInspSaveStats() {
+async function dmInspSaveStats() {
   if (!dmInspectId) return;
+  /* Enhance inputs hold the displayed total, so saving back-computes
+   * ownEnh from the row's gear/race/class (fetched first, as the
+   * inspector renders it). Falls back to a direct ownEnh set if the
+   * totals cannot be computed. */
+  var totals = null;
+  try {
+    var row = await sb.from('characters').select('data').eq('id', dmInspectId).single();
+    if (!row.error) totals = await remoteStatTotals(row.data.data || {});
+  } catch (e) {}
   dmUpdateCharacter(dmInspectId, function (d) {
+    var R = window.DCCRules;
     ['str', 'con', 'dex', 'int', 'cha'].forEach(function (k) {
       d.ownBase = d.ownBase || {};
       d.ownEnh = d.ownEnh || {};
-      d.ownBase[k] = inspInt('insp-base-' + k, d.ownBase[k] || 1);
-      d.ownEnh[k] = inspInt('insp-enh-' + k, d.ownEnh[k] || 0);
+      d.ownBase[k] = Math.max(1, inspInt('insp-base-' + k, d.ownBase[k] || 1));
+      var typed = inspInt('insp-enh-' + k, d.ownEnh[k] || 0);
+      var t = totals && totals[k];
+      d.ownEnh[k] = t ? R.ownEnhForTotal(typed, d.ownBase[k], t.gear, t.raceClass, R.statCapFor(d.race, d.class, k)) : Math.max(0, typed);
     });
     d.ownArmor = inspInt('insp-armor', d.ownArmor || 0);
   }, 'Stats saved.');
@@ -492,6 +527,10 @@ async function renderInspector() {
   try { await window.DCC.ensureKeywords(); } catch (e) {}
   var base = d.ownBase || { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
   var enh = d.ownEnh || { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
+  /* Enhance inputs show the same total the player sees (Base + Gear +
+   * Race/Class + buffs − penalties); saving back-computes ownEnh. */
+  var statTotals = null;
+  try { statTotals = await remoteStatTotals(d); } catch (e) {}
   var num = function (id, val, min) { return '<input type="number" id="' + id + '" value="' + val + '"' + (min !== undefined ? ' min="' + min + '"' : '') + ' style="width:72px">'; };
   var statOpts = ['str', 'con', 'dex', 'int', 'cha'].map(function (k) { return '<option value="' + k + '">' + k.toUpperCase() + '</option>'; }).join('');
   var html = await inspectPickerHtml() + '<p><strong>' + esc(d.name || row.data.name || 'Unnamed Crawler') + '</strong>'
@@ -517,7 +556,7 @@ async function renderInspector() {
   html += '<div class="cloud-subhead">Stats (base / enhance / armor)</div>';
   ['str', 'con', 'dex', 'int', 'cha'].forEach(function (k) {
     html += '<div><label>' + k.toUpperCase() + ' base ' + num('insp-base-' + k, base[k] === undefined ? 1 : base[k]) + '</label> '
-      + '<label>enhance ' + num('insp-enh-' + k, enh[k] || 0) + '</label></div>';
+      + '<label>enhance (total) ' + num('insp-enh-' + k, statTotals ? statTotals[k].total : (enh[k] || 0)) + '</label></div>';
   });
   html += '<div><label>Own armor ' + num('insp-armor', d.ownArmor || 0) + '</label></div>'
     + '<div class="btn-row"><button type="button" onclick="dmInspSaveStats()">Save stats</button></div>';

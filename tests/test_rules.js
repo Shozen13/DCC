@@ -21,11 +21,22 @@ eq(R.naturesBreathHealFormula(15), '1d8 + 1d6 + 3 slots', 'NB rank 15');
 eq(R.statBank(1, 0), 0, 'bank level 1');
 eq(R.statBank(10, 0), 27, 'bank level 10 (book example)');
 eq(R.statBank(4, 5), 4, 'bank level 4 spent 5');
-// Derived base / total: penalties from Total, not Base; minimum Total 1
-eq(R.derivedBase({ str: 5, con: 5, dex: 5, int: 5, cha: 5 }, { str: 0, con: -4, dex: 3, int: 0, cha: 0 }, { str: 0, con: 0, dex: 0, int: 0, cha: 0 }),
-  { str: 5, con: 5, dex: 8, int: 5, cha: 5 }, 'derived base ignores penalties');
+// Base is own base only (race/class NOT folded in); Total = Base +
+// Enhance + Gear + Race/Class, minimum Total 1
+eq(R.derivedBase({ str: 5, con: 5, dex: 5, int: 5, cha: 5 }),
+  { str: 5, con: 5, dex: 5, int: 5, cha: 5 }, 'derived base is own base only');
+eq(R.derivedBase({ str: 0, con: 3, dex: 1, int: 1, cha: 1 }),
+  { str: 1, con: 3, dex: 1, int: 1, cha: 1 }, 'derived base minimum 1');
 eq(R.statTotal(5, 0, 0, -4, null), 1, 'total minimum 1 with -4 penalty on base 5? (5-4=1)');
 eq(R.statTotal(10, 0, 0, 0, 10), 10, 'cap applied');
+eq(R.statTotal(5, 0, 0, 3, null), 8, 'race/class +3 adds to total');
+eq(R.statTotal(5, 2, 1, 2, null), 10, 'total = base + enh + gear + race/class');
+eq(R.statTotal(8, 0, 0, 5, 10), 10, 'total capped');
+// Enhance back-compute: typing a total sets ownEnh (like displayed rank)
+eq(R.ownEnhForTotal(10, 5, 1, 2, null), 2, 'enh back-compute 10 - 5 - 1 - 2 = 2');
+eq(R.ownEnhForTotal(3, 5, 0, 0, null), 0, 'enh cannot go below base');
+eq(R.ownEnhForTotal(20, 5, 0, 0, 10), 5, 'enh back-compute respects cap');
+eq(R.ownEnhForTotal(10, 5, 1, -1, null), 5, 'enh back-compute with penalty');
 eq(R.statCapFor('Hobgoblin', '', 'cha'), 10, 'Hobgoblin CHA cap');
 eq(R.statCapFor('Pocket Kuma', '', 'str'), 10, 'Pocket Kuma STR cap');
 eq(R.statCapFor('Human', '', 'cha'), null, 'no cap for Human');
@@ -319,6 +330,27 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
   eq(sc.subtype, 'Scroll', 'spell scroll subtype');
   eq(sc.use.spell, undefined, 'scroll spell designated later');
   eq(R.consumablePickFor('Something Unlisted'), null, 'unlisted consumable has no pick');
+})();
+
+// Evade Buffs granted by ranked skills/spells (e.g. Dodge, book p.190)
+(function () {
+  eq(R.evadeBuffsInText('Passive. You gain a +1 Evade Buff.'), 1, 'evade buff +1 in text');
+  eq(R.evadeBuffsInText('Gain a +1 Evade Buff, and +2 Evade Buff.'), 3, 'evade buffs sum in text');
+  eq(R.evadeBuffsInText('No evade here.'), 0, 'evade buff none in text');
+  eq(R.evadeBuffsInText('+1 Evade with no Buff word'), 0, 'plain +N Evade does not count');
+  var dodge = { base_effect: 'Passive. You gain a +1 Evade Buff.', upgrades: { 5: 'Gain a +1 Evade Buff, and you may Step an additional 5 feet when you perform the Evade Action.', 10: 'Gain a +2 Evade Buff, and roll Evade with Advantage vs. Spells and Ranged Attacks.', 15: 'Gain a +2 Evade Buff, and you may perform the Evade Action without spending an Action in combat.' } };
+  eq(R.skillEvadeBuff(dodge, 1), 1, 'Dodge rank 1 = +1');
+  eq(R.skillEvadeBuff(dodge, 4), 1, 'Dodge rank 4 = +1');
+  eq(R.skillEvadeBuff(dodge, 5), 2, 'Dodge rank 5 = +2');
+  eq(R.skillEvadeBuff(dodge, 9), 2, 'Dodge rank 9 = +2');
+  eq(R.skillEvadeBuff(dodge, 10), 4, 'Dodge rank 10 = +4');
+  eq(R.skillEvadeBuff(dodge, 15), 6, 'Dodge rank 15 = +6');
+  var rapier = { base_effect: 'Melee edged weapon attack.', upgrades: { 10: '+1d6 base damage, and you gain a +1 Evade Buff.', 15: '+1d6 base damage, and you gain a +1 Evade Buff.' } };
+  eq(R.skillEvadeBuff(rapier, 9), 0, 'Rapier rank 9 = +0');
+  eq(R.skillEvadeBuff(rapier, 10), 1, 'Rapier rank 10 = +1');
+  eq(R.skillEvadeBuff(rapier, 15), 2, 'Rapier rank 15 = +2');
+  eq(R.skillEvadeBuff(null, 3, 'You gain a +2 Evade Buff.'), 2, 'custom skill effect counts');
+  eq(R.skillEvadeBuff(null, 3, null), 0, 'no lib and no effect = +0');
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

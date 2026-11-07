@@ -139,16 +139,20 @@
   function raceClassDR() {
     return R.parseRaceClassDR(raceEntry()) + R.parseRaceClassDR(classEntry());
   }
+  /* Stat model (Antony, 2026-11-06): Base is the player's own base
+   * only — race/class is NOT folded into it. Total = Base + Enhance
+   * (own) + Gear + Race/Class (fixed + split, may be negative) with
+   * a minimum of 1 per stat and the race/class cap applied. */
   function computeStats() {
     var fixed = fixedStats();
     var splits = splitAssignments();
     var gear = equippedBonuses().stat;
-    var derived = R.derivedBase(state.ownBase, fixed, splits);
+    var derived = R.derivedBase(state.ownBase);
     var out = {};
     R.STAT_KEYS.forEach(function (k) {
-      var penalty = Math.min(0, fixed[k]);
-      var total = R.statTotal(derived[k], state.ownEnh[k] || 0, gear[k] || 0, penalty, R.statCapFor(state.race, state.class, k));
-      out[k] = { derived: derived[k], fixed: fixed[k], split: splits[k], penalty: penalty, gear: gear[k] || 0, ownEnh: state.ownEnh[k] || 0, total: total, mod: R.getModifier(total) };
+      var raceClass = (fixed[k] || 0) + (splits[k] || 0);
+      var total = R.statTotal(derived[k], state.ownEnh[k] || 0, gear[k] || 0, raceClass, R.statCapFor(state.race, state.class, k));
+      out[k] = { derived: derived[k], fixed: fixed[k], split: splits[k], raceClass: raceClass, penalty: Math.min(0, fixed[k]), gear: gear[k] || 0, ownEnh: state.ownEnh[k] || 0, total: total, mod: R.getModifier(total) };
     });
     return out;
   }
@@ -163,6 +167,19 @@
       });
     });
     return { stat: stat, dr: dr, evade: evade };
+  }
+  /* Evade Buffs granted by ranked skills/spells (e.g. Dodge): recomputed
+   * every render from each card's displayed rank, like the rank model.
+   * Rank 0 cards never count. Manual Buffs (state.evadeBuffs) and gear
+   * stay separate — this is only what the cards themselves grant. */
+  function skillEvadeTotal() {
+    var total = 0;
+    state.skills.concat(state.spells).forEach(function (c) {
+      var r = cardRank(c);
+      if (r < 1) return;
+      total += R.skillEvadeBuff(findLib(c.name), r, c.effect);
+    });
+    return total;
   }
   function gearGivenFor(card) {
     var total = 0;
@@ -293,7 +310,7 @@
     });
     var gearBon = equippedBonuses();
     var evadeDice = R.evadeDiceCount(raceEntry(), classEntry());
-    var evadeBuffs = (state.evadeBuffs || 0) + (gearBon.evade || 0);
+    var evadeBuffs = (state.evadeBuffs || 0) + (gearBon.evade || 0) + skillEvadeTotal();
     var armor = (state.ownArmor || 0) + (gearBon.dr || 0);
     var drBuffs = (state.drBuffs || 0) + raceClassDR();
     var drTotal = R.totalDR(armor, state.drBuffs, raceClassDR());
@@ -639,8 +656,9 @@
     $('mana-fill').style.width = (maxMana ? Math.round(state.manaCurrent / maxMana * 100) : 0) + '%';
     var evadeDice = R.evadeDiceCount(raceEntry(), classEntry());
     var gearEvade = equippedBonuses().evade;
-    $('evade-disp').textContent = R.evadeString(stats.dex.mod, evadeDice, state.evadeBuffs, gearEvade);
-    $('evade-sub').textContent = 'Evade = d20' + (evadeDice ? ' + ' + evadeDice + 'd4 (Race/Class)' : '') + ' + DEX modifier (+' + stats.dex.mod + ')' + ' + Buffs (' + (state.evadeBuffs >= 0 ? '+' : '') + state.evadeBuffs + ')' + (gearEvade ? ' + Gear (+' + gearEvade + ')' : '');
+    var skillEvade = skillEvadeTotal();
+    $('evade-disp').textContent = R.evadeString(stats.dex.mod, evadeDice, state.evadeBuffs + skillEvade, gearEvade);
+    $('evade-sub').textContent = 'Evade = d20' + (evadeDice ? ' + ' + evadeDice + 'd4 (Race/Class)' : '') + ' + DEX modifier (+' + stats.dex.mod + ')' + ' + Buffs (' + (state.evadeBuffs >= 0 ? '+' : '') + state.evadeBuffs + ')' + (skillEvade ? ' + Skills (+' + skillEvade + ')' : '') + (gearEvade ? ' + Gear (+' + gearEvade + ')' : '');
     var armor = state.ownArmor + equippedBonuses().dr;
     var dr = R.totalDR(armor, state.drBuffs, raceClassDR());
     $('dr-disp').textContent = dr;
@@ -655,15 +673,15 @@
       cards += '<div class="stat-card"><h3>' + k.toUpperCase() + ' — ' + R.STAT_NAMES[k] + '</h3>'
         + '<p class="stat-total">Total: <strong>' + s.total + '</strong> &nbsp; Modifier: <strong>+' + s.mod + '</strong></p>'
         + '<label>Base (edit to set) <input type="number" min="1" value="' + s.derived + '" onchange="DCC.setOwnBase(\'' + k + '\', this.value)"></label>'
-        + '<p>Derived Base: <strong>' + s.derived + '</strong> (own + positive race/class + split)</p>'
-        + '<label>Enhance (own) <input type="number" min="0" value="' + (state.ownEnh[k] || 0) + '" onchange="DCC.setOwnEnh(\'' + k + '\', this.value)"></label>'
-        + '<p>Gear: +' + s.gear + ' &nbsp; Race/Class: ' + (s.fixed + s.split >= 0 ? '+' : '') + (s.fixed + s.split) + '</p>'
+        + '<label>Enhance <input type="number" min="1" value="' + s.total + '" onchange="DCC.setEnhTotal(\'' + k + '\', this.value)"></label>'
+        + '<p>Gear: +' + s.gear + ' &nbsp; Race/Class: +' + (Math.max(0, s.fixed) + s.split) + '</p>'
         + (s.penalty < 0 ? '<p>Race/Class penalty: ' + s.penalty + ' (subtracted from Total)</p>' : '') + '</div>';
     });
     $('stat-cards').innerHTML = cards;
-    // Note: the Base input above shows the derived base; changing it
-    // sets ownBase (setOwnBase subtracts the positive race/class + split
-    // part so the displayed base matches what was typed).
+    // Note: Base shows the player's own base only (race/class is a
+    // separate line, not folded in). Enhance shows the computed total;
+    // typing a total back-computes the own enhancement (setEnhTotal),
+    // like the rank control sets the displayed rank.
     function listHtml(list, kind) {
       return list.map(function (x, i) {
         return '<li>' + esc(x) + ' <button type="button" onclick="DCC.delNote(\'' + kind + '\',' + i + ')">Remove</button></li>';
@@ -687,13 +705,19 @@
     }).join('') || '<p class="hint">Hotlist is empty.</p>';
   }
   function setOwnBase(key, value) {
-    var fixed = fixedStats(), splits = splitAssignments();
-    var positive = Math.max(0, fixed[key]) + (splits[key] || 0);
-    state.ownBase[key] = Math.max(1, num(value, 1) - positive);
+    state.ownBase[key] = Math.max(1, num(value, 1));
     saveSoon(); renderAll();
   }
   function setOwnEnh(key, value) {
     state.ownEnh[key] = Math.max(0, num(value, 0));
+    saveSoon(); renderAll();
+  }
+  /* The Enhance box shows the computed total (Base + Gear + Race/Class
+   * + buffs − penalties). Typing a total back-computes the player's
+   * own enhancement, like the rank control sets the displayed rank. */
+  function setEnhTotal(key, value) {
+    var s = computeStats()[key];
+    state.ownEnh[key] = R.ownEnhForTotal(value, state.ownBase[key] || 0, s.gear || 0, s.raceClass || 0, R.statCapFor(state.race, state.class, key));
     saveSoon(); renderAll();
   }
 
@@ -1377,7 +1401,7 @@
   function gearBonusesHtml(stats) {
     var rows = R.STAT_KEYS.map(function (k) {
       var s = stats[k];
-      var before = R.statTotal(s.derived, s.ownEnh, 0, s.penalty, R.statCapFor(state.race, state.class, k));
+      var before = R.statTotal(s.derived, s.ownEnh, 0, s.raceClass, R.statCapFor(state.race, state.class, k));
       var after = s.total;
       var delta = after - before;
       return '<div class="gear-bonus-stat"><strong>' + k.toUpperCase() + '</strong><br>' + before + ' → ' + after + (delta ? ' (+' + delta + ')' : '') + '</div>';
@@ -1979,7 +2003,7 @@
     getExportData: getExportData,
     openSkillPicker: openSkillPicker, openItemPicker: openItemPicker, openRaceClassPicker: openRaceClassPicker,
     showRaceClassInfo: showRaceClassInfo, openChoicePicker: openChoicePicker, pickerPick: pickerPick,
-    setOwnBase: setOwnBase, setOwnEnh: setOwnEnh,
+    setOwnBase: setOwnBase, setOwnEnh: setOwnEnh, setEnhTotal: setEnhTotal,
     setCardOpen: function (id, open) {
       // Collapsed by default; a card the user opened stays open on reload.
       // No re-render here: re-rendering would rebuild the element mid-toggle.
@@ -2522,7 +2546,7 @@
     rollEvade: function () {
       var stats = computeStats();
       var dice = R.evadeDiceCount(raceEntry(), classEntry());
-      var modTotal = stats.dex.mod + state.evadeBuffs + equippedBonuses().evade;
+      var modTotal = stats.dex.mod + state.evadeBuffs + equippedBonuses().evade + skillEvadeTotal();
       var d20 = R.rollDie(20), d4s = [];
       for (var i = 0; i < dice; i++) d4s.push(R.rollDie(4));
       var parts = [d20].concat(d4s);
