@@ -292,11 +292,19 @@
     body.innerHTML = '<p>Starting gear. Pick from the rulebook or add a custom item; equip it on the Gear tab after finishing.</p>'
       + '<div class="btn-row"><button type="button" id="wiz-item-pick">Pick from rulebook</button>'
       + '<button type="button" id="wiz-item-add">Add custom item</button></div>'
-      + '<ul>' + s.items.map(function (i) { return '<li>' + i.name + '</li>'; }).join('') + '</ul>';
+      + '<ul>' + s.items.map(function (i) { return '<li>' + String(i.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + ' <button type="button" data-wiz-del-item="' + i.id + '">Remove</button></li>'; }).join('') + '</ul>';
     el('wiz-item-pick').addEventListener('click', function () { window.DCC.openItemPicker(); });
     el('wiz-item-add').addEventListener('click', function () {
       var name = prompt('Custom item name:');
       if (name && name.trim()) { s.items.push({ id: 'id' + Date.now(), name: name.trim(), kind: 'other', slot: 'Other', effect: '', bonuses: [], equipped: false }); window.DCC.saveSoon(); render(); }
+    });
+    body.querySelectorAll('[data-wiz-del-item]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-wiz-del-item');
+        var st = S();
+        st.items = st.items.filter(function (i) { return i.id !== id; });
+        window.DCC.saveSoon(); render();
+      });
     });
   }
   function renderReview(body) {

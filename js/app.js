@@ -2056,7 +2056,10 @@
     toggleUsed: function (kind, id, checked) {
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
-      if (card) { card.used = checked; saveSoon(); }
+      // Re-render like every other card control: the (Used) suffix in the
+      // card header is only recomputed on render, so without this it
+      // stayed hidden until the next reload.
+      if (card) { card.used = checked; saveSoon(); renderAll(); }
     },
     delCard: function (kind, id) {
       // Manual delete is blocked while a source still gives the card:
