@@ -200,7 +200,9 @@
     return R.groupBonusFor(card, state.race, state.class, lib, kw);
   }
   function backgroundGivenFor(card) {
-    return (card.backgroundRank || 0);
+    // Background ranks are trained ranks (folded into ownRank on load by
+    // R.foldBackgroundRank), never a given source — see rules.js.
+    return 0;
   }
   function cardRank(card) {
     return R.displayRank(card, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
@@ -223,7 +225,7 @@
     var lib = findLib(card.name);
     var kw = keywordCache[R.normName(card.name)] || [];
     var group = R.groupBonusFor(card, d.race, d.class, lib, kw);
-    var bg = card.backgroundRank || 0;
+    var bg = backgroundGivenFor(card);
     var rank = R.displayRank(card, gear, race, group, bg);
     return { rank: rank, gear: gear, race: race, group: group, bg: bg, eff: R.effectiveRank(rank, card, d.race, d.class) };
   }
@@ -251,8 +253,8 @@
       var data = JSON.parse(raw);
       if (!data || typeof data !== 'object') return false;
       state = Object.assign(blankState(), data);
-      (state.skills || []).forEach(function (c) { R.splitBackgroundRank(c); });
-      (state.spells || []).forEach(function (c) { R.splitBackgroundRank(c); });
+      (state.skills || []).forEach(function (c) { R.foldBackgroundRank(c); });
+      (state.spells || []).forEach(function (c) { R.foldBackgroundRank(c); });
       // Ensure every field exists even for older v2 saves.
       var b = blankState();
       Object.keys(b).forEach(function (k) { if (state[k] === undefined) state[k] = b[k]; });
@@ -794,7 +796,7 @@
       + '<label>Used <input type="checkbox"' + (card.used ? ' checked' : '') + ' onchange="DCC.toggleUsed(\'' + card.kind + '\',\'' + card.id + '\',this.checked)"></label>'
       + '<button type="button" onclick="DCC.rollCard(\'' + card.kind + '\',\'' + card.id + '\')">Roll d20</button>'
       + '<button type="button" onclick="DCC.delCard(\'' + card.kind + '\',\'' + card.id + '\')">Delete</button></div>'
-      + '<p>Rank ' + rank + (group ? ' (Group +' + group + ' in rank)' : '') + (backgroundGivenFor(card) ? ' (Background +' + backgroundGivenFor(card) + ' in rank)' : '') + (eff !== rank ? ' — effective Rank ' + eff + ' (Mage −3)' : '') + ' (Trained ' + (parseInt(card.ownRank, 10) || 0) + ')' + '</p>'
+      + '<p>Rank ' + rank + (group ? ' (Group +' + group + ' in rank)' : '') + (eff !== rank ? ' — effective Rank ' + eff + ' (Mage −3)' : '') + ' (Trained ' + (parseInt(card.ownRank, 10) || 0) + ')' + '</p>'
       + cardRelationHtml(card)
       + '<label>Notes <input type="text" value="' + esc(card.effect || '') + '" onchange="DCC.setCardEffect(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
       + rulebookBox(card) + '</details>';

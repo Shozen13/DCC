@@ -183,14 +183,16 @@ eq(R.ownRankForTotal(2, 0, 0, 0, 3), 0, 'lowering below background floor snaps t
 eq(R.ownRankForTotal(5, 0, 0, 0, 3), 2, 'rank 5 with background 3 -> own 2');
 eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0, 3), false, 'background-only card survives while background gives it');
 (function () {
-  var c = R.splitBackgroundRank({ background: true, backgroundRank: 3, ownRank: 3 });
-  eq(c.ownRank, 0, 'split: old ownRank 3 + bg 3 -> own 0');
-  eq(R.displayRank(c, 0, 0, 0, 3), 3, 'split card still displays 3');
-  var lowered = R.splitBackgroundRank({ background: true, backgroundRank: 3, ownRank: 1 });
-  eq(lowered.ownRank, 0, 'split repairs a card wrongly lowered to 1 (own 0, display 3)');
-  eq(R.displayRank(lowered, 0, 0, 0, 3), 3, 'repaired card displays its given rank 3');
-  var twice = R.splitBackgroundRank(c);
-  eq(twice.ownRank, 0, 'split is idempotent');
+  var c = R.foldBackgroundRank({ background: true, backgroundRank: 3, ownRank: 0 });
+  eq(c.ownRank, 3, 'fold: background 3 becomes trained 3');
+  eq(c.backgroundRank, 0, 'fold clears backgroundRank');
+  eq(R.displayRank(c, 0, 0, 0, 0), 3, 'folded card still displays 3');
+  var legacy = R.foldBackgroundRank({ background: true, backgroundRank: 3, ownRank: 3 });
+  eq(legacy.ownRank, 3, 'fold repairs old double-count (own 3 + bg 3 -> trained 3, not 6)');
+  var trained = R.foldBackgroundRank({ background: true, backgroundRank: 3, ownRank: 2, bgSplit: true });
+  eq(trained.ownRank, 5, 'fold keeps trained ranks: own 2 + background 3 -> trained 5');
+  var twice = R.foldBackgroundRank(c);
+  eq(twice.ownRank, 3, 'fold is idempotent');
 })();
 
 

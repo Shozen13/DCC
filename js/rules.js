@@ -187,16 +187,19 @@
   function shouldRemoveCard(card, gearGiven, raceGiven, groupGiven, backgroundGiven) {
     return (card.ownRank || 0) <= 0 && combinedFloor(gearGiven, raceGiven, groupGiven, backgroundGiven) <= 0;
   }
-  /* One-time split for cards created before background ranks became a
-   * given source: those cards stored the background rank inside ownRank
-   * (e.g. ownRank 3 with backgroundRank 3). Split it out so the display
-   * stays identical (ownRank 0 + background 3 = 3) while the floor now
-   * protects it. A card a player had wrongly lowered below its given
-   * rank (ownRank 1, backgroundRank 3) is repaired by this to display 3.
-   * Idempotent via bgSplit; new background cards are created split. */
-  function splitBackgroundRank(card) {
-    if (card.background && (card.backgroundRank || 0) > 0 && !card.bgSplit) {
-      card.ownRank = Math.max(0, (card.ownRank || 0) - card.backgroundRank);
+  /* Background ranks are trained ranks, not a given source: a skill or
+   * spell from character creation was learned in the crawler's past life,
+   * so it belongs in ownRank. Fold any stored backgroundRank into ownRank
+   * on load — the displayed rank stays identical (ownRank 0 + background 3
+   * becomes ownRank 3) and the Trained note shows it. First repairs the
+   * old double-count shape (ownRank 3 with backgroundRank 3) the same way
+   * the old split did, so the fold cannot inflate a rank. Idempotent: a
+   * second run sees backgroundRank 0 and does nothing. */
+  function foldBackgroundRank(card) {
+    if (card.background && (card.backgroundRank || 0) > 0) {
+      if (!card.bgSplit) card.ownRank = Math.max(0, (card.ownRank || 0) - card.backgroundRank);
+      card.ownRank = (card.ownRank || 0) + card.backgroundRank;
+      card.backgroundRank = 0;
       card.bgSplit = true;
     }
     return card;
@@ -861,7 +864,7 @@
     rankDamageDie: rankDamageDie, naturesBreathHealFormula: naturesBreathHealFormula,
     displayRank: displayRank, combinedFloor: combinedFloor,
     ownRankForTotal: ownRankForTotal, shouldRemoveCard: shouldRemoveCard,
-    splitBackgroundRank: splitBackgroundRank,
+    foldBackgroundRank: foldBackgroundRank,
     parseRaceClassStats: parseRaceClassStats, parseRaceClassSplit: parseRaceClassSplit,
     parseRaceClassDR: parseRaceClassDR, evadeDiceCount: evadeDiceCount,
     healthBarUsesCha: healthBarUsesCha, parseFixedSkillBonuses: parseFixedSkillBonuses,

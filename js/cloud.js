@@ -582,7 +582,7 @@ async function renderInspector() {
       var r = window.DCC.remoteCardRank ? window.DCC.remoteCardRank(c, d)
         : { rank: parseInt(c.ownRank, 10) || 0, group: 0, bg: 0, eff: parseInt(c.ownRank, 10) || 0 };
       var line = 'Rank <input type="number" min="1" value="' + r.rank + '" onchange="dmInspSetRank(\'' + list + '\', ' + i + ', this.value)" style="width:64px">'
-        + (r.group ? ' (Group +' + r.group + ' in rank)' : '') + (r.bg ? ' (Background +' + r.bg + ' in rank)' : '')
+        + (r.group ? ' (Group +' + r.group + ' in rank)' : '')
         + (r.eff !== r.rank ? ' — effective Rank ' + r.eff + ' (Mage −3)' : '')
         + ' (Trained ' + (parseInt(c.ownRank, 10) || 0) + ')';
       return '<div class="cloud-row"><span>' + esc(c.name) + ' - ' + esc((c.stat || '').toUpperCase()) + ' - ' + line + '</span><span><button type="button" onclick="dmInspDelCard(\'' + list + '\', ' + i + ')">Remove</button></span></div>';
