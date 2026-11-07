@@ -185,14 +185,21 @@ eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0, 3), false, 'background-only card 
 (function () {
   var c = R.foldBackgroundRank({ background: true, backgroundRank: 3, ownRank: 0 });
   eq(c.ownRank, 3, 'fold: background 3 becomes trained 3');
-  eq(c.backgroundRank, 0, 'fold clears backgroundRank');
+  eq(c.backgroundRank, 3, 'fold keeps backgroundRank as the protection floor');
+  eq(c.bgFolded, true, 'fold marks the card folded');
   eq(R.displayRank(c, 0, 0, 0, 0), 3, 'folded card still displays 3');
   var legacy = R.foldBackgroundRank({ background: true, backgroundRank: 3, ownRank: 3 });
   eq(legacy.ownRank, 3, 'fold repairs old double-count (own 3 + bg 3 -> trained 3, not 6)');
   var trained = R.foldBackgroundRank({ background: true, backgroundRank: 3, ownRank: 2, bgSplit: true });
   eq(trained.ownRank, 5, 'fold keeps trained ranks: own 2 + background 3 -> trained 5');
   var twice = R.foldBackgroundRank(c);
-  eq(twice.ownRank, 3, 'fold is idempotent');
+  eq(twice.ownRank, 3, 'fold is idempotent (no second add)');
+  var rec = R.foldBackgroundRank({ background: true, backgroundRank: 0, ownRank: 3, bgSplit: true, name: 'Cooking' }, { career: { bg: 'Chef', skills: ['First Aid'] } });
+  eq(rec.backgroundRank, 0, 'fold does not invent a floor for a skill outside the saved backgrounds');
+  var rec2 = R.foldBackgroundRank({ background: true, backgroundRank: 0, ownRank: 3, bgSplit: true, name: 'First Aid' }, { career: { bg: 'Chef', skills: ['First Aid'] } });
+  eq(rec2.backgroundRank, 3, 'fold recovers a cleared backgroundRank from the saved career pick');
+  var rec3 = R.foldBackgroundRank({ background: true, backgroundRank: 0, ownRank: 3, bgSplit: true, name: 'UNARMED COMBAT' }, { combat: { type: 'weapon', name: 'Longsword' } });
+  eq(rec3.backgroundRank, 3, 'fold recovers the combat background rank for Unarmed Combat');
 })();
 
 
@@ -353,6 +360,43 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
   eq(R.skillEvadeBuff(rapier, 15), 2, 'Rapier rank 15 = +2');
   eq(R.skillEvadeBuff(null, 3, 'You gain a +2 Evade Buff.'), 2, 'custom skill effect counts');
   eq(R.skillEvadeBuff(null, 3, null), 0, 'no lib and no effect = +0');
+})();
+
+// Rank-20 cap clauses, parsed from the real race/class data
+(function () {
+  var rc = require('../data/races_classes.json');
+  var libData = require('../data/skills_spells.json');
+  var byName = {};
+  libData.forEach(function (e) { byName[e.name.toLowerCase()] = e; });
+  var realLib = function (n) { return byName[(n || '').toLowerCase()] || null; };
+  var caps = {};
+  rc.forEach(function (e) {
+    var rules = R.parseCapGrants(e, realLib);
+    if (rules.length) caps[e.name] = rules;
+  });
+  eq(Object.keys(caps).length, 22, 'cap clauses: 22 race/class entries have a Rank 20 clause');
+  eq(caps['Dwarf, Classic'].map(function (r) { return r.type; }), ['crafting'], 'Dwarf: all crafting skills');
+  eq(caps['Elf, High'][0].category, 'cha', 'Elf, High: two CHA skills (choice)');
+  eq(caps['Elf, High'][0].count, 2, 'Elf, High: pick two');
+  eq(caps['Elf, Night'].map(function (r) { return r.type; }).sort(), ['choice', 'fixed'], 'Elf, Night: fixed Hide in Shadows + crafting choice');
+  eq(caps['Primal'][0].type, 'all', 'Primal: all skills');
+  eq(caps['Hobgoblin'][0].type, 'explosiveTrap', 'Hobgoblin: explosives + trap-making');
+  eq(caps['Caprid'].map(function (r) { return r.name; }).sort(), ['Find Crawler', 'Persuasion'], 'Caprid: two fixed skills');
+  eq(caps['Fire Spiritualist'].map(function (r) { return r.name; }), ['HEAL OTHERS'], 'Fire Spiritualist: only Heal Others (not the earlier list)');
+  eq(caps['Prizefighter'].map(function (r) { return r.name; }), ['PUGILISM'], 'Prizefighter: only Pugilism');
+  eq(caps['Spirit Healer'].map(function (r) { return r.name; }), ['HEAL OTHERS'], 'Spirit Healer: only Heal Others');
+  eq(caps['Douchy Wizard School Wand-Maker'].map(function (r) { return r.name; }), ['Arcane'], 'Wand-Maker: Arcanist text resolves to the Arcane skill');
+  eq(caps['Swashbuckler'][0].options, ['RAPIER', 'LONGSWORD'], 'Swashbuckler: Rapier or Longsword choice');
+  eq(R.capForCard({ name: 'Dodge', kind: 'skill' }, caps['Artist Alley Mogul'], []), 20, 'cap: fixed named skill');
+  eq(R.capForCard({ name: 'Alchemy', kind: 'skill' }, caps['Dwarf, Classic'], []), 20, 'cap: crafting skill under Dwarf');
+  eq(R.capForCard({ name: 'Cooking', kind: 'skill' }, caps['Dwarf, Classic'], []), 15, 'cap: Cooking has no crafting table, stays 15');
+  eq(R.capForCard({ name: 'Trap Engineer', kind: 'skill' }, caps['Hobgoblin'], []), 20, 'cap: trap skill under Hobgoblin');
+  eq(R.capForCard({ name: 'Dodge', kind: 'skill' }, caps['Hobgoblin'], []), 15, 'cap: unrelated skill under Hobgoblin stays 15');
+  eq(R.capForCard({ name: 'Pugilism', kind: 'skill' }, caps['Primal'], []), 20, 'cap: Primal lifts all skills');
+  eq(R.capForCard({ name: 'Fireball', kind: 'spell' }, caps['Primal'], []), 15, 'cap: Primal "All Skills" does not lift spells');
+  eq(R.capForCard({ name: 'Heal Others', kind: 'spell' }, caps['Fire Spiritualist'], []), 20, 'cap: fixed spell');
+  eq(R.capForCard({ name: 'Longsword', kind: 'skill' }, [], [{ name: 'Longsword', kind: 'skill', cap: 20 }]), 20, 'cap: picked cap choice lifts the skill');
+  eq(R.capForCard({ name: 'Longsword', kind: 'skill' }, [], [{ name: 'Rapier', kind: 'skill', cap: 20 }]), 15, 'cap: a different pick does not lift it');
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

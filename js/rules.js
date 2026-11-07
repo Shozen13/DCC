@@ -187,22 +187,43 @@
   function shouldRemoveCard(card, gearGiven, raceGiven, groupGiven, backgroundGiven) {
     return (card.ownRank || 0) <= 0 && combinedFloor(gearGiven, raceGiven, groupGiven, backgroundGiven) <= 0;
   }
-  /* Background ranks are trained ranks, not a given source: a skill or
-   * spell from character creation was learned in the crawler's past life,
-   * so it belongs in ownRank. Fold any stored backgroundRank into ownRank
-   * on load — the displayed rank stays identical (ownRank 0 + background 3
-   * becomes ownRank 3) and the Trained note shows it. First repairs the
-   * old double-count shape (ownRank 3 with backgroundRank 3) the same way
-   * the old split did, so the fold cannot inflate a rank. Idempotent: a
-   * second run sees backgroundRank 0 and does nothing. */
-  function foldBackgroundRank(card) {
-    if (card.background && (card.backgroundRank || 0) > 0) {
+  /* Background ranks are trained ranks, and backgroundRank is the
+   * protection floor: the rank the card came with at creation, which the
+   * trained rank can never drop below and which blocks deleting the card.
+   * It is never added to the displayed rank (backgroundGivenFor is 0) —
+   * it is already inside ownRank. Fold any stored backgroundRank into
+   * ownRank once (bgFolded), keeping backgroundRank as the floor record.
+   * First repairs the old double-count shape (ownRank 3 with
+   * backgroundRank 3) the same way the old split did, so the fold cannot
+   * inflate a rank. Cards folded by ?v=43 had backgroundRank cleared;
+   * recover the grant from the saved background picks (backgrounds:
+   * {childhood, adolescence, career, hobby} with skills lists, ranks
+   * 1/1/3/2, plus combat at 3). New wizard cards are created folded. */
+  function foldBackgroundRank(card, backgrounds) {
+    if (!card.background || card.bgFolded) return card;
+    if ((card.backgroundRank || 0) > 0) {
       if (!card.bgSplit) card.ownRank = Math.max(0, (card.ownRank || 0) - card.backgroundRank);
       card.ownRank = (card.ownRank || 0) + card.backgroundRank;
-      card.backgroundRank = 0;
-      card.bgSplit = true;
+    } else if (backgrounds) {
+      var rec = backgroundGrantRank(card, backgrounds);
+      if (rec > 0) card.backgroundRank = rec;
     }
+    card.bgSplit = true;
+    card.bgFolded = true;
     return card;
+  }
+  function backgroundGrantRank(card, backgrounds) {
+    if (!backgrounds) return 0;
+    var key = normName(card.name);
+    var ranks = { childhood: 1, adolescence: 1, career: 3, hobby: 2 };
+    var catIds = ['childhood', 'adolescence', 'career', 'hobby'];
+    for (var i = 0; i < catIds.length; i++) {
+      var sel = backgrounds[catIds[i]];
+      if (sel && (sel.skills || []).some(function (n) { return normName(n) === key; })) return ranks[catIds[i]];
+    }
+    var combat = backgrounds.combat;
+    if (combat && (key === 'unarmed combat' || normName(combat.name || '') === key)) return 3;
+    return 0;
   }
 
   /* ---- Race/class text parsing (data-driven, benefits text only) ---- */
@@ -339,14 +360,139 @@
     return out;
   }
 
+  /* Rank-20 cap clauses: "X can be raised to Rank 20" / "X raisable to
+   * Rank 20". Returns [{type, name, kind, category, count, options,
+   * label}]. type: 'fixed' (a named skill/spell), 'all' (all skills),
+   * 'crafting' (all crafting skills), 'explosiveTrap' (explosives and
+   * trap-making skills), 'choice' (the player picks: category 'weapon'
+   * | 'crafting' | 'cha' | 'skill' with options). A clause can hold
+   * both a fixed name and a choice ("Hide in Shadows and one crafting
+   * Skill of your choice"), so choice patterns are extracted first and
+   * the fixed-name scan runs on what is left. Names are validated
+   * against the library, so ordinary words in a long clause never
+   * become caps. */
+  function parseCapGrants(entry, findLib) {
+    var out = [];
+    if (!entry || !entry.benefits) return out;
+    var b = entry.benefits;
+    var re = /can be raised to rank 20|raisable to rank 20/gi;
+    var m;
+    while ((m = re.exec(b)) !== null) {
+      var j = m.index - 1;
+      while (j >= 0 && b[j] !== '.' && b[j] !== ';' && b[j] !== '\n' && b[j] !== '•') j--;
+      var frag = b.slice(j + 1, re.lastIndex);
+      // "with X raisable to Rank 20": the cap applies only to X, not to
+      // an earlier list in the same sentence (e.g. "+2 Holy Aura, Hot
+      // Stuff Aura, Heal Others, and Intimate Touches Spells, with Heal
+      // Others raisable to Rank 20" raises only Heal Others).
+      var withIdx = frag.toLowerCase().lastIndexOf(' with ');
+      if (withIdx >= 0) frag = frag.slice(withIdx + 1);
+      parseCapFragment(frag, findLib, out);
+    }
+    return out;
+  }
+  function parseCapFragment(frag, findLib, out) {
+    var seen = {};
+    function push(rule) {
+      var key = rule.type + '|' + (rule.name || '') + '|' + (rule.category || '') + '|' + (rule.options || []).join(',');
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push(rule);
+    }
+    var f = frag;
+    var low = f.toLowerCase();
+    var skipFixed = false;
+    if (/all crafting skills/.test(low)) { push({ type: 'crafting', label: 'all crafting Skills' }); skipFixed = true; }
+    else if (/all skills/.test(low)) { push({ type: 'all', label: 'all Skills' }); skipFixed = true; }
+    if (/all explosives and trap-making skills/.test(low)) { push({ type: 'explosiveTrap', label: 'all explosives and trap-making Skills' }); skipFixed = true; }
+    // Choice patterns; each removes its phrase so the fixed scan below
+    // does not re-read it.
+    [{ re: /two different charisma-based skills?/i, category: 'cha', count: 2, label: 'two different Charisma-based Skills' },
+     { re: /one weapon skills?/i, category: 'weapon', count: 1, label: 'one Weapon Skill' },
+     { re: /one crafting skills?/i, category: 'crafting', count: 1, label: 'one crafting Skill' }].forEach(function (c) {
+      if (c.re.test(f)) {
+        push({ type: 'choice', category: c.category, count: c.count, label: c.label, options: null });
+        f = f.replace(c.re, ' ');
+      }
+    });
+    // "Rapier or Longsword Skill (raisable to Rank 20)".
+    var orM = /([A-Z][A-Za-z'’\- ]+?)\s+or\s+([A-Z][A-Za-z'’\- ]+?)\s+(?:skill|spell)/i.exec(f);
+    if (orM) {
+      var opts = [orM[1], orM[2]].map(function (n) { return cleanCapName(n, findLib); });
+      if (opts[0] && opts[1]) {
+        push({ type: 'choice', category: 'skill', count: 1, label: opts.join(' or '), options: opts });
+        f = f.replace(orM[0], ' ');
+        skipFixed = true;
+      }
+    }
+    if (skipFixed) return;
+    var rest = f.replace(/can be raised to rank 20|raisable to rank 20/gi, ' ');
+    rest.split(/,|\s+and\s+/i).forEach(function (part) {
+      var name = cleanCapName(part, findLib);
+      if (!name) return;
+      var lib = findLib(name);
+      push({ type: 'fixed', name: lib.name, kind: lib.kind, label: lib.name });
+    });
+  }
+  /* Strip grant phrasing around a skill/spell name ("with Heal Others",
+   * "The Smush Skill", "+5 Arcane") and resolve it against the library.
+   * Returns the library name or null. The book text says "Arcanist
+   * skill" for the Douchy Wizard School Wand-Maker, but the Chapter 4
+   * skill is "Arcane" — that alias is handled here. */
+  function cleanCapName(part, findLib) {
+    if (!findLib) return null;
+    var n = String(part || '').trim()
+      .replace(/^\s*(\+?\d+\s+|the\s+|a\s+|an\s+|with\s+|gains?\s+|gain\s+|and\s+|or\s+|of\s+|you\s+|your\s+)+/i, '')
+      .replace(/\s+(skills?|spells?)\s*$/i, '')
+      .replace(/^\s*(the\s+|a\s+|an\s+|with\s+|and\s+|or\s+|of\s+)+/i, '')
+      .trim();
+    if (!n) return null;
+    var lib = findLib(n);
+    if (lib) return lib.name;
+    if (normName(n) === 'arcanist') { var arc = findLib('Arcane'); if (arc) return arc.name; }
+    return null;
+  }
+
+  /* The rank cap for one card: 15 normally, 20 when a parsed cap rule
+   * or a picked cap choice covers it. 'all' covers skills only (the
+   * book's "All Skills"; spells are "Spells"). rules are the parsed
+   * cap grants from the character's race + class; capPicks are the
+   * player's picked cap choices ({name, cap: 20}). */
+  function capForCard(card, rules, capPicks) {
+    var cap = 15;
+    var key = normName(card.name);
+    (rules || []).forEach(function (g) {
+      if (!g) return;
+      if (g.type === 'all' && card.kind === 'skill') cap = 20;
+      else if (g.type === 'crafting' && CRAFTING_SKILLS.indexOf(key) >= 0) cap = 20;
+      else if (g.type === 'explosiveTrap' && (TRAP_SKILLS.indexOf(key) >= 0 || EXPLOSIVE_SKILLS.indexOf(key) >= 0)) cap = 20;
+      else if (g.type === 'fixed' && normName(g.name) === key) cap = 20;
+    });
+    (capPicks || []).forEach(function (p) {
+      if (p && p.cap === 20 && p.name && normName(p.name) === key) cap = 20;
+    });
+    return cap;
+  }
+
+  /* Skill sets for rank-cap and group-bonus rules. The trap/explosive
+   * lists are the Hobgoblin group-bonus sets; the crafting list is the
+   * set of skills with a crafting table (Table 44 types Alchemy,
+   * Arcanist, Armorer, Engineering, Metalworking, Sapper's, Writing
+   * map to Alchemy, Arcane, Smithing, Engineering, Explosives
+   * Handling, Goblin Explosives, Calligraphy) plus Tattoo Artistry
+   * (Table 45 Tattoos). Cooking has no crafting table. */
+  var TRAP_SKILLS = ['trap engineer', 'find trap', 'detect trap'];
+  var EXPLOSIVE_SKILLS = ['bomb surgeon', 'improvised explosive device', 'explosives handling', 'goblin explosives', 'incendiary device handling'];
+  var CRAFTING_SKILLS = ['alchemy', 'arcane', 'calligraphy', 'engineering', 'explosives handling', 'goblin explosives', 'smithing', 'tattoo artistry'];
+
   /* Group bonuses, as Rank adjustments. lib is the Chapter 4 entry for
    * the card (or null for custom cards); keywords is the spell's
    * keyword list (or []). Returns the total group amount. */
   function groupBonusFor(card, raceName, className, lib, keywords) {
     var key = normName(card.name);
     var statKey = card.stat || '';
-    var isTrap = ['trap engineer', 'find trap', 'detect trap'].indexOf(key) >= 0;
-    var isExplosive = ['bomb surgeon', 'improvised explosive device', 'explosives handling', 'goblin explosives', 'incendiary device handling'].indexOf(key) >= 0;
+    var isTrap = TRAP_SKILLS.indexOf(key) >= 0;
+    var isExplosive = EXPLOSIVE_SKILLS.indexOf(key) >= 0;
     var isEdged = card.kind === 'skill' && lib && lib.kind === 'attack' &&
       (((lib.base_damage || '').indexOf('Slashing') >= 0) || ['dagger', 'rapier'].indexOf(key) >= 0);
     var isMuscleMove = ['running', 'climbing', 'swimming', 'jumping'].indexOf(key) >= 0;
@@ -869,6 +1015,7 @@
     parseRaceClassDR: parseRaceClassDR, evadeDiceCount: evadeDiceCount,
     healthBarUsesCha: healthBarUsesCha, parseFixedSkillBonuses: parseFixedSkillBonuses,
     parseChoiceGrants: parseChoiceGrants, groupBonusFor: groupBonusFor,
+    parseCapGrants: parseCapGrants, capForCard: capForCard, CRAFTING_SKILLS: CRAFTING_SKILLS,
     magePenalty: magePenalty, effectiveRank: effectiveRank,
     attackDamageStat: attackDamageStat, tigranMoveBonus: tigranMoveBonus,
     normName: normName, clampInt: clampInt, normalizeSlot: normalizeSlot, parseItemBonuses: parseItemBonuses,

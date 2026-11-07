@@ -391,6 +391,11 @@ function dmInspSetRank(list, idx, val) {
     var card = d[list][idx];
     if (window.DCC.remoteCardRank) {
       var r = window.DCC.remoteCardRank(card, d);
+      // The displayed rank cannot be set above the cap (15, or 20 for a
+      // skill/spell a race/class clause raises) — same as the player's
+      // rank control. (Background protection does NOT apply here: the
+      // DM can still lower or remove background cards.)
+      if (window.DCC.remoteRankCap) total = Math.min(total, window.DCC.remoteRankCap(card, d));
       card.ownRank = R.ownRankForTotal(total, r.gear, r.race, r.group, r.bg);
     } else {
       card.ownRank = total;

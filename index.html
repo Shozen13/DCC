@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=43">
+<link rel="stylesheet" href="css/style.css?v=44">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -45,7 +45,7 @@
     <label>Name <input type="text" id="f-name" placeholder="Crawler name"></label>
     <label>Number <input type="text" id="f-number" placeholder="Crawler number"></label>
     <label>Level <span class="btn-row kill-btns"><button type="button" onclick="DCC.levelDelta(-1)">−</button><input type="number" id="f-level" min="1" max="250" value="1"><button type="button" onclick="DCC.levelDelta(1)">+</button></span></label>
-    <label>Floor <span class="btn-row kill-btns"><button type="button" onclick="DCC.floorDelta(-1)">−</button><input type="number" id="f-floor" min="1" value="1"><button type="button" onclick="DCC.floorDelta(1)">+</button></span></label>
+    <label>Floor <span class="btn-row kill-btns"><input type="number" id="f-floor" min="1" value="1" readonly><button type="button" onclick="DCC.advanceFloor()">+</button></span></label>
     <div class="raceclass-row">
       <span>Race: <strong id="race-name">—</strong></span>
       <button type="button" id="race-pick">Pick</button>
@@ -235,6 +235,7 @@
       <div class="btn-row">
         <button type="button" id="skill-pick">Pick from rulebook</button>
         <button type="button" id="skill-add">Add custom skill</button>
+        <button type="button" id="skill-levelup">Level Up</button>
       </div>
       <div id="skill-list"></div>
     </section>
@@ -244,6 +245,7 @@
       <div class="btn-row">
         <button type="button" id="spell-pick">Pick from rulebook</button>
         <button type="button" id="spell-add">Add custom spell</button>
+        <button type="button" id="spell-levelup">Level Up</button>
       </div>
       <div id="spell-list"></div>
     </section>
@@ -688,6 +690,19 @@
   </div>
 </div>
 
+<!-- Grant-name autocomplete suggestions (one shared floating box) -->
+<div id="grant-suggest" hidden></div>
+
+<!-- Skill advancement (Level Up button / floor advance) -->
+<div class="overlay" id="levelup-modal" hidden>
+  <div class="modal wide">
+    <h2 id="levelup-title">Level Up</h2>
+    <p id="levelup-help" class="hint"></p>
+    <div id="levelup-list"></div>
+    <div class="btn-row"><button type="button" id="levelup-rollall">Roll All</button><button type="button" id="levelup-close">Close</button></div>
+  </div>
+</div>
+
 <!-- Stat bank distribute -->
 <div class="overlay" id="distribute-modal" hidden>
   <div class="modal">
@@ -745,10 +760,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=43"></script>
-<script src="js/convert.js?v=43"></script>
-<script src="js/app.js?v=43"></script>
-<script src="js/wizard.js?v=43"></script>
-<script src="js/cloud.js?v=43"></script>
+<script src="js/rules.js?v=44"></script>
+<script src="js/convert.js?v=44"></script>
+<script src="js/app.js?v=44"></script>
+<script src="js/wizard.js?v=44"></script>
+<script src="js/cloud.js?v=44"></script>
 </body>
 </html>

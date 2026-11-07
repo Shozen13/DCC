@@ -261,11 +261,12 @@
         var card = list.find(function (c) { return c.name.toLowerCase() === name.toLowerCase(); });
         if (card) {
           // Background ranks are trained ranks: the card keeps the higher
-          // trained rank (no double-dipping).
-          card.background = true; card.ownRank = Math.max(card.ownRank || 0, rank); card.bgSplit = true;
+          // trained rank (no double-dipping). backgroundRank is the
+          // protection floor — the rank it came with.
+          card.background = true; card.ownRank = Math.max(card.ownRank || 0, rank); card.backgroundRank = Math.max(card.backgroundRank || 0, rank); card.bgSplit = true; card.bgFolded = true;
         } else {
           var lib = window.DCC.findLib(name);
-          list.push({ id: 'id' + Date.now() + Math.random().toString(36).slice(2), name: name, kind: 'skill', ownRank: rank, stat: (bgSk.stat || (lib && lib.stat) || 'STR').toLowerCase(), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, background: true, bgSplit: true });
+          list.push({ id: 'id' + Date.now() + Math.random().toString(36).slice(2), name: name, kind: 'skill', ownRank: rank, stat: (bgSk.stat || (lib && lib.stat) || 'STR').toLowerCase(), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, background: true, backgroundRank: rank, bgSplit: true, bgFolded: true });
         }
       });
     });
@@ -273,10 +274,10 @@
     function addCombat(name, kind) {
       var list = kind === 'spell' ? s.spells : s.skills;
       var card = list.find(function (c) { return c.name.toLowerCase() === name.toLowerCase(); });
-      if (card) { card.background = true; card.ownRank = Math.max(card.ownRank || 0, 3); card.bgSplit = true; }
+      if (card) { card.background = true; card.ownRank = Math.max(card.ownRank || 0, 3); card.backgroundRank = Math.max(card.backgroundRank || 0, 3); card.bgSplit = true; card.bgFolded = true; }
       else {
         var lib = window.DCC.findLib(name);
-        list.push({ id: 'id' + Date.now() + Math.random().toString(36).slice(2), name: name, kind: kind, ownRank: 3, stat: (lib && lib.stat ? lib.stat : (kind === 'spell' ? 'INT' : 'STR')).toLowerCase(), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, background: true, bgSplit: true });
+        list.push({ id: 'id' + Date.now() + Math.random().toString(36).slice(2), name: name, kind: kind, ownRank: 3, stat: (lib && lib.stat ? lib.stat : (kind === 'spell' ? 'INT' : 'STR')).toLowerCase(), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, background: true, backgroundRank: 3, bgSplit: true, bgFolded: true });
       }
     }
     addCombat('UNARMED COMBAT', 'skill');

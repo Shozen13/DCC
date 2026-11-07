@@ -204,8 +204,35 @@
     // R.foldBackgroundRank), never a given source — see rules.js.
     return 0;
   }
+  /* Rank cap: 15 normally, 20 for skills/spells a race/class clause
+   * raises (parsed from the race + class benefits text) or a cap choice
+   * the player picked on the Choices tab. The fixed rules are memoized
+   * per race/class entry pair (by object identity, so a not-yet-loaded
+   * library re-parses once it arrives); the picks are read live. */
+  var capRulesCache = { race: null, cls: null, rules: [] };
+  function capRulesFor(raceName, className) {
+    var raceEntryObj = findRaceClass(raceName, 'race');
+    var classEntryObj = findRaceClass(className, 'class');
+    if (capRulesCache.race !== raceEntryObj || capRulesCache.cls !== classEntryObj) {
+      var rules = [];
+      [raceEntryObj, classEntryObj].forEach(function (entry) {
+        R.parseCapGrants(entry, findLib).forEach(function (g) { rules.push(g); });
+      });
+      capRulesCache = { race: raceEntryObj, cls: classEntryObj, rules: rules };
+    }
+    return capRulesCache.rules;
+  }
+  function capPicksFrom(choices) {
+    return Object.keys(choices || {}).map(function (cid) { return choices[cid]; }).filter(function (p) { return p && p.cap === 20; });
+  }
+  function rankCapFor(card) {
+    return R.capForCard(card, capRulesFor(state.race, state.class), capPicksFrom(state.raceClassChoices));
+  }
+  function remoteRankCapFor(card, d) {
+    return R.capForCard(card, capRulesFor(d.race, d.class), capPicksFrom(d.raceClassChoices));
+  }
   function cardRank(card) {
-    return R.displayRank(card, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
+    return Math.min(R.displayRank(card, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card)), rankCapFor(card));
   }
   function cardFloor(card) {
     return R.combinedFloor(gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
@@ -226,7 +253,7 @@
     var kw = keywordCache[R.normName(card.name)] || [];
     var group = R.groupBonusFor(card, d.race, d.class, lib, kw);
     var bg = backgroundGivenFor(card);
-    var rank = R.displayRank(card, gear, race, group, bg);
+    var rank = Math.min(R.displayRank(card, gear, race, group, bg), remoteRankCapFor(card, d));
     return { rank: rank, gear: gear, race: race, group: group, bg: bg, eff: R.effectiveRank(rank, card, d.race, d.class) };
   }
   function findCard(name, kind) {
@@ -253,8 +280,8 @@
       var data = JSON.parse(raw);
       if (!data || typeof data !== 'object') return false;
       state = Object.assign(blankState(), data);
-      (state.skills || []).forEach(function (c) { R.foldBackgroundRank(c); });
-      (state.spells || []).forEach(function (c) { R.foldBackgroundRank(c); });
+      (state.skills || []).forEach(function (c) { R.foldBackgroundRank(c, state.backgrounds); });
+      (state.spells || []).forEach(function (c) { R.foldBackgroundRank(c, state.backgrounds); });
       // Ensure every field exists even for older v2 saves.
       var b = blankState();
       Object.keys(b).forEach(function (k) { if (state[k] === undefined) state[k] = b[k]; });
@@ -438,17 +465,44 @@
     }
   }
 
+  /* A grant bonus's skill/spell kind: the Chapter 4 library decides
+   * when the name matches it (a spell is a spell no matter what the
+   * kind box says — e.g. Protective Shell is a spell); a custom name
+   * keeps its stored kind (default skill). */
+  function grantKindFor(b) {
+    var lib = b && b.skillName ? findLib(b.skillName) : null;
+    if (lib) return lib.kind === 'spell' ? 'spell' : 'skill';
+    return (b && b.kind) || 'skill';
+  }
   /* ---------------- gear grants ---------------- */
   function syncGearGrants() {
+    // The library decides a grant's kind; if it has not loaded yet,
+    // re-run once it arrives so misfiled cards move to the right tab.
+    if (!cache.skills) { ensureSkills().then(function () { syncGearGrants(); saveSoon(); renderAll(); }).catch(function () {}); }
     // Create cards for equipped grants that have no card yet.
     state.items.forEach(function (it) {
       if (!it.equipped) return;
       (it.bonuses || []).forEach(function (b) {
         if (b.type !== 'grant' || !b.skillName) return;
-        var kind = b.kind || 'skill';
-        if (!findCard(b.skillName, kind)) {
+        var kind = grantKindFor(b);
+        var card = findCard(b.skillName, kind);
+        if (!card) {
+          // A card created under the wrong kind (a spell filed as a
+          // skill before the library decided the kind) moves to the
+          // right tab instead of duplicating — but only if the player
+          // has not trained it there themselves (ownRank 0).
+          var otherKind = kind === 'spell' ? 'skill' : 'spell';
+          var misfiled = findCard(b.skillName, otherKind);
+          if (misfiled && (parseInt(misfiled.ownRank, 10) || 0) === 0) {
+            misfiled.kind = kind;
+            if (kind === 'spell') { state.skills = state.skills.filter(function (c) { return c !== misfiled; }); state.spells.push(misfiled); }
+            else { state.spells = state.spells.filter(function (c) { return c !== misfiled; }); state.skills.push(misfiled); }
+            card = misfiled;
+          }
+        }
+        if (!card) {
           var lib = findLib(b.skillName);
-          var card = { id: uid(), name: lib ? lib.name : b.skillName, kind: kind, ownRank: 0, stat: lib && lib.stat ? lib.stat.toLowerCase() : (kind === 'spell' ? 'int' : 'str'), checkType: 'Active Check', effect: '', used: false, gearGrants: {} };
+          card = { id: uid(), name: lib ? lib.name : b.skillName, kind: kind, ownRank: 0, stat: lib && lib.stat ? lib.stat.toLowerCase() : (kind === 'spell' ? 'int' : 'str'), checkType: 'Active Check', effect: '', used: false, gearGrants: {} };
           (kind === 'spell' ? state.spells : state.skills).push(card);
         }
       });
@@ -460,7 +514,7 @@
       state.items.forEach(function (it) {
         if (!it.equipped) return;
         (it.bonuses || []).forEach(function (b) {
-          if (b.type === 'grant' && b.skillName && R.normName(b.skillName) === R.normName(card.name) && (b.kind || 'skill') === card.kind) {
+          if (b.type === 'grant' && b.skillName && R.normName(b.skillName) === R.normName(card.name) && grantKindFor(b) === card.kind) {
             map[it.id] = (map[it.id] || 0) + num(b.amount, 0);
           }
         });
@@ -552,6 +606,20 @@
     saveSoon();
     renderAll();
   }
+  /* A cap choice pick: which skill/spell this race/class clause raises
+   * to Rank 20. Unlike a rank choice it grants no ranks, so it is stored
+   * in raceClassChoices with cap: 20 and never goes through
+   * applyFixedBonus / raceClassApplied (which feed rank math). The
+   * setRaceClass cid-prefix deletion already clears it on a race/class
+   * change, since it shares the same cid namespace. */
+  function setCapChoice(cid, kind, sourceName, capGrant, pickIdx, name) {
+    if (!name) { delete state.raceClassChoices[cid]; }
+    else {
+      state.raceClassChoices[cid] = { name: name, kind: capGrant.category === 'spell' ? 'spell' : 'skill', cap: 20 };
+    }
+    saveSoon();
+    renderAll();
+  }
   function setSplit(cid, statKey, delta, pool) {
     var ch = state.raceClassChoices[cid] || { split: {} };
     ch.split = ch.split || {};
@@ -580,6 +648,13 @@
         for (var n = 0; n < g.count; n++) {
           var cid2 = choiceId(pair.kind, entry.name, 'choice' + gi, n);
           sections.push({ type: 'grant', cid: cid2, entry: entry, kind: pair.kind, grant: g, cur: state.raceClassChoices[cid2] });
+        }
+      });
+      R.parseCapGrants(entry, findLib).forEach(function (g, gi) {
+        if (g.type !== 'choice') return;
+        for (var n = 0; n < g.count; n++) {
+          var cid3 = choiceId(pair.kind, entry.name, 'cap' + gi, n);
+          sections.push({ type: 'cap', cid: cid3, entry: entry, kind: pair.kind, capGrant: g, cur: state.raceClassChoices[cid3] });
         }
       });
     });
@@ -781,7 +856,7 @@
       return '<option value="' + k + '"' + (card.stat === k ? ' selected' : '') + '>' + k.toUpperCase() + '</option>';
     }).join('');
     var rankOptions = '';
-    for (var r = 1; r <= 20; r++) rankOptions += '<option value="' + r + '"' + (rank === r ? ' selected' : '') + '>' + r + '</option>';
+    for (var r = 1; r <= rankCapFor(card); r++) rankOptions += '<option value="' + r + '"' + (rank === r ? ' selected' : '') + '>' + r + '</option>';
     var open = !!(state.cardOpen && state.cardOpen[card.id]);
     return '<details class="card"' + (open ? ' open' : '') + ' ontoggle="DCC.setCardOpen(\'' + card.id + '\',this.open)"><summary>' + esc(card.name) + ' — Rank ' + rank + (card.used ? ' (Used)' : '') + '</summary>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(card.name) + '" onchange="DCC.renameCard(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
@@ -1261,7 +1336,8 @@
     return '<div class="bonus-row"><select onchange="DCC.setBonusType(\'' + item.id + '\',' + bi + ',this.value)">'
       + ['stat', 'grant', 'dr', 'evade'].map(function (t) { return '<option value="' + t + '"' + (b.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>'
       + (b.type === 'stat' ? '<select onchange="DCC.setBonusStat(\'' + item.id + '\',' + bi + ',this.value)">' + R.STAT_KEYS.map(function (k) { return '<option value="' + k + '"' + (b.stat === k ? ' selected' : '') + '>' + k.toUpperCase() + '</option>'; }).join('') + '</select>' : '')
-      + (b.type === 'grant' ? '<input type="text" placeholder="Skill/spell name" value="' + esc(b.skillName || '') + '" onchange="DCC.setBonusSkill(\'' + item.id + '\',' + bi + ',this.value)">'
+      + (b.type === 'grant' ? '<input type="text" placeholder="Skill/spell name" value="' + esc(b.skillName || '') + '" oninput="DCC.grantSkillInput(this,\'' + item.id + '\',' + bi + ')" onblur="DCC.hideGrantSuggest()" onkeydown="if(event.key===\'Escape\')DCC.hideGrantSuggest()" onchange="DCC.setBonusSkill(\'' + item.id + '\',' + bi + ',this.value)">'
+        + '<button type="button" onclick="DCC.pickBonusSkill(\'' + item.id + '\',' + bi + ')">Pick</button>'
         + '<select onchange="DCC.setBonusKind(\'' + item.id + '\',' + bi + ',this.value)"><option value="skill"' + ((b.kind || 'skill') === 'skill' ? ' selected' : '') + '>skill</option><option value="spell"' + (b.kind === 'spell' ? ' selected' : '') + '>spell</option></select>' : '')
       + '<label>Amount <input type="number" value="' + num(b.amount, 0) + '" onchange="DCC.setBonusAmount(\'' + item.id + '\',' + bi + ',this.value)"></label>'
       + '<button type="button" onclick="DCC.delBonus(\'' + item.id + '\',' + bi + ')">Remove bonus</button></div>';
@@ -1431,7 +1507,7 @@
     state.items.forEach(function (it) {
       if (!it.equipped) return;
       (it.bonuses || []).forEach(function (b) {
-        if (b.type === 'grant' && b.skillName) grants[b.skillName + '|' + (b.kind || 'skill')] = (grants[b.skillName + '|' + (b.kind || 'skill')] || 0) + num(b.amount, 0);
+        if (b.type === 'grant' && b.skillName) grants[b.skillName + '|' + grantKindFor(b)] = (grants[b.skillName + '|' + grantKindFor(b)] || 0) + num(b.amount, 0);
       });
     });
     var extra = [];
@@ -1492,6 +1568,14 @@
           return '<p>' + k.toUpperCase() + ': <button type="button" onclick="DCC.setSplit(\'' + s.cid + '\',\'' + k + '\',-1,' + s.pool.pool + ')">−</button> ' + v + ' <button type="button" onclick="DCC.setSplit(\'' + s.cid + '\',\'' + k + '\',1,' + s.pool.pool + ')">+</button></p>';
         }).join('');
         return '<div class="card"><strong>Source: ' + esc(s.entry.name) + ' (' + s.kind + ') — +' + s.pool.pool + ' split between ' + s.pool.stats.map(function (k) { return k.toUpperCase(); }).join(', ') + '</strong><p>Assigned ' + s.total + ' / ' + s.pool.pool + '.</p>' + rows + '</div>';
+      }
+      if (s.type === 'cap') {
+        var cur = s.cur;
+        return '<div class="card"><strong>Source: ' + esc(s.entry.name) + ' (' + s.kind + ') — ' + esc(s.capGrant.label) + ' can be raised to Rank 20</strong><br>'
+          + '<button type="button" onclick="DCC.openCapPicker(\'' + s.cid + '\',\'' + s.kind + '\',\'' + esc(s.entry.name) + '\')">Pick from rulebook</button> '
+          + '<input type="text" placeholder="or custom name" value="' + esc(cur && cur.name ? cur.name : '') + '" onchange="DCC.pickCapChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + esc(s.entry.name) + '\',this.value)">'
+          + (cur && cur.name ? ' <button type="button" onclick="DCC.pickCapChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + esc(s.entry.name) + '\',\'\')">Clear pick</button>' : '')
+          + '</div>';
       }
       var cur = s.cur;
       return '<div class="card"><strong>Source: ' + esc(s.entry.name) + ' (' + s.kind + ') — +' + s.grant.amount + ' ' + esc(s.grant.label) + '</strong><br>'
@@ -1731,6 +1815,43 @@
       saveSoon(); renderAll(); refreshWizard();
     });
   }
+  /* Picker for a grant bonus's skill/spell: the full Chapter 4 library
+   * (skills and spells), searchable, showing each entry's kind — so a
+   * spell is picked as a spell and never has to be spelled right. */
+  async function openGrantSkillPicker(onPick) {
+    var list = await ensureSkills();
+    openPicker('Pick a skill or spell', list, function (c) { onPick(c.name); });
+  }
+  /* Grant-name autocomplete: as the player types a skill/spell name in
+   * a grant bonus row, matching Chapter 4 entries appear under the
+   * input (name + Skill/Spell). Picking one fills the canonical name
+   * and snaps the kind to the library kind. No match = a custom name,
+   * and the kind box decides as before. One shared floating box serves
+   * the creation form and the Inventory editor. */
+  var grantSuggestCtx = null; // {input, onPick, matches}
+  function hideGrantSuggest() { var box = $('grant-suggest'); if (box) box.hidden = true; grantSuggestCtx = null; }
+  function showGrantSuggest(input, onPick) {
+    grantSuggestCtx = { input: input, onPick: onPick, matches: [] };
+    updateGrantSuggest();
+  }
+  function updateGrantSuggest() {
+    var box = $('grant-suggest');
+    if (!box || !grantSuggestCtx || !document.contains(grantSuggestCtx.input)) { hideGrantSuggest(); return; }
+    var q = R.normName(grantSuggestCtx.input.value);
+    if (!q) { box.hidden = true; return; }
+    if (!cache.skills) { ensureSkills().then(function () { updateGrantSuggest(); }).catch(function () {}); box.hidden = true; return; }
+    var matches = cache.skills.filter(function (e) { return R.normName(e.name).indexOf(q) >= 0; }).slice(0, 8);
+    grantSuggestCtx.matches = matches;
+    if (!matches.length) { box.hidden = true; return; }
+    var r = grantSuggestCtx.input.getBoundingClientRect();
+    box.style.left = r.left + 'px';
+    box.style.top = (r.bottom + 2) + 'px';
+    box.style.minWidth = Math.max(r.width, 220) + 'px';
+    box.innerHTML = matches.map(function (e, i) {
+      return '<button type="button" class="picker-item" onmousedown="DCC.pickGrantSuggest(' + i + ')"><strong>' + esc(e.name) + '</strong><small>' + (e.kind === 'spell' ? 'Spell' : 'Skill') + '</small></button>';
+    }).join('');
+    box.hidden = false;
+  }
   async function openItemPicker() {
     var list = await ensureItems();
     var skills = [];
@@ -1778,6 +1899,7 @@
     var type = row.querySelector('.create-bonus-type').value;
     row.querySelector('.create-bonus-stat').style.display = type === 'stat' ? '' : 'none';
     row.querySelector('.create-bonus-skill').style.display = type === 'grant' ? '' : 'none';
+    row.querySelector('.create-bonus-pick').style.display = type === 'grant' ? '' : 'none';
     row.querySelector('.create-bonus-kind').style.display = type === 'grant' ? '' : 'none';
   }
   function syncCreateBonusAdd() {
@@ -1792,10 +1914,27 @@
     row.innerHTML = '<select class="create-bonus-type"><option value="stat">Stat bonus</option><option value="grant">Skill grant</option><option value="dr">Damage Resistance</option><option value="evade">Evade</option></select>'
       + '<select class="create-bonus-stat">' + R.STAT_KEYS.map(function (k) { return '<option value="' + k + '">' + k.toUpperCase() + '</option>'; }).join('') + '</select>'
       + '<input type="text" class="create-bonus-skill" placeholder="Skill/spell name" style="display:none">'
+      + '<button type="button" class="create-bonus-pick" style="display:none">Pick</button>'
       + '<select class="create-bonus-kind" style="display:none"><option value="skill">skill</option><option value="spell">spell</option></select>'
       + '<label>Amount <input type="number" class="create-bonus-amount" value="0"></label>'
       + '<button type="button" class="create-bonus-remove">Remove bonus</button>';
     row.querySelector('.create-bonus-type').addEventListener('change', function () { syncCreateBonusRow(row); });
+    function fillGrantSkill(name) {
+      row.querySelector('.create-bonus-skill').value = name;
+      // Snap the kind box to the library kind for the picked name.
+      var lib = findLib(name);
+      if (lib) row.querySelector('.create-bonus-kind').value = lib.kind === 'spell' ? 'spell' : 'skill';
+    }
+    row.querySelector('.create-bonus-pick').addEventListener('click', function () {
+      openGrantSkillPicker(fillGrantSkill);
+    });
+    // Type-ahead: matching rulebook skills/spells appear under the
+    // input as you type; picking one fills the canonical name.
+    row.querySelector('.create-bonus-skill').addEventListener('input', function () {
+      showGrantSuggest(this, fillGrantSkill);
+    });
+    row.querySelector('.create-bonus-skill').addEventListener('blur', function () { hideGrantSuggest(); });
+    row.querySelector('.create-bonus-skill').addEventListener('keydown', function (e) { if (e.key === 'Escape') hideGrantSuggest(); });
     row.querySelector('.create-bonus-remove').addEventListener('click', function () { row.remove(); syncCreateBonusAdd(); });
     box.appendChild(row);
     syncCreateBonusRow(row);
@@ -1850,7 +1989,8 @@
       else if (type === 'grant') {
         var skill = row.querySelector('.create-bonus-skill').value.trim();
         if (!skill) { bonusErr = 'Give the skill grant a skill/spell name.'; return; }
-        bonuses.push({ type: 'grant', skillName: skill, kind: row.querySelector('.create-bonus-kind').value, amount: amount });
+        // The library decides the kind when the name matches it.
+        bonuses.push({ type: 'grant', skillName: skill, kind: grantKindFor({ skillName: skill, kind: row.querySelector('.create-bonus-kind').value }), amount: amount });
       }
       else if (type === 'dr') bonuses.push({ type: 'dr', amount: amount });
       else if (type === 'evade') bonuses.push({ type: 'evade', amount: amount });
@@ -1937,6 +2077,132 @@
     });
   }
 
+  var capGrantByCid = {};
+  /* Picker for a cap choice: which skill/spell this race/class clause
+   * raises to Rank 20. Candidates depend on the clause: weapon = the 26
+   * attack skills (not the 7 hand-to-hand Damage Effects), crafting =
+   * the skills with a crafting table, cha = Charisma-based skills,
+   * skill with options = the named options. */
+  function openCapPicker(cid, kind, sourceName) {
+    var capGrant = capGrantByCid[cid];
+    ensureSkills().then(function (list) {
+      var cands;
+      if (capGrant && capGrant.options) {
+        cands = capGrant.options.map(function (n) {
+          var lib = findLib(n);
+          return lib || { name: n, kind: 'utility', base_effect: 'Custom / choice option (not a Chapter 4 library entry, or matched by name).' };
+        });
+      } else if (capGrant && capGrant.category === 'weapon') {
+        cands = list.filter(function (e) { return e.kind === 'attack' && R.isAttackSkill(e.name); });
+      } else if (capGrant && capGrant.category === 'crafting') {
+        cands = R.CRAFTING_SKILLS.map(function (n) { return findLib(n); }).filter(Boolean);
+      } else if (capGrant && capGrant.category === 'cha') {
+        cands = list.filter(function (e) { return e.kind !== 'spell' && (e.stat || '').toLowerCase() === 'cha'; });
+      } else {
+        cands = list.filter(function (e) { return e.kind !== 'spell'; });
+      }
+      openPicker('Pick a skill to raise to Rank 20 (' + sourceName + ')', cands, function (c) {
+        setCapChoice(cid, kind, sourceName, capGrant || { category: 'skill' }, 0, c.name);
+      });
+    });
+  }
+
+  /* ---------------- skill advancement (Level Up) ----------------
+   * The book's Skill Advancement Check: roll 1d20 against the skill's
+   * current (base/trained) rank; roll equal to or higher to gain 1 rank.
+   * Base rank 0–4 rolls from the Level Up button on the Skills/Spells
+   * tabs; base rank 5+ rolls when advancing a floor. After resolving,
+   * the Used mark clears either way ("erase all marks and start fresh").
+   * A rank never levels past its cap. */
+  var levelUpContext = { kind: null, minBase: 0, maxBase: 4 };
+  var levelUpResults = {};
+  function levelUpEligible(card, minBase, maxBase) {
+    var own = parseInt(card.ownRank, 10) || 0;
+    return !!card.used && own >= minBase && own <= maxBase && own < rankCapFor(card);
+  }
+  function levelUpRows() {
+    var ctx = levelUpContext;
+    var list = [];
+    if (!ctx.kind || ctx.kind === 'skill') state.skills.forEach(function (c) { if (levelUpEligible(c, ctx.minBase, ctx.maxBase)) list.push(c); });
+    if (!ctx.kind || ctx.kind === 'spell') state.spells.forEach(function (c) { if (levelUpEligible(c, ctx.minBase, ctx.maxBase)) list.push(c); });
+    list.sort(function (a, b) {
+      var d = (parseInt(b.ownRank, 10) || 0) - (parseInt(a.ownRank, 10) || 0);
+      return d || (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+    });
+    return list;
+  }
+  function openLevelUp(kind, minBase, maxBase) {
+    levelUpContext = { kind: kind, minBase: minBase, maxBase: maxBase };
+    levelUpResults = {};
+    $('levelup-title').textContent = kind === 'skill' ? 'Level Up — Skills' : kind === 'spell' ? 'Level Up — Spells' : 'Floor ' + state.floor + ' Advancement';
+    $('levelup-help').textContent = kind
+      ? 'Roll a d20 against the Trained rank for each Used ' + (kind === 'skill' ? 'skill' : 'spell') + ' at base rank ' + minBase + '–' + maxBase + '. Roll equal to or higher than the Trained rank to gain 1 rank. The Used mark clears whether the roll succeeds or not.'
+      : 'You advanced to Floor ' + state.floor + '. Roll a d20 against the Trained rank for each Used skill or spell at base rank 5 or higher. Roll equal to or higher than the Trained rank to gain 1 rank. The Used mark clears whether the roll succeeds or not.';
+    renderLevelUp();
+    $('levelup-modal').hidden = false;
+  }
+  function renderLevelUp() {
+    var rows = levelUpRows();
+    var resolved = Object.keys(levelUpResults).map(function (id) { return levelUpResults[id]; });
+    var all = rows.map(function (c) { return { card: c, res: null }; })
+      .concat(resolved.map(function (r) { return { card: null, res: r }; }));
+    all.sort(function (a, b) {
+      var ra = a.res ? a.res.base : (parseInt(a.card.ownRank, 10) || 0);
+      var rb = b.res ? b.res.base : (parseInt(b.card.ownRank, 10) || 0);
+      var d = rb - ra;
+      if (d) return d;
+      var na = a.res ? a.res.name : a.card.name;
+      var nb = b.res ? b.res.name : b.card.name;
+      return (na || '').toLowerCase().localeCompare((nb || '').toLowerCase());
+    });
+    if (!all.length) {
+      $('levelup-list').innerHTML = '<p class="hint">' + (levelUpContext.kind
+        ? 'No Used ' + (levelUpContext.kind === 'skill' ? 'skills' : 'spells') + ' at base rank ' + levelUpContext.minBase + '–' + levelUpContext.maxBase + ' right now. Tick the Used box on a card to roll for it here.'
+        : 'No Used skills or spells at base rank 5 or higher.') + '</p>';
+    } else {
+      $('levelup-list').innerHTML = all.map(function (row) {
+        if (row.res) {
+          var r = row.res;
+          return '<div class="cloud-row"><span><strong>' + esc(r.name) + '</strong>' + (levelUpContext.kind ? '' : ' (' + (r.kind === 'spell' ? 'Spell' : 'Skill') + ')') + ' — Rank ' + r.displayed + ' (Trained ' + r.base + ')</span><span>Rolled ' + r.roll + ' vs Trained ' + r.base + ' — ' + (r.success ? 'Rank up! Now Trained ' + r.newRank : 'no gain') + '</span></div>';
+        }
+        var c = row.card;
+        return '<div class="cloud-row"><span><strong>' + esc(c.name) + '</strong>' + (levelUpContext.kind ? '' : ' (' + (c.kind === 'spell' ? 'Spell' : 'Skill') + ')') + ' — Rank ' + cardRank(c) + ' (Trained ' + (parseInt(c.ownRank, 10) || 0) + ')</span><span><button type="button" onclick="DCC.rollLevelUp(\'' + c.kind + '\',\'' + c.id + '\')">Roll d20</button></span></div>';
+      }).join('');
+    }
+    $('levelup-rollall').hidden = rows.length === 0;
+  }
+  function rollLevelUp(kind, id) {
+    var list = kind === 'spell' ? state.spells : state.skills;
+    var card = list.find(function (c) { return c.id === id; });
+    if (!card || !levelUpEligible(card, levelUpContext.minBase, levelUpContext.maxBase)) return;
+    var base = parseInt(card.ownRank, 10) || 0;
+    var displayed = cardRank(card);
+    var roll = R.rollDie(20);
+    var success = roll >= base;
+    var newRank = success ? Math.min(base + 1, rankCapFor(card)) : base;
+    card.ownRank = newRank;
+    card.used = false;
+    levelUpResults[id] = { name: card.name, kind: card.kind, displayed: displayed, base: base, roll: roll, success: success, newRank: newRank };
+    saveSoon();
+    renderLevelUp();
+    renderAll();
+  }
+  function rollAllLevelUp() {
+    levelUpRows().slice().forEach(function (c) { rollLevelUp(c.kind, c.id); });
+  }
+  function closeLevelUp() {
+    $('levelup-modal').hidden = true;
+    levelUpResults = {};
+  }
+  function advanceFloor() {
+    var next = state.floor + 1;
+    if (!confirm('Advance to Floor ' + next + '? Used skills and spells at base rank 5 or higher get an advancement roll next.')) return;
+    state.floor = next;
+    saveSoon();
+    renderAll();
+    openLevelUp(null, 5, Infinity);
+  }
+
   /* ---------------- distribute dialog ---------------- */
   var distAlloc = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
   function openDistribute() {
@@ -2019,10 +2285,10 @@
     blankState: blankState,
     renderAll: renderAll, showTab: showTab, saveNow: saveNow, saveSoon: saveSoon,
     ensureSkills: ensureSkills, ensureItems: ensureItems, ensureRaces: ensureRaces, ensureKeywords: ensureKeywords,
-    findLib: findLib, cardRank: cardRank, remoteCardRank: remoteCardRank, setRaceClass: setRaceClass, choiceSections: choiceSections,
+    findLib: findLib, cardRank: cardRank, remoteCardRank: remoteCardRank, remoteRankCap: remoteRankCapFor, setRaceClass: setRaceClass, choiceSections: choiceSections,
     getExportData: getExportData,
     openSkillPicker: openSkillPicker, openItemPicker: openItemPicker, openRaceClassPicker: openRaceClassPicker,
-    showRaceClassInfo: showRaceClassInfo, openChoicePicker: openChoicePicker, pickerPick: pickerPick,
+    showRaceClassInfo: showRaceClassInfo, openChoicePicker: openChoicePicker, openCapPicker: openCapPicker, pickerPick: pickerPick,
     setOwnBase: setOwnBase, setOwnEnh: setOwnEnh, setEnhTotal: setEnhTotal,
     setCardOpen: function (id, open) {
       // Collapsed by default; a card the user opened stays open on reload.
@@ -2039,6 +2305,10 @@
       state.floor = Math.max(1, state.floor + delta);
       saveSoon(); renderAll();
     },
+    advanceFloor: advanceFloor,
+    rollLevelUp: rollLevelUp,
+    rollAllLevelUp: rollAllLevelUp,
+    closeLevelUp: closeLevelUp,
     killDelta: function (which, delta) {
       // Boss/Player kills are raised one at a time (a kill is an event,
       // not a number to type); the number input stays for corrections.
@@ -2050,7 +2320,13 @@
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
       if (!card) return;
-      card.ownRank = R.ownRankForTotal(num(value, 1), gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
+      // The displayed rank cannot be set above the cap (15, or 20 for a
+      // skill/spell a race/class clause raises).
+      var total = Math.min(num(value, 1), rankCapFor(card));
+      card.ownRank = R.ownRankForTotal(total, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
+      // Background protection: the trained rank can never drop below the
+      // rank the card came with at creation (the DM inspector is exempt).
+      if (card.background) card.ownRank = Math.max(card.ownRank, card.backgroundRank || 0);
       saveSoon(); renderAll();
     },
     setCardStat: function (kind, id, value) {
@@ -2087,7 +2363,10 @@
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
       if (!card) return;
-      if (cardFloor(card) > 0) { alert('This card is granted by a background, race, class, choice, or equipped item. Remove that source (or unequip the item) to remove the card.'); return; }
+      // Background protection: a background skill/spell cannot be deleted
+      // (the DM inspector is exempt — see dmInspDelCard in cloud.js).
+      if (card.background && (card.backgroundRank || 0) > 0) { alert('This skill came from your background and cannot be deleted.'); return; }
+      if (cardFloor(card) > 0) { alert('This card is granted by a race, class, choice, or equipped item. Remove that source (or unequip the item) to remove the card.'); return; }
       if (kind === 'spell') state.spells = state.spells.filter(function (c) { return c.id !== id; });
       else state.skills = state.skills.filter(function (c) { return c.id !== id; });
       saveSoon(); renderAll();
@@ -2098,7 +2377,9 @@
       var bonuses = (item.bonuses || []).map(function (b) {
         var amount = parseInt(b.amount, 10) || 0;
         if (b.type === 'stat') return { type: 'stat', stat: (b.stat || 'str').toLowerCase(), amount: amount };
-        if (b.type === 'grant') return { type: 'grant', skillName: b.skill || '', kind: 'skill', amount: amount };
+        // The library decides the kind when the name matches it (a DM-picked
+        // spell grant must land in Spells, not Skills).
+        if (b.type === 'grant') return { type: 'grant', skillName: b.skill || '', kind: grantKindFor({ skillName: b.skill || '', kind: 'skill' }), amount: amount };
         if (b.type === 'dr') return { type: 'dr', amount: amount };
         if (b.type === 'evade') return { type: 'evade', amount: amount };
         return { type: 'stat', stat: 'str', amount: amount };
@@ -2279,12 +2560,30 @@
     },
     setBonusSkill: function (id, bi, v) {
       var it = state.items.find(function (i) { return i.id === id; });
-      if (it && it.bonuses[bi]) { it.bonuses[bi].skillName = v; syncGearGrants(); saveSoon(); renderAll(); }
+      // The stored kind snaps to the library kind when the name matches
+      // it, so the kind box always shows the kind the grant applies as.
+      if (it && it.bonuses[bi]) { it.bonuses[bi].skillName = v; it.bonuses[bi].kind = grantKindFor(it.bonuses[bi]); syncGearGrants(); saveSoon(); renderAll(); }
     },
     setBonusKind: function (id, bi, v) {
       var it = state.items.find(function (i) { return i.id === id; });
-      if (it && it.bonuses[bi]) { it.bonuses[bi].kind = v; syncGearGrants(); saveSoon(); renderAll(); }
+      // The kind box only decides for custom names; a library name keeps
+      // its library kind (see grantKindFor).
+      if (it && it.bonuses[bi]) { it.bonuses[bi].kind = v; it.bonuses[bi].kind = grantKindFor(it.bonuses[bi]); syncGearGrants(); saveSoon(); renderAll(); }
     },
+    pickBonusSkill: function (id, bi) {
+      openGrantSkillPicker(function (name) { window.DCC.setBonusSkill(id, bi, name); });
+    },
+    grantSkillInput: function (input, id, bi) {
+      showGrantSuggest(input, function (name) { window.DCC.setBonusSkill(id, bi, name); });
+    },
+    pickGrantSuggest: function (i) {
+      var ctx = grantSuggestCtx;
+      if (!ctx || !ctx.matches || !ctx.matches[i]) return;
+      var name = ctx.matches[i].name;
+      hideGrantSuggest();
+      if (ctx.onPick) ctx.onPick(name);
+    },
+    hideGrantSuggest: hideGrantSuggest,
     setBonusAmount: function (id, bi, v) {
       var it = state.items.find(function (i) { return i.id === id; });
       if (it && it.bonuses[bi]) { it.bonuses[bi].amount = num(v, 0); syncGearGrants(); saveSoon(); renderAll(); }
@@ -2293,6 +2592,10 @@
     pickChoice: function (cid, kind, sourceName, amount, category, name) {
       var grant = choiceGrantByCid[cid] || { amount: amount, category: category };
       setChoice(cid, kind, sourceName, grant, 0, name);
+    },
+    pickCapChoice: function (cid, kind, sourceName, name) {
+      var capGrant = capGrantByCid[cid] || { category: 'skill' };
+      setCapChoice(cid, kind, sourceName, capGrant, 0, name);
     },
     delNote: function (kind, i) {
       if (kind === 'buff') state.buffs.splice(i, 1); else state.debuffs.splice(i, 1);
@@ -2580,11 +2883,15 @@
     distStep: distStep,
     renderPickerList: renderPickerList
   };
-  // Keep the choice-grant map current for the picker.
+  // Keep the choice-grant maps current for the pickers.
   var origRenderChoices = renderChoices;
   renderChoices = function () {
     choiceGrantByCid = {};
-    choiceSections().forEach(function (s) { if (s.type === 'grant') choiceGrantByCid[s.cid] = s.grant; });
+    capGrantByCid = {};
+    choiceSections().forEach(function (s) {
+      if (s.type === 'grant') choiceGrantByCid[s.cid] = s.grant;
+      if (s.type === 'cap') capGrantByCid[s.cid] = s.capGrant;
+    });
     origRenderChoices();
   };
 
@@ -2741,6 +3048,10 @@
     });
     click('skill-pick', function () { openSkillPicker('skill'); });
     click('spell-pick', function () { openSkillPicker('spell'); });
+    click('skill-levelup', function () { openLevelUp('skill', 0, 4); });
+    click('spell-levelup', function () { openLevelUp('spell', 0, 4); });
+    click('levelup-close', function () { closeLevelUp(); });
+    click('levelup-rollall', function () { rollAllLevelUp(); });
     click('item-pick', openItemPicker);
     click('skill-add', function () {
       state.skills.push({ id: uid(), name: 'New Skill', kind: 'skill', ownRank: 1, stat: 'str', checkType: 'Active Check', effect: '', used: false, gearGrants: {} });
@@ -2789,6 +3100,11 @@
     document.querySelectorAll('.overlay').forEach(function (ov) {
       ov.addEventListener('click', function (e) { if (e.target === ov) ov.hidden = true; });
     });
+    // A scrolling page detaches the floating grant suggestions from
+    // their input; hide them (scrolling inside the list itself is fine).
+    document.addEventListener('scroll', function (e) {
+      if (grantSuggestCtx && !(e.target && e.target.closest && e.target.closest('#grant-suggest'))) hideGrantSuggest();
+    }, true);
   }
 
   document.addEventListener('DOMContentLoaded', function () {
