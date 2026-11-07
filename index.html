@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dungeon Crawler World - Earth</title>
 <link rel="icon" type="image/png" href="Zev_icon.png">
-<link rel="stylesheet" href="css/style.css?v=38">
+<link rel="stylesheet" href="css/style.css?v=39">
 </head>
 <body>
 <div class="bg-slider"><div class="bg-track" id="bgTrack"></div></div>
@@ -108,6 +108,26 @@
     <section class="panel active" id="panel-vitals">
       <h2>Vitals</h2>
       <div class="stat-cards" id="stat-cards"></div>
+      <details class="modifier-ref">
+        <summary>Stat Modifier Reference Chart</summary>
+        <table class="mod-table">
+          <thead>
+            <tr>
+              <th>Stat Range</th>
+              <th>Modifier</th>
+              <th>Stat Range</th>
+              <th>Modifier</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1 – 2</td><td>+1</td><td>50 – 99</td><td>+6</td></tr>
+            <tr><td>3 – 5</td><td>+2</td><td>100 – 149</td><td>+7</td></tr>
+            <tr><td>6 – 9</td><td>+3</td><td>150 – 199</td><td>+8</td></tr>
+            <tr><td>10 – 19</td><td>+4</td><td>200 – 299</td><td>+9</td></tr>
+            <tr><td>20 – 49</td><td>+5</td><td>300+</td><td>+10</td></tr>
+          </tbody>
+        </table>
+      </details>
       <div class="vitals-box">
         <div class="hp-row"><strong>Health Bar</strong> <span id="hp-text"></span></div>
         <div class="hp-bar" id="hp-bar"></div>
@@ -481,6 +501,16 @@
       <div id="loot-pending"></div>
       <div id="loot-reveal"></div>
       <div id="loot-opened"></div>
+      <h3>Give yourself a loot box</h3>
+      <p class="hint">While the DM isn't using the page yet, you can send a loot box to yourself. It arrives above like any DM box — open it with Open all boxes.</p>
+      <label>Loot Box Name * <input type="text" id="self-box-name" placeholder="e.g. Goblin King's Hoard"></label>
+      <label>Loot Box Grade * <select id="self-box-grade" onchange="updateBoxGoldHint('self-box-grade', 'self-box-gold-hint')"><option value="">Select grade</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Legendary</option><option>Celestial</option></select></label>
+      <p id="self-box-gold-hint" class="hint" style="display: none;"></p>
+      <h3>Items in this box</h3>
+      <div id="self-box-items"></div>
+      <div class="btn-row"><button type="button" onclick="addDmItemRow('self-box-items')">Add item</button></div>
+      <div class="btn-row"><button type="button" onclick="sendSelfBox()">Send loot box to myself</button></div>
+      <p id="self-box-status" class="hint"></p>
     </section>
 
     <section class="panel" id="panel-sendbox">
@@ -523,6 +553,22 @@
       <h2>Achievements</h2>
       <p class="hint">Your achievements, from boxes you have opened. Click an achievement name to see its message.</p>
       <div id="ach-player-items"></div>
+      <h3>Give yourself an achievement</h3>
+      <p class="hint">While the DM isn't using the page yet, you can award an achievement to yourself. Same as a loot box, plus an achievement name, message, and optional sound clip.</p>
+      <label>Achievement name * <input type="text" id="self-ach-name" placeholder="e.g. First Blood"></label>
+      <label>Message * <textarea id="self-ach-message" placeholder="What you did, and what this is for"></textarea></label>
+      <label><input type="checkbox" id="self-ach-no-box" onchange="toggleSelfAchBoxFields()"> No loot box (achievement only, message only, no reward)</label>
+      <label>Sound clip (optional) <select id="self-ach-sound"><option value="">No sound</option><option value="new_achievement.mp3">New Achievement</option><option value="sultrynewachievement.mp3">Sultry New Achievement</option></select></label>
+      <div id="self-ach-box-fields">
+        <label>Loot Box Name * <input type="text" id="self-ach-box-name" placeholder="e.g. Goblin King's Hoard"></label>
+        <label>Loot Box Grade * <select id="self-ach-box-grade" onchange="updateBoxGoldHint('self-ach-box-grade', 'self-ach-box-gold-hint')"><option value="">Select grade</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Legendary</option><option>Celestial</option></select></label>
+        <p id="self-ach-box-gold-hint" class="hint" style="display: none;"></p>
+        <h3>Items in this box</h3>
+        <div id="self-ach-items"></div>
+        <div class="btn-row"><button type="button" onclick="addDmItemRow('self-ach-items')">Add item</button></div>
+      </div>
+      <div class="btn-row"><button type="button" onclick="sendSelfAchievement()">Send achievement to myself</button></div>
+      <p id="self-ach-status" class="hint"></p>
     </section>
 
     <section class="panel" id="panel-deadparty">
@@ -699,10 +745,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/rules.js?v=38"></script>
-<script src="js/convert.js?v=38"></script>
-<script src="js/app.js?v=38"></script>
-<script src="js/wizard.js?v=38"></script>
-<script src="js/cloud.js?v=38"></script>
+<script src="js/rules.js?v=39"></script>
+<script src="js/convert.js?v=39"></script>
+<script src="js/app.js?v=39"></script>
+<script src="js/wizard.js?v=39"></script>
+<script src="js/cloud.js?v=39"></script>
 </body>
 </html>

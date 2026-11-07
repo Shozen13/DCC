@@ -53,6 +53,8 @@ function landingStatus(msg) { var el = $('landing-status'); if (el) el.innerText
 function achStatus(msg) { var el = $('ach-status'); if (el) el.innerText = msg || ''; }
 function lootStatus(msg) { var el = $('loot-status'); if (el) el.innerText = msg || ''; }
 function boxStatus(msg) { var el = $('box-status'); if (el) el.innerText = msg || ''; }
+function selfBoxStatus(msg) { var el = $('self-box-status'); if (el) el.innerText = msg || ''; }
+function selfAchStatus(msg) { var el = $('self-ach-status'); if (el) el.innerText = msg || ''; }
 
 /* The merged state keeps its own localStorage key (dcc-sheet-v2); the cloud
  * layer only needs a deep copy of it for upload, and applies downloaded
@@ -1687,9 +1689,9 @@ function onTabShown(tab) {
   if (tab === 'messages') refreshMessages();
   if (tab === 'inspect') renderInspector();
   if (tab === 'deadparty') refreshDeadPartyTab();
-  if (tab === 'loot') refreshLoot();
+  if (tab === 'loot') { refreshLoot(); if ($('self-box-items') && !$('self-box-items').children.length) addDmItemRow('self-box-items'); }
   if (tab === 'sendbox' || tab === 'sendach') refreshAchCampaigns();
-  if (tab === 'achievements') { refreshAchPlayerList(); checkUnviewedAchievements(); }
+  if (tab === 'achievements') { refreshAchPlayerList(); checkUnviewedAchievements(); if ($('self-ach-items') && !$('self-ach-items').children.length) addDmItemRow('self-ach-items'); }
 }
 
 /* Hooks the sheet calls (defined here so app.js can reference window.Cloud
@@ -2097,6 +2099,57 @@ async function sendAchievement() {
   achStatus('Achievement sent to ' + playerIds.length + ' player(s).' + (noBox ? ' It appears directly in their Achievements tab, with no loot box.' : ''));
   $('ach-name').value = '';
   $('ach-message').value = '';
+}
+/* Player self-grant (temporary, while the DM isn't using the page):
+ * same boxes/achievements as the DM send forms, but the only recipient
+ * is the player's own loaded crawler. Needs supabase_loot_self.sql run
+ * once in Supabase: the loot_dm_insert policy only allows the campaign
+ * DM, so self-sends need their own policy. Drop that policy when the
+ * DM takes over and this section can come out. */
+function toggleSelfAchBoxFields() {
+  var noBox = $('self-ach-no-box').checked;
+  var fields = $('self-ach-box-fields');
+  if (fields) fields.style.display = noBox ? 'none' : '';
+}
+async function sendSelfBox() {
+  if (!needLogin()) return selfBoxStatus('Log in first, in the Account section of the Campaign tab.');
+  if (!cloudCharacterId) return selfBoxStatus('Load a cloud crawler first.');
+  if (!cloudCampaignId) return selfBoxStatus('Join a campaign first — boxes belong to a campaign.');
+  var boxName = $('self-box-name').value.trim();
+  var boxGrade = $('self-box-grade').value;
+  var collected = collectDmItems('self-box-items');
+  if (collected.error) return selfBoxStatus(collected.error);
+  var items = collected.items;
+  if (!boxName) return selfBoxStatus('Loot Box Name is required.');
+  if (!boxGrade) return selfBoxStatus('Loot Box Grade is required.');
+  var err = await insertLootBoxes(cloudCampaignId, [cloudCharacterId], { dm_id: cloudUser.id, achievement_name: null, message: null, loot_box_name: boxName, loot_box_grade: boxGrade, sound_clip: null, items: items, status: 'pending', is_achievement: false });
+  if (err) return selfBoxStatus('Send failed: ' + err.message + ' (if this is a new site version, run supabase_loot_self.sql in Supabase first.)');
+  selfBoxStatus('Loot box sent to yourself — it is waiting in the list above. Open it with Open all boxes.');
+  refreshLoot();
+}
+async function sendSelfAchievement() {
+  if (!needLogin()) return selfAchStatus('Log in first, in the Account section of the Campaign tab.');
+  if (!cloudCharacterId) return selfAchStatus('Load a cloud crawler first.');
+  if (!cloudCampaignId) return selfAchStatus('Join a campaign first — achievements belong to a campaign.');
+  var name = $('self-ach-name').value.trim();
+  var message = $('self-ach-message').value.trim();
+  var sound = $('self-ach-sound').value;
+  var noBox = $('self-ach-no-box').checked;
+  var boxName = noBox ? '' : $('self-ach-box-name').value.trim();
+  var boxGrade = noBox ? '' : $('self-ach-box-grade').value;
+  var collected = noBox ? { items: [], error: null } : collectDmItems('self-ach-items');
+  if (collected.error) return selfAchStatus(collected.error);
+  var items = collected.items;
+  if (!name) return selfAchStatus('Achievement name is required.');
+  if (!message) return selfAchStatus('Message is required.');
+  if (!noBox && !boxName) return selfAchStatus('Loot Box Name is required.');
+  if (!noBox && !boxGrade) return selfAchStatus('Loot Box Grade is required.');
+  var err = await insertLootBoxes(cloudCampaignId, [cloudCharacterId], { dm_id: cloudUser.id, achievement_name: name, message: message, loot_box_name: boxName, loot_box_grade: boxGrade, sound_clip: sound || null, items: items, status: noBox ? 'opened' : 'pending', is_achievement: true });
+  if (err) return selfAchStatus('Send failed: ' + err.message + ' (if this is a new site version, run supabase_loot_self.sql in Supabase first.)');
+  selfAchStatus('Achievement sent to yourself.' + (noBox ? ' It appears directly in your Achievements tab, with no loot box.' : ' Open its loot box from the Loot Boxes tab to see it.'));
+  $('self-ach-name').value = '';
+  $('self-ach-message').value = '';
+  refreshAchPlayerList();
 }
 async function checkUnviewedAchievements() {
   if (!cloudUser || !cloudCharacterId || crawlerMode !== 'player') return;
