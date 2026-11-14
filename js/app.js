@@ -409,7 +409,7 @@
       skills: skills, spells: spells,
       inventory: state.items.map(function (it) {
         var bs = bonusSummary(it);
-        return { name: it.name, qty: it.kind === 'consumable' ? getQty(it) : 1,
+        return { name: it.name, qty: (it.kind === 'consumable' || it.kind === 'material') ? getQty(it) : 1,
           notes: (it.effect || '') + (bs ? ' (' + bs + ')' : '') };
       }),
       avatar: avatar
@@ -1391,7 +1391,7 @@
       + (it.kind === 'consumable' && it.subtype ? ' · ' + it.subtype : '')
       + ((it.kind === 'coupon' || it.kind === 'material') && it.subtype ? ' · ' + it.subtype : '');
     var kindOpts = [['gear', 'Gear'], ['consumable', 'Consumable'], ['coupon', 'Coupon'], ['material', 'Material/Misc']];
-    var html = '<div class="card"><h4>' + esc(it.name) + (it.kind === 'consumable' ? ' ×' + getQty(it) : '') + (it.equipped ? ' — EQUIPPED' + (it.placement ? ' (' + it.placement + ')' : '') : '') + '</h4>'
+    var html = '<div class="card"><h4>' + esc(it.name) + ((it.kind === 'consumable' || it.kind === 'material') ? ' ×' + getQty(it) : '') + (it.equipped ? ' — EQUIPPED' + (it.placement ? ' (' + it.placement + ')' : '') : '') + '</h4>'
       + '<p>' + esc(it.effect || '') + '</p>'
       + '<p class="hint">' + esc(meta) + '</p>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(it.name) + '" onchange="DCC.renameItem(\'' + it.id + '\',this.value)"></label>'
@@ -1409,6 +1409,9 @@
         : '')
       + ((it.kind === 'coupon' || it.kind === 'material')
         ? '<label>Type <input type="text" value="' + esc(it.subtype || '') + '" placeholder="Free form, e.g. Tavern coupon" onchange="DCC.setItemSubtype(\'' + it.id + '\',this.value)"></label>'
+        : '')
+      + (it.kind === 'material'
+        ? '<label>Qty <input type="number" min="1" value="' + getQty(it) + '" onchange="DCC.setItemUseField(\'' + it.id + '\',\'qty\',this.value)"></label>'
         : '')
       + (it.kind === 'consumable' ? consumableUseFieldsHtml(it) : '')
       + (it.kind === 'gear'
@@ -1644,8 +1647,10 @@
     });
     return changed;
   }
+  /* Quantity lives on Consumables and Material/Misc alike, in
+   * use.qty (default 1). Gear and Coupons have no quantity. */
   function getQty(it) {
-    if (!it || it.kind !== 'consumable') return 1;
+    if (!it || (it.kind !== 'consumable' && it.kind !== 'material')) return 1;
     var q = it.use ? num(it.use.qty, 1) : 1;
     return Math.max(1, q);
   }
@@ -1947,7 +1952,7 @@
     $('item-create-consumable').hidden = k !== 'consumable';
     $('item-create-freetype').hidden = !(k === 'coupon' || k === 'material');
     var cons = k === 'consumable';
-    $('item-create-qtygroup').hidden = !cons;
+    $('item-create-qtygroup').hidden = !(cons || k === 'material');
     $('item-create-spellgroup').hidden = !(cons && (sub === 'Scroll' || sub === 'Spellbook'));
     $('item-create-potiongroup').hidden = !(cons && sub === 'Potion');
     $('item-create-damagegroup').hidden = !(cons && sub === 'Explosive');
@@ -1997,8 +2002,10 @@
     });
     if (bonusErr) return fail(bonusErr);
     var use = {};
-    if (kind === 'consumable') {
+    if (kind === 'consumable' || kind === 'material') {
       use.qty = Math.max(1, num($('item-create-qty').value, 1));
+    }
+    if (kind === 'consumable') {
       if (subtype === 'Scroll' || subtype === 'Spellbook') {
         var spell = $('item-create-spell').value.trim();
         if (!spell) return fail('Scrolls and spellbooks need a designated spell.');
@@ -2388,11 +2395,12 @@
       // ones (kind/slot/subtype/use from the Send Box form); loot rows
       // sent before that change have none and arrive as Material/Misc.
       var lootKind = item.kind ? R.normalizeKind(item.kind) : 'material';
-      if (lootKind === 'consumable') {
-        // Consumables stack: one entry carrying the quantity, so
-        // using it can count down and remove it at zero.
+      if (lootKind === 'consumable' || lootKind === 'material') {
+        // Consumables and Material/Misc stack: one entry carrying
+        // the quantity, so using a consumable can count down and
+        // remove it at zero, and a material pile shows its count.
         var useIn = item.use || {};
-        state.items.push({ id: uid(), name: item.name, kind: 'consumable', slot: null, subtype: item.subtype || null, placement: null, effect: item.notes || '', bonuses: JSON.parse(JSON.stringify(bonuses)), use: Object.assign({}, useIn, { qty: n }), equipped: false });
+        state.items.push({ id: uid(), name: item.name, kind: lootKind, slot: null, subtype: item.subtype || null, placement: null, effect: item.notes || '', bonuses: JSON.parse(JSON.stringify(bonuses)), use: Object.assign({}, useIn, { qty: n }), equipped: false });
       } else {
         for (var i = 0; i < n; i++) state.items.push({ id: uid(), name: item.name, kind: lootKind, slot: lootKind === 'gear' ? (item.slot ? R.normalizeSlot(item.slot) : null) : null, subtype: item.subtype || null, placement: null, effect: item.notes || '', bonuses: JSON.parse(JSON.stringify(bonuses)), use: {}, equipped: false });
       }
