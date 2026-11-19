@@ -21,6 +21,10 @@ button { background:var(--pearl); background-size:300% 100%; background-position
 button:hover { filter:brightness(1.1); }
 @media (prefers-reduced-motion: reduce) { body { animation:none; } }
 input, select { background:#0a0a0a; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; max-width:100%; }
+/* Freeform text boxes: full width of their container, dark like the other
+ * inputs, and no drag handle — the height is driven by the auto-grow
+ * script instead (grows with what you type up to 240px, then scrolls). */
+textarea { background:#0a0a0a; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; width:100%; max-width:100%; max-height:240px; resize:none; overflow-y:auto; font:inherit; }
 input[type=number] { width:90px; }
 .topbar { position:relative; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:12px 16px; }
 .topbar::after { content:''; position:absolute; left:0; right:0; bottom:0; height:3px; background:var(--pearl); background-size:300% 100%; background-position:var(--pearl-x) 50%; }
@@ -48,6 +52,10 @@ input[type=number] { width:90px; }
 .panel { display:none; background-color:var(--panel); background-image:linear-gradient(135deg,rgba(255,46,158,.07),rgba(10,10,10,0) 40%,rgba(45,212,200,.07)); border:1px solid var(--line); border-radius:10px; padding:16px; }
 .panel.active { display:block; }
 .panel h2 { margin-top:0; background:var(--pearl); background-size:300% 100%; background-position:var(--pearl-x) 50%; -webkit-background-clip:text; background-clip:text; color:transparent; }
+/* Bio fields each get their own line: the label text above a full-width
+ * box, instead of four fields flowing side by side in a row. */
+#panel-bio > label { display:block; margin:12px 0; color:var(--muted); }
+#panel-bio > label textarea { display:block; margin-top:4px; }
 .hint { color:var(--muted); font-size:.9rem; }
 .sub { color:var(--muted); font-size:.9rem; }
 .btn-row, .btn-col { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }

@@ -43,7 +43,7 @@
       moveVal: 20, stepVal: 10, bossKills: 0, pkKills: 0,
       buffs: [], debuffs: [], hotlist: [],
       skills: [], spells: [], attacks: [], items: [], pendingDamage: null,
-      story: { quests: [], journal: [], pets: [], mounts: [], sponsors: [], faith: { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] }, crafting: [], bio: { appearance: '', personality: '', backstory: '', notes: '' } },
+      story: { quests: [], journal: [], pets: [], mounts: [], sponsors: [], faith: { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] }, crafting: [], bio: { appearance: '', personality: '', backstory: '', pastTrauma: '', looseEnds: '', regrets: '', notes: '' } },
       raceClassApplied: [], raceClassChoices: {}, raceClassMoveApplied: null, backgrounds: null, cardOpen: {},
       loadouts: [{ id: 'loadout-1', name: 'Loadout 1', placements: {} }, { id: 'loadout-2', name: 'Loadout 2', placements: {} }],
       activeLoadoutId: null,
@@ -896,10 +896,11 @@
   }
   /* ---------------- story tabs ---------------- */
   function story() {
-    if (!state.story) state.story = { quests: [], journal: [], pets: [], mounts: [], sponsors: [], faith: { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] }, crafting: [], bio: { appearance: '', personality: '', backstory: '', notes: '' } };
+    if (!state.story) state.story = { quests: [], journal: [], pets: [], mounts: [], sponsors: [], faith: { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] }, crafting: [], bio: { appearance: '', personality: '', backstory: '', pastTrauma: '', looseEnds: '', regrets: '', notes: '' } };
     if (!state.story.faith) state.story.faith = { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] };
     ['tier', 'looted', 'streak', 'missed'].forEach(function (k) { if (state.story.faith[k] === undefined) state.story.faith[k] = k === 'tier' ? 'none' : 0; });
-    if (!state.story.bio) state.story.bio = { appearance: '', personality: '', backstory: '', notes: '' };
+    if (!state.story.bio) state.story.bio = { appearance: '', personality: '', backstory: '', pastTrauma: '', looseEnds: '', regrets: '', notes: '' };
+    ['appearance', 'personality', 'backstory', 'pastTrauma', 'looseEnds', 'regrets', 'notes'].forEach(function (k) { if (state.story.bio[k] === undefined) state.story.bio[k] = ''; });
     ['quests', 'journal', 'pets', 'mounts', 'sponsors', 'crafting'].forEach(function (k) { if (!state.story[k]) state.story[k] = []; });
     return state.story;
   }
@@ -1070,6 +1071,9 @@
     $('bio-appearance').value = b.appearance || '';
     $('bio-personality').value = b.personality || '';
     $('bio-backstory').value = b.backstory || '';
+    $('bio-past-trauma').value = b.pastTrauma || '';
+    $('bio-loose-ends').value = b.looseEnds || '';
+    $('bio-regrets').value = b.regrets || '';
     $('bio-notes').value = b.notes || '';
     // Creation background, as chosen in the wizard: category, background
     // name, the two skills picked from it and their starting rank, plus
@@ -1649,6 +1653,23 @@
   }
   /* Quantity lives on Consumables and Material/Misc alike, in
    * use.qty (default 1). Gear and Coupons have no quantity. */
+  /* Freeform text boxes grow with what you type, up to a cap, then
+   * scroll internally like a chat box — so a long backstory never
+   * turns the whole page into one text box. Hidden panels and
+   * modals are left alone (their scrollHeight reads 0 while hidden);
+   * they get fitted when they open or render. */
+  var TEXTAREA_MAX_HEIGHT = 240;
+  function fitTextarea(el) {
+    if (!el || el.tagName !== 'TEXTAREA') return;
+    if (!el.offsetParent) return;
+    el.style.height = 'auto';
+    var h = Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT);
+    el.style.height = h + 'px';
+    el.style.overflowY = el.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
+  }
+  function fitAllTextareas() {
+    Array.prototype.forEach.call(document.querySelectorAll('textarea'), fitTextarea);
+  }
   function getQty(it) {
     if (!it || (it.kind !== 'consumable' && it.kind !== 'material')) return 1;
     var q = it.use ? num(it.use.qty, 1) : 1;
@@ -1733,6 +1754,7 @@
     var deadLocked = !!state.dead && !(window.Cloud && window.Cloud.isDm());
     document.body.classList.toggle('dead-lock', deadLocked);
     var stamp = $('dead-stamp'); if (stamp) stamp.hidden = !deadLocked;
+    fitAllTextareas();
   }
   function showTab(tab) {
     // Tab guards, ported from the original sheet: DM-only tabs fall back to
@@ -1896,6 +1918,7 @@
     $('item-create-error').hidden = true;
     syncItemCreateFields();
     $('item-create-modal').hidden = false;
+    fitAllTextareas();
     $('item-create-name').focus();
   }
   /* Bonus rows on the creation form mirror the Inventory bonus
@@ -2290,7 +2313,7 @@
     syncGearGrants: syncGearGrants, ensureUnarmed: ensureUnarmed,
     setState: function (s) { state = s; },
     blankState: blankState,
-    renderAll: renderAll, showTab: showTab, saveNow: saveNow, saveSoon: saveSoon,
+    renderAll: renderAll, showTab: showTab, saveNow: saveNow, saveSoon: saveSoon, fitAllTextareas: fitAllTextareas,
     ensureSkills: ensureSkills, ensureItems: ensureItems, ensureRaces: ensureRaces, ensureKeywords: ensureKeywords,
     findLib: findLib, cardRank: cardRank, remoteCardRank: remoteCardRank, remoteRankCap: remoteRankCapFor, setRaceClass: setRaceClass, choiceSections: choiceSections,
     getExportData: getExportData,
@@ -2905,6 +2928,10 @@
 
   /* ---------------- static wiring & init ---------------- */
   function bind() {
+    // Every freeform box grows as you type (see fitTextarea).
+    document.addEventListener('input', function (e) {
+      if (e.target && e.target.tagName === 'TEXTAREA') fitTextarea(e.target);
+    });
     document.querySelectorAll('.tab-btn').forEach(function (b) {
       b.addEventListener('click', function () { showTab(b.dataset.tab); });
     });
@@ -3035,9 +3062,14 @@
       if (looted) looted.addEventListener('change', function () { window.DCC.faithSet('looted', Math.max(0, num(looted.value, 0))); });
       click('faith-offered', function () { window.DCC.faithOffered(); });
       click('faith-missed', function () { window.DCC.faithMissed(); });
-      ['appearance', 'personality', 'backstory', 'notes'].forEach(function (f) {
+      ['appearance', 'personality', 'backstory', 'regrets', 'notes'].forEach(function (f) {
         var el = $('bio-' + f);
         if (el) el.addEventListener('change', function () { window.DCC.bioSet(f, el.value); });
+      });
+      // Paper-sheet fields whose ids are hyphenated: state keys are camelCase.
+      [['pastTrauma', 'past-trauma'], ['looseEnds', 'loose-ends']].forEach(function (pair) {
+        var el = $('bio-' + pair[1]);
+        if (el) el.addEventListener('change', function () { window.DCC.bioSet(pair[0], el.value); });
       });
       var jd = $('journal-date');
       if (jd && !jd.value) jd.value = new Date().toISOString().slice(0, 10);

@@ -655,7 +655,7 @@ async function renderInspector() {
     + '<p>Journal entries: ' + (st.journal || []).length + ' · Pets: ' + (st.pets || []).map(function (pt) { return esc(pt.name || 'Pet'); }).join(', ') + ' · Mounts: ' + (st.mounts || []).map(function (mt) { return esc(mt.name || 'Mount'); }).join(', ') + '</p>'
     + '<p>Sponsors: ' + (st.sponsors || []).map(function (sp) { return esc(sp.name || 'Sponsor'); }).join(', ') + ' · Faith: ' + esc((st.faith && st.faith.deity) || '') + ' ' + esc((st.faith && st.faith.tier) || '') + '</p>'
     + (bgText ? '<p>Backgrounds: ' + esc(bgText) + '</p>' : '')
-    + '<p>Bio: ' + esc(((st.bio || {}).appearance || '') + ' ' + ((st.bio || {}).personality || '') + ' ' + ((st.bio || {}).backstory || '') + ' ' + ((st.bio || {}).notes || '')) + '</p>';
+    + '<p>Bio: ' + esc(((st.bio || {}).appearance || '') + ' ' + ((st.bio || {}).personality || '') + ' ' + ((st.bio || {}).backstory || '') + ' ' + ((st.bio || {}).pastTrauma || '') + ' ' + ((st.bio || {}).looseEnds || '') + ' ' + ((st.bio || {}).regrets || '') + ' ' + ((st.bio || {}).notes || '')) + '</p>';
   box.innerHTML = html;
 }
 
@@ -1977,6 +1977,9 @@ function dmItemApply(sel) {
   var notesEl = group.querySelector('.dm-item-notes');
   if (nameEl) nameEl.value = entry.name;
   if (notesEl && !notesEl.value.trim() && entry.effect) notesEl.value = entry.effect;
+  // A rulebook auto-fill writes the notes directly (no keystroke), so
+  // fit the box to the filled text instead of waiting for typing.
+  if (window.DCC && window.DCC.fitAllTextareas) window.DCC.fitAllTextareas();
   // Same taxonomy as the player's item form: kind + slot auto-fill
   // from the book entry, so the sent item arrives classified.
   var kindEl = group.querySelector('.dm-item-kind');
@@ -2088,6 +2091,7 @@ function addDmItemRow(containerId) {
     + '<div class="btn-row"><button type="button" onclick="addDmBonusRow(this.closest(\'.dm-item-group\'))">Add bonus</button><button type="button" onclick="this.closest(\'.dm-item-group\').remove()">Remove item</button></div>';
   box.appendChild(group);
   ensureDmData();
+  if (window.DCC && window.DCC.fitAllTextareas) window.DCC.fitAllTextareas();
 }
 function collectDmItems(containerId) {
   var items = [];
@@ -2240,6 +2244,7 @@ async function sendAchievement() {
   achStatus('Achievement sent to ' + playerIds.length + ' player(s).' + (noBox ? ' It appears directly in their Achievements tab, with no loot box.' : ''));
   $('ach-name').value = '';
   $('ach-message').value = '';
+  if (window.DCC && window.DCC.fitAllTextareas) window.DCC.fitAllTextareas();
 }
 /* Player self-grant (temporary, while the DM isn't using the page):
  * same boxes/achievements as the DM send forms, but the only recipient
@@ -2290,6 +2295,7 @@ async function sendSelfAchievement() {
   selfAchStatus('Achievement sent to yourself.' + (noBox ? ' It appears directly in your Achievements tab, with no loot box.' : ' Open its loot box from the Loot Boxes tab to see it.'));
   $('self-ach-name').value = '';
   $('self-ach-message').value = '';
+  if (window.DCC && window.DCC.fitAllTextareas) window.DCC.fitAllTextareas();
   refreshAchPlayerList();
 }
 async function checkUnviewedAchievements() {
