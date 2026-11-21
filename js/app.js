@@ -1237,10 +1237,10 @@
     var card = state.skills.find(function (c) { return c.kind === 'skill' && R.normName(c.name) === R.normName(name); });
     return card ? cardRank(card) : 0;
   }
-  function promptEffectThenRoll(attackName, statKey, statMod, parentInfo) {
+  function promptEffectThenRoll(attackName, statKey, statMod, parentInfo, rank) {
     ensureSkills().then(function () {
       var effects = effectsForAttack(attackName);
-      if (!effects.length) { rollD20Check(attackName + ' — to hit', statMod); return; }
+      if (!effects.length) { rollD20Check(attackName + ' — to hit', statMod, rank); return; }
       var overlay = openOverlay('Roll ' + attackName + ' — use a Damage Effect?', '', []);
       var body = overlay.querySelector('.modal > div');
       var html = '<p class="hint">Choose before rolling, as the book requires. Picking an effect does not use it yet — it only applies if the attack then passes.</p>';
@@ -1258,7 +1258,7 @@
         var sel = overlay.querySelector('input[name="eff-choice"]:checked');
         var chosen = sel && sel.value !== '' ? effects[parseInt(sel.value, 10)].name : null;
         closeModalEl(overlay);
-        rollD20Check(attackName + ' — to hit', statMod);
+        rollD20Check(attackName + ' — to hit', statMod, rank);
         if (chosen) promptSuccess(attackName, statKey, statMod, chosen, parentInfo);
       });
       var cancelBtn = document.createElement('button');
@@ -1268,7 +1268,7 @@
       row.appendChild(rollBtn);
       row.appendChild(cancelBtn);
       overlay.querySelector('.modal').appendChild(row);
-    }).catch(function () { rollD20Check(attackName + ' — to hit', statMod); });
+    }).catch(function () { rollD20Check(attackName + ' — to hit', statMod, rank); });
   }
   function promptSuccess(attackName, statKey, statMod, effectName, parentInfo) {
     openOverlay('Did ' + attackName + ' hit?', '<p>' + esc(lastRollText) + '</p><p class="hint">The sheet does not know the DM\'s check threshold, so confirm the result yourself. A miss changes nothing — the effect is not used, ranked, or marked.</p>', [
@@ -1355,7 +1355,7 @@
       var adjNote = adj.additions.length ? ' (includes ' + adj.additions.map(function (a) { return '+' + a.count + 'd' + a.sides + ' at Rank ' + a.tier; }).join(', ') + ')' : '';
       return '<div class="card"><h4>' + esc(c.name) + '</h4>'
         + '<p>' + (c.kind === 'spell' ? 'Attack spell' : esc(R.skillAttackType(c.name) || 'Attack skill')) + ' — Rank ' + cardRank(c) + '</p>'
-        + '<p>To hit: d20 + ' + c.stat.toUpperCase() + ' Mod (+' + mod + ')</p>'
+        + '<p>To hit: d20 + ' + cardRank(c) + ' + ' + c.stat.toUpperCase() + ' Mod (+' + mod + ')</p>'
         + '<p>Damage: ' + esc(adj.damage) + adjNote + (override ? ' — damage uses ' + override.toUpperCase() + ' Mod instead (race/class override; to-hit unchanged)' : '')
         + ((lib && lib.mana_cost) ? ' — Mana: ' + esc(lib.mana_cost) : '') + '</p>'
         + (c.kind === 'skill' ? damageEffectsFor(c.name) : '')
@@ -2357,9 +2357,13 @@
     toast.appendChild(span);
     toast.appendChild(close);
   }
-  function rollD20Check(label, mod) {
+  function rollD20Check(label, mod, rank) {
     var die = R.rollDie(20);
-    showRoll(label + ': d20 + ' + mod + ' = ' + die + ' + ' + mod + ' = ' + (die + mod));
+    if (rank) {
+      showRoll(label + ': d20 + ' + rank + ' + ' + mod + ' = ' + die + ' + ' + rank + ' + ' + mod + ' = ' + (die + rank + mod));
+    } else {
+      showRoll(label + ': d20 + ' + mod + ' = ' + die + ' + ' + mod + ' = ' + (die + mod));
+    }
   }
   function doRest(type, label) {
     var maxMana = R.maxMana(computeStats().int.total);
@@ -2855,9 +2859,11 @@
       var lib = findLib(card.name);
       var mod = (lib && !lib.stat) ? 0 : (stats[card.stat] ? stats[card.stat].mod : 0);
       if (kind === 'skill' && R.isAttackSkill(card.name)) {
-        promptEffectThenRoll(card.name, card.stat, mod, null);
+        promptEffectThenRoll(card.name, card.stat, mod, null, cardRank(card));
       } else {
-        rollD20Check(card.name + ' — ' + card.checkType, mod);
+        // Attack spells roll with rank too (d20 + rank + stat mod); every
+        // other card rolls d20 + stat mod as before.
+        rollD20Check(card.name + ' — ' + card.checkType, mod, isAttackCard(card) ? cardRank(card) : 0);
       }
     },
     rollAttack: function (id) {
