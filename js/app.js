@@ -549,9 +549,18 @@
     pruneBonusCards();
   }
   function pruneBonusCards() {
+    // A card with a race/class record still holding it (any amount,
+    // positive or negative) must survive the prune: reverseSource needs
+    // the card to restore ranks into when the race/class leaves.
+    function hasRaceRecord(card) {
+      var key = R.normName(card.name);
+      return state.raceClassApplied.some(function (a) {
+        return a.kind === card.kind && R.normName(a.skillName) === key;
+      });
+    }
     function keep(list) {
       return list.filter(function (card) {
-        return !R.shouldRemoveCard(card, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card));
+        return !R.shouldRemoveCard(card, gearGivenFor(card), raceGivenFor(card), groupGivenFor(card), backgroundGivenFor(card), hasRaceRecord(card));
       });
     }
     state.skills = keep(state.skills);
@@ -2229,7 +2238,7 @@
     var list = await ensureRaces();
     var entry = list.find(function (e) { return e.kind === kind && R.normName(e.name) === R.normName(name); });
     if (!entry) { alert('No rulebook entry found for ' + name + '.'); return; }
-    showInfo(entry.name + (entry.source_book_page ? ' (' + kind + ')' : ' (Custom race)'), formatRaceClassBenefits(entry.benefits)
+    showInfo(entry.name + (entry.source_book_page ? ' (' + kind + ')' : ' (Custom ' + kind + ')'), formatRaceClassBenefits(entry.benefits)
       + (entry.prerequisites ? '<p><strong>Prerequisites:</strong> ' + esc(entry.prerequisites) + '</p>' : '')
       + (entry.source_book_page ? '<p>Book p.' + entry.source_book_page + '</p>' : '')
       + '<p class="hint">Text shown here is book text for reference. Only the auto-applied effects listed in the README are applied automatically; everything else is shown, not auto-applied.</p>');

@@ -48,6 +48,8 @@ eq(R.ownRankForTotal(2, 0, 2, 1), 0, 'manual lowering below floor snaps to floor
 eq(R.ownRankForTotal(5, 0, 2, 1), 2, 'manual rank 5 with given 3 -> own 2');
 eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0), true, 'bonus-only card removed when all given amounts go');
 eq(R.shouldRemoveCard({ ownRank: 1 }, 0, 0, 0), false, 'trained card survives removal of all given amounts');
+eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0, 0, true), false, 'Rank-0 card held by a race/class record survives prune (?v=47.7)');
+eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0, 0, false), true, 'Rank-0 card with no record is still pruned (?v=47.7)');
 // Group bonuses
 const healCard = { name: "NATURE'S BREATH", kind: 'spell', stat: '' };
 eq(R.groupBonusFor(healCard, 'Lifebringer', '', null, ['Heal', 'Interrupt', 'Passive']), 1, 'Lifebringer Heal via keywords');
@@ -182,6 +184,7 @@ eq(R.combinedFloor(0, 0, 0, 3), 3, 'background floor 3 alone');
 eq(R.ownRankForTotal(2, 0, 0, 0, 3), 0, 'lowering below background floor snaps to floor (own 0, display 3)');
 eq(R.ownRankForTotal(5, 0, 0, 0, 3), 2, 'rank 5 with background 3 -> own 2');
 eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0, 3), false, 'background-only card survives while background gives it');
+eq(R.shouldRemoveCard({ ownRank: 0, backgroundRank: 3 }, 0, 0, 0, 0), false, 'Rank-0 card with a background floor survives prune (?v=47.7)');
 (function () {
   var c = R.foldBackgroundRank({ background: true, backgroundRank: 3, ownRank: 0 });
   eq(c.ownRank, 3, 'fold: background 3 becomes trained 3');

@@ -184,7 +184,15 @@
     if (t < floor) t = floor;
     return t - floor;
   }
-  function shouldRemoveCard(card, gearGiven, raceGiven, groupGiven, backgroundGiven) {
+  function shouldRemoveCard(card, gearGiven, raceGiven, groupGiven, backgroundGiven, heldByRaceClass) {
+    // A card still held by a race/class record must survive: a negative
+    // grant can fold its trained rank to 0 while held, and the record is
+    // the only way those ranks come back when the race/class leaves
+    // (?v=47.7: Unarmed Combat 1 folded to 0 by Spellforge Smith was
+    // pruned here, so clearing the class had no card to restore into).
+    // A card with a background protection floor is held the same way.
+    // Only a card with nothing holding it goes.
+    if (heldByRaceClass || (card.backgroundRank || 0) > 0) return false;
     return (card.ownRank || 0) <= 0 && combinedFloor(gearGiven, raceGiven, groupGiven, backgroundGiven) <= 0;
   }
   /* Background ranks are trained ranks, and backgroundRank is the
