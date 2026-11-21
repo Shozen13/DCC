@@ -207,7 +207,7 @@
   function groupGivenFor(card) {
     var lib = findLib(card.name);
     var kw = keywordCache[R.normName(card.name)] || [];
-    return R.groupBonusFor(card, state.race, state.class, lib, kw);
+    return R.groupBonusFor(card, state.race, state.class, lib, kw, state.floor);
   }
   function backgroundGivenFor(card) {
     // Background ranks are trained ranks (folded into ownRank on load by
@@ -261,7 +261,7 @@
     var race = 0;
     var lib = findLib(card.name);
     var kw = keywordCache[R.normName(card.name)] || [];
-    var group = R.groupBonusFor(card, d.race, d.class, lib, kw);
+    var group = R.groupBonusFor(card, d.race, d.class, lib, kw, d.floor);
     var bg = backgroundGivenFor(card);
     var rank = Math.min(R.displayRank(card, gear, race, group, bg), remoteRankCapFor(card, d));
     return { rank: rank, gear: gear, race: race, group: group, bg: bg, eff: R.effectiveRank(rank, card, d.race, d.class) };
@@ -566,14 +566,24 @@
     var card = findCard(skillName, kind);
     var applied;
     if (!card) {
+      // A penalty cannot apply to a skill you do not have (book rule),
+      // so a negative grant on a missing card creates nothing.
+      if (amount <= 0) return;
       var lib = findLib(skillName);
       applied = Math.min(amount, 10);
       card = { id: uid(), name: lib ? lib.name : skillName, kind: kind, ownRank: applied, stat: lib && lib.stat ? lib.stat.toLowerCase() : (kind === 'spell' ? 'int' : 'str'), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, rcFolded: true };
       (kind === 'spell' ? state.spells : state.skills).push(card);
     } else {
       var before = cardRank(card);
-      applied = Math.max(0, Math.min(amount, 10 - before)); // cap Rank 10 at selection
-      if (applied <= 0) return;
+      if (amount >= 0) {
+        applied = Math.max(0, Math.min(amount, 10 - before)); // cap Rank 10 at selection
+      } else {
+        // A penalty folds into the trained rank, but never below 0.
+        // The record keeps the ACTUAL amount taken, so removal
+        // restores exactly what was lost.
+        applied = Math.max(-(card.ownRank || 0), amount);
+      }
+      if (applied === 0) return;
       // Race/class grants are trained ranks: fold the amount into
       // ownRank. The raceClassApplied entry stays as the record of how
       // much to take back off if this race/class leaves.
@@ -601,42 +611,74 @@
   function syncMoveBonus() {
     if (state.raceClassMoveApplied) {
       var a = state.raceClassMoveApplied;
-      state.moveVal = Math.max(a.ownBefore, state.moveVal - a.amount);
+      state.moveVal = Math.max(num(a.ownBefore, state.moveVal), state.moveVal - num(a.amount, 0));
+      if (a.stepBefore !== undefined) state.stepVal = Math.max(num(a.stepBefore, state.stepVal), state.stepVal - num(a.stepAmount, 0));
       state.raceClassMoveApplied = null;
     }
-    var bonus = R.tigranMoveBonus(state.race, state.class);
-    if (bonus > 0) {
-      state.raceClassMoveApplied = { amount: bonus, ownBefore: state.moveVal };
-      state.moveVal = state.moveVal + bonus;
+    var bonus = R.raceClassMoveBonus(state.race, state.class);
+    if (bonus.move > 0 || bonus.step > 0) {
+      state.raceClassMoveApplied = { amount: bonus.move, stepAmount: bonus.step, ownBefore: state.moveVal, stepBefore: state.stepVal };
+      state.moveVal = state.moveVal + bonus.move;
+      state.stepVal = state.stepVal + bonus.step;
     }
   }
-  /* Tendrils (Symbiote: Anti Venom) is auto-assigned: picking the race
-   * creates the TENDRILS attack card if it has none, and its rank always
-   * equals the current floor. The card leaves with the race. It is not a
-   * +1 grant, so it never goes through applyFixedBonus / raceClassApplied
-   * (that would add its rank on top of the floor-synced ownRank). */
-  var TENDRILS_RACE = 'Symbiote: Anti Venom';
-  function tendrilsCard() { return findCard('TENDRILS', 'skill'); }
-  function ensureTendrilsCard() {
-    var card = tendrilsCard();
+  /* Floor-driven natural attacks (?v=47.2 Tendrils, ?v=47.6 Tongue
+   * Lash): picking the race auto-assigns the attack card if it has
+   * none, and its rank always equals the current floor. The card leaves
+   * with the race. It is not a +N grant, so it never goes through
+   * applyFixedBonus / raceClassApplied (that would add its rank on top
+   * of the floor-synced ownRank). Keep in step with
+   * R.FLOOR_ATTACK_NAMES in rules.js (the group-bonus exclusion). */
+  var FLOOR_ATTACKS = [
+    { race: 'Symbiote: Anti Venom', name: 'TENDRILS', stat: 'int', title: 'Symbiote Tendrils' },
+    { race: 'Lizardfolk', name: 'TONGUE LASH', stat: 'dex', title: 'Lizardfolk Tongue Lash' }
+  ];
+  function floorAttackForRace(raceName) {
+    for (var i = 0; i < FLOOR_ATTACKS.length; i++) if (FLOOR_ATTACKS[i].race === raceName) return FLOOR_ATTACKS[i];
+    return null;
+  }
+  function floorAttackCard(attackName) { return findCard(attackName, 'skill'); }
+  function floorAttackSpecForCard(card) {
+    if (!card) return null;
+    var key = R.normName(card.name);
+    for (var i = 0; i < FLOOR_ATTACKS.length; i++) {
+      if (R.normName(FLOOR_ATTACKS[i].name) === key && state.race === FLOOR_ATTACKS[i].race) return FLOOR_ATTACKS[i];
+    }
+    return null;
+  }
+  function isFloorAttackCard(card) { return !!floorAttackSpecForCard(card); }
+  function ensureFloorAttackCard(raceName) {
+    var spec = floorAttackForRace(raceName);
+    if (!spec) return null;
+    var card = floorAttackCard(spec.name);
     if (!card) {
-      var bc = bookCheckFor('TENDRILS');
-      card = { id: uid(), name: 'TENDRILS', kind: 'skill', ownRank: Math.max(1, state.floor), stat: 'int', checkType: (bc && bc.check) || 'Evade Check', effect: '', used: false, gearGrants: {} };
+      var bc = bookCheckFor(spec.name);
+      card = { id: uid(), name: spec.name, kind: 'skill', ownRank: Math.max(1, state.floor), stat: spec.stat, checkType: (bc && bc.check) || 'Evade Check', effect: '', used: false, gearGrants: {} };
       state.skills.push(card);
     }
-    syncTendrilsRank();
+    syncFloorAttackRank(raceName);
     return card;
   }
-  function syncTendrilsRank() {
-    if (state.race !== TENDRILS_RACE) return null;
-    var card = tendrilsCard();
+  function syncFloorAttackRank(raceName) {
+    var spec = floorAttackForRace(raceName || state.race);
+    if (!spec) return null;
+    var card = floorAttackCard(spec.name);
     if (card) card.ownRank = Math.max(1, state.floor);
     return card;
   }
-  function removeTendrilsCard() {
-    var card = tendrilsCard();
+  function removeFloorAttackCard(raceName) {
+    var spec = floorAttackForRace(raceName);
+    if (!spec) return;
+    var card = floorAttackCard(spec.name);
     if (card) state.skills = state.skills.filter(function (c) { return c !== card; });
   }
+  /* Back-compat wrappers for the Symbiote-only names (cloud.js calls
+   * syncTendrilsRank). */
+  var TENDRILS_RACE = 'Symbiote: Anti Venom';
+  function tendrilsCard() { return floorAttackCard('TENDRILS'); }
+  function ensureTendrilsCard() { return ensureFloorAttackCard(TENDRILS_RACE); }
+  function syncTendrilsRank() { return syncFloorAttackRank(); }
+  function removeTendrilsCard() { removeFloorAttackCard(TENDRILS_RACE); }
   async function setRaceClass(kind, name) {
     var oldName = kind === 'race' ? state.race : state.class;
     if (oldName === name) return;
@@ -658,8 +700,8 @@
       });
     }
     if (kind === 'race') {
-      if (oldName === TENDRILS_RACE && name !== TENDRILS_RACE) removeTendrilsCard();
-      if (name === TENDRILS_RACE) ensureTendrilsCard();
+      if (oldName && floorAttackForRace(oldName)) removeFloorAttackCard(oldName);
+      if (floorAttackForRace(name)) ensureFloorAttackCard(name);
     }
     syncMoveBonus();
     pruneBonusCards();
@@ -917,7 +959,8 @@
     // inspector does: leveling raises the trained rank, while the Rank
     // shown and edited here is the displayed rank (trained + bonuses).
     var rank = cardRank(card);
-    var tendrilsLocked = R.normName(card.name) === 'tendrils' && state.race === TENDRILS_RACE;
+    var faSpec = floorAttackSpecForCard(card);
+    var tendrilsLocked = !!faSpec;
     var eff = R.effectiveRank(rank, card, state.race, state.class);
     var group = groupGivenFor(card);
     var lib = findLib(card.name);
@@ -933,7 +976,7 @@
     var open = !!(state.cardOpen && state.cardOpen[card.id]);
     return '<details class="card"' + (open ? ' open' : '') + ' ontoggle="DCC.setCardOpen(\'' + card.id + '\',this.open)"><summary>' + esc(card.name) + ' — Rank ' + rank + (card.used ? ' (Used)' : '') + '</summary>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(card.name) + '" onchange="DCC.renameCard(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
-      + '<label>Rank ' + (tendrilsLocked ? '<select disabled title="Rank equals your Floor (Symbiote Tendrils)"><option>' + rank + '</option></select>' : '<select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select>') + '</label>'
+      + '<label>Rank ' + (tendrilsLocked ? '<select disabled title="Rank equals your Floor (' + faSpec.title + ')"><option>' + rank + '</option></select>' : '<select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select>') + '</label>'
       + '<label>Stat ' + (statNoStat
         ? '<select disabled title="No associated stat in the book (Passive), locked"><option value="">\u2014</option></select>'
         : '<select ' + (statLocked ? 'disabled title="Book stat (see Rulebook box)"' : '') + ' onchange="DCC.setCardStat(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + statOptions + '</select>') + '</label>'
@@ -2255,8 +2298,8 @@
   var levelUpResults = {};
   function levelUpEligible(card, minBase, maxBase) {
     var own = parseInt(card.ownRank, 10) || 0;
-    // Tendrils rank is the floor, not a trained rank: it never rolls.
-    if (R.normName(card.name) === 'tendrils' && state.race === TENDRILS_RACE) return false;
+    // A floor-driven attack's rank is the floor, not a trained rank: it never rolls.
+    if (isFloorAttackCard(card)) return false;
     return !!card.used && own >= minBase && own <= maxBase && own < rankCapFor(card);
   }
   function levelUpRows() {
@@ -2337,7 +2380,7 @@
     var next = state.floor + 1;
     if (!confirm('Advance to Floor ' + next + '? Used skills and spells at base rank 5 or higher get an advancement roll next.')) return;
     state.floor = next;
-    syncTendrilsRank();
+    syncFloorAttackRank();
     saveSoon();
     renderAll();
     openLevelUp(null, 5, Infinity);
@@ -2447,7 +2490,7 @@
     },
     floorDelta: function (delta) {
       state.floor = Math.max(1, state.floor + delta);
-      syncTendrilsRank();
+      syncFloorAttackRank();
       saveSoon(); renderAll();
     },
     advanceFloor: advanceFloor,
@@ -2465,8 +2508,8 @@
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
       if (!card) return;
-      // Tendrils rank is the floor, not a trained rank.
-      if (R.normName(card.name) === 'tendrils' && state.race === TENDRILS_RACE) return;
+      // A floor-driven attack's rank is the floor, not a trained rank.
+      if (isFloorAttackCard(card)) return;
       // The displayed rank cannot be set above the cap (15, or 20 for a
       // skill/spell a race/class clause raises).
       var total = Math.min(num(value, 1), rankCapFor(card));
@@ -3064,7 +3107,7 @@
     onChange('f-name', function (v) { state.name = v; });
     onChange('f-number', function (v) { state.number = v; });
     onChange('f-level', function (v) { state.level = Math.max(1, Math.min(250, num(v, 1))); });
-    onChange('f-floor', function (v) { state.floor = Math.max(1, num(v, 1)); syncTendrilsRank(); });
+    onChange('f-floor', function (v) { state.floor = Math.max(1, num(v, 1)); syncFloorAttackRank(); });
     onChange('f-armor', function (v) { state.ownArmor = Math.max(0, num(v, 0)); });
     onChange('f-evade-buffs', function (v) { state.evadeBuffs = num(v, 0); });
     onChange('f-dr-buffs', function (v) { state.drBuffs = num(v, 0); });
@@ -3284,7 +3327,7 @@
       if (state.activeTab) showTab(state.activeTab); else renderAll();
       // Keep any bonus-created cards consistent with current sources.
       syncGearGrants();
-      syncTendrilsRank();
+      syncFloorAttackRank();
       renderAll();
     } else {
       state.manaCurrent = 1;

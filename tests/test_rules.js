@@ -226,6 +226,72 @@ eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0, 3), false, 'background-only card 
   var none = R.foldRaceClassRank({ name: 'Dodge', kind: 'skill', ownRank: 2 }, []);
   eq(none.ownRank, 2, 'fold with no entries leaves ownRank alone but still marks folded');
   eq(none.rcFolded, true, 'fold marks folded even with no entries');
+  // Negative grants (?v=47.6): a penalty folds off the trained rank,
+  // clamped at 0, and the fold is idempotent like the positive one.
+  var neg = R.foldRaceClassRank({ name: 'UNARMED COMBAT', kind: 'skill', ownRank: 4 },
+    [{ source: 'class', sourceName: 'Spellforge Smith', skillName: 'UNARMED COMBAT', kind: 'skill', amount: -2 }]);
+  eq(neg.ownRank, 2, 'fold: -2 penalty on own 4 -> trained 2');
+  var negClamp = R.foldRaceClassRank({ name: 'UNARMED COMBAT', kind: 'skill', ownRank: 1 },
+    [{ source: 'class', sourceName: 'Spellforge Smith', skillName: 'UNARMED COMBAT', kind: 'skill', amount: -2 }]);
+  eq(negClamp.ownRank, 0, 'fold: -2 penalty on own 1 clamps at 0');
+  eq(R.foldRaceClassRank(neg, [{ source: 'class', sourceName: 'Spellforge Smith', skillName: 'UNARMED COMBAT', kind: 'skill', amount: -2 }]).ownRank, 2,
+    'fold: negative fold is idempotent (no second take)');
+})();
+
+// ?v=47.6: Spellforge Smith INT group (floor-gated) and Lizardfolk.
+// The INT group is +1 for INT-stat skills AND spells from Floor 6,
+// 0 below Floor 6, and never applies to floor-driven attacks.
+(function () {
+  var rc = require('../data/races_classes.json');
+  var libData = require('../data/skills_spells.json');
+  var byName = {};
+  libData.forEach(function (e) { byName[e.name.toLowerCase()] = e; });
+  var realLib = function (n) { return byName[(n || '').toLowerCase()] || null; };
+  var sf = rc.find(function (e) { return e.name === 'Spellforge Smith'; });
+  var lz = rc.find(function (e) { return e.name === 'Lizardfolk'; });
+  // Spellforge Smith parses
+  eq(R.parseRaceClassStats(sf), { str: 0, con: 0, dex: 1, int: 2, cha: 0 }, 'Spellforge Smith: +2 INT, +1 DEX');
+  eq(R.parseFixedSkillBonuses(sf, realLib).map(function (g) { return g.name + ':' + g.amount; }),
+    ['Smithing:2', 'FIREBALL:1', 'MAGIC MISSILE:1', 'Arcane:1', 'Engineering:1', 'UNARMED COMBAT:-2'],
+    'Spellforge Smith: fixed grants incl. -2 Unarmed Combat, no bogus INT-group card');
+  eq(R.parseChoiceGrants(sf), [], 'Spellforge Smith: no choice grants');
+  eq(R.parseCapGrants(sf, realLib).map(function (r) { return r.name; }), ['Smithing'], 'Spellforge Smith: Smithing to Rank 20');
+  eq(R.capForCard({ name: 'Smithing', kind: 'skill' }, R.parseCapGrants(sf, realLib), []), 20, 'cap: Smithing 20 under Spellforge Smith');
+  // INT group, floor-gated
+  eq(R.groupBonusFor({ name: 'FIREBALL', kind: 'spell', stat: 'int' }, '', 'Spellforge Smith', realLib('FIREBALL'), [], 3), 0, 'INT group: 0 below Floor 6 (spell)');
+  eq(R.groupBonusFor({ name: 'FIREBALL', kind: 'spell', stat: 'int' }, '', 'Spellforge Smith', realLib('FIREBALL'), [], 6), 1, 'INT group: +1 from Floor 6 (spell)');
+  eq(R.groupBonusFor({ name: 'Arcane', kind: 'skill', stat: 'int' }, '', 'Spellforge Smith', realLib('Arcane'), [], 6), 1, 'INT group: +1 from Floor 6 (skill)');
+  eq(R.groupBonusFor({ name: 'Arcane', kind: 'skill', stat: 'int' }, '', 'Spellforge Smith', realLib('Arcane'), [], 5), 0, 'INT group: 0 at Floor 5');
+  eq(R.groupBonusFor({ name: 'Arcane', kind: 'skill', stat: 'int' }, '', 'Spellforge Smith', realLib('Arcane'), []), 0, 'INT group: 0 when floor is unknown');
+  eq(R.groupBonusFor({ name: 'Smithing', kind: 'skill', stat: 'str' }, '', 'Spellforge Smith', realLib('Smithing'), [], 6), 0, 'INT group: 0 for a STR skill');
+  eq(R.groupBonusFor({ name: 'HANDGUN', kind: 'skill', stat: 'dex' }, '', 'Spellforge Smith', realLib('HANDGUN'), [], 6), 0, 'INT group: 0 for a DEX skill');
+  eq(R.groupBonusFor({ name: 'TENDRILS', kind: 'skill', stat: 'int' }, 'Symbiote: Anti Venom', 'Spellforge Smith', realLib('TENDRILS'), [], 6), 0, 'INT group: TENDRILS excluded at any floor');
+  eq(R.groupBonusFor({ name: 'TONGUE LASH', kind: 'skill', stat: 'dex' }, 'Lizardfolk', 'Spellforge Smith', realLib('TONGUE LASH'), [], 6), 0, 'INT group: TONGUE LASH excluded at any floor');
+  eq(R.groupBonusFor({ name: 'Arcane', kind: 'skill', stat: 'int' }, '', 'Human', realLib('Arcane'), [], 6), 0, 'INT group: 0 without Spellforge Smith');
+  // Lizardfolk parses
+  eq(R.parseRaceClassStats(lz), { str: 0, con: 0, dex: 3, int: 0, cha: 0 }, 'Lizardfolk: +3 DEX');
+  eq(R.parseFixedSkillBonuses(lz, realLib).map(function (g) { return g.name + ':' + g.amount; }), ['Stealth:2'],
+    'Lizardfolk: +2 Stealth only (Tongue Lash is floor-driven, not a grant)');
+  eq(R.parseChoiceGrants(lz), [], 'Lizardfolk: no choice grants');
+  eq(R.parseCapGrants(lz, realLib), [], 'Lizardfolk: no Rank 20 clause');
+  eq(R.raceClassMoveBonus('Lizardfolk', ''), { move: 5, step: 5 }, 'Lizardfolk: +5 Move, +5 Step');
+  eq(R.raceClassMoveBonus('Tigran', ''), { move: 10, step: 0 }, 'Tigran: still +10 Move, no Step');
+  eq(R.raceClassMoveBonus('Obsidian Butterfly', ''), { move: 0, step: 0 }, 'Obsidian Butterfly: conditional +20ft Move (flying) is not applied');
+  eq(lz.benefits.indexOf('Custom race by Dukeofdoom.') >= 0, true, 'Lizardfolk carries the Dukeofdoom credit');
+  // TONGUE LASH data entry
+  var tl = realLib('TONGUE LASH');
+  eq(tl.kind, 'attack', 'TONGUE LASH kind is attack');
+  eq(tl.stat, 'DEX', 'TONGUE LASH stat is DEX');
+  eq(tl.base_damage, '1d6 + Dex Bludgeoning', 'TONGUE LASH damage is 1d6 + Dex Bludgeoning');
+  eq(tl.range, 'Melee', 'TONGUE LASH range is Melee');
+  eq(tl.upgrades, { 5: '+1d6 base damage', 10: '+1d6 base damage', 15: '+1d6 base damage' }, 'TONGUE LASH upgrades add +1d6 at 5/10/15');
+  eq(R.isAttackSkill('TONGUE LASH'), true, 'TONGUE LASH counts as an attack skill');
+  // Negative grants across the whole data file: only Spellforge Smith.
+  var negs = [];
+  rc.forEach(function (e) {
+    R.parseFixedSkillBonuses(e, realLib).forEach(function (g) { if (g.amount < 0) negs.push(e.name + ':' + g.name); });
+  });
+  eq(negs, ['Spellforge Smith:UNARMED COMBAT'], 'only Spellforge Smith has a negative grant in the whole file');
 })();
 
 
@@ -400,7 +466,7 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
     var rules = R.parseCapGrants(e, realLib);
     if (rules.length) caps[e.name] = rules;
   });
-  eq(Object.keys(caps).length, 22, 'cap clauses: 22 race/class entries have a Rank 20 clause');
+  eq(Object.keys(caps).length, 23, 'cap clauses: 23 race/class entries have a Rank 20 clause');
   eq(caps['Dwarf, Classic'].map(function (r) { return r.type; }), ['crafting'], 'Dwarf: all crafting skills');
   eq(caps['Elf, High'][0].category, 'cha', 'Elf, High: two CHA skills (choice)');
   eq(caps['Elf, High'][0].count, 2, 'Elf, High: pick two');
@@ -413,6 +479,7 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
   eq(caps['Spirit Healer'].map(function (r) { return r.name; }), ['HEAL OTHERS'], 'Spirit Healer: only Heal Others');
   eq(caps['Douchy Wizard School Wand-Maker'].map(function (r) { return r.name; }), ['Arcane'], 'Wand-Maker: Arcanist text resolves to the Arcane skill');
   eq(caps['Swashbuckler'][0].options, ['RAPIER', 'LONGSWORD'], 'Swashbuckler: Rapier or Longsword choice');
+  eq(caps['Spellforge Smith'].map(function (r) { return r.name; }), ['Smithing'], 'Spellforge Smith: Smithing to Rank 20');
   eq(R.capForCard({ name: 'Dodge', kind: 'skill' }, caps['Artist Alley Mogul'], []), 20, 'cap: fixed named skill');
   eq(R.capForCard({ name: 'Alchemy', kind: 'skill' }, caps['Dwarf, Classic'], []), 20, 'cap: crafting skill under Dwarf');
   eq(R.capForCard({ name: 'Cooking', kind: 'skill' }, caps['Dwarf, Classic'], []), 15, 'cap: Cooking has no crafting table, stays 15');

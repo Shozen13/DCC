@@ -1181,5 +1181,12 @@
     "stat": "INT",
     "check": "Evade Check",
     "reason": "Attack skill vs target Evade"
+  },
+  {
+    "name": "TONGUE LASH",
+    "kind": "attack",
+    "stat": "DEX",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
   }
 ]

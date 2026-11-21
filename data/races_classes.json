@@ -310,6 +310,16 @@
   "uncertain_reason": null
  },
  {
+  "benefits": "Gains +3 Dexterity, +2 Stealth, +5ft Move, and +5ft Step. Gain a Climb Movement, which allows you to automatically climb most surfaces, even ceilings. Limb Regeneration. See in total darkness. Tongue Lash: a natural attack at Rank = Floor Number, dealing 1d6 + Dexterity Mod Bludgeoning damage; add another d6 at Ranks 5, 10, and 15. Advantage against Insectoid creatures. Detriment: Vulnerable to Cold damage (double damage from Cold attacks).\n\nCustom race by Dukeofdoom.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Lizardfolk",
+  "prerequisites": null,
+  "source_book_page": null,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
   "benefits": "Gains +3 Intelligence and +2 Dexterity, +5 Arcane, +3 Salvage, and +2 in one crafting Skill of your choice and +1 in another crafting Skill of your choice. Gains a Tier 1 Arcanist table, and Arcane and one crafting skill can be raised to Rank 20.",
   "class_type": "Arcanist",
   "kind": "class",
@@ -826,6 +836,16 @@
   "name": "Swashbuckler",
   "prerequisites": null,
   "source_book_page": 158,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
+  "benefits": "Gains +2 Intelligence and +1 Dexterity, +2 Smithing, +1 Fireball, +1 Magic Missile, +1 Arcane, and +1 Engineering. Gains Tier 1 Smithing and Arcanist tables. Uses Intelligence instead of Strength for Smithing. Smithing can be raised to Rank 20. Advantage on Smithing checks. All Intelligence-based Skills gain one Rank, starting on the 6th Floor (no bonus on Floors 1-5). Member of Club Desperado. Detriments: -2 Unarmed Combat; the Intelligence-based Skills bonus does not apply before the 6th Floor.",
+  "class_type": "Arcanist",
+  "kind": "class",
+  "name": "Spellforge Smith",
+  "prerequisites": null,
+  "source_book_page": null,
   "uncertain": false,
   "uncertain_reason": null
  }

@@ -239,7 +239,9 @@
     (applied || []).forEach(function (a) {
       if (a.kind === card.kind && normName(a.skillName) === key) total += parseInt(a.amount, 10) || 0;
     });
-    if (total > 0) card.ownRank = (card.ownRank || 0) + total;
+    // A negative total is a folded penalty (Spellforge Smith -2 Unarmed
+    // Combat): it comes off the trained rank the same way, never below 0.
+    if (total !== 0) card.ownRank = Math.max(0, (card.ownRank || 0) + total);
     card.rcFolded = true;
     return card;
   }
@@ -311,14 +313,10 @@
     var out = [];
     if (!entry || !findLib) return out;
     var b = (entry.benefits || '').replace(/Rise, Dead Minion!/g, 'RISEDEADMINION');
-    var re = /\+(\d+)\s+([^.;+]+)/g;
-    var m;
-    while ((m = re.exec(b)) !== null) {
-      var segment = m[2];
-      if (/choice|chosen/i.test(segment)) continue; // choice grants live in Choices, not here
-      var amt = parseInt(m[1], 10);
+    function pushNames(segment, amt) {
+      if (/choice|chosen/i.test(segment)) return; // choice grants live in Choices, not here
       var txt = segment.replace(/\bSkills?\b|\bSpells?\b/gi, '').trim().replace(/,$/, '').trim().replace(/\s+and\s*$/, '').trim();
-      if (!txt) continue;
+      if (!txt) return;
       txt.split(/,|\s+and\s+/).forEach(function (raw) {
         var name = raw.trim().replace(/\([^)]*\)/g, '').trim();
         name = name.replace(/^\+?\d+\s*/, '').trim();
@@ -332,6 +330,21 @@
         if (!lib) return; // library-only: stats, DR, group wording never become cards
         out.push({ name: lib.name, kind: lib.kind, amount: amt });
       });
+    }
+    var re = /\+(\d+)\s+([^.;+]+)/g;
+    var m;
+    while ((m = re.exec(b)) !== null) {
+      pushNames(m[2], parseInt(m[1], 10));
+    }
+    /* Negative grants (detriments): "-2 Unarmed Combat" (Spellforge
+     * Smith). Same segment rules as the positive pass, with the amount
+     * stored negative so applyFixedBonus folds the penalty into
+     * ownRank and reverseSource restores it. Names are library-
+     * validated, so prose like "-4 Charisma" (Tigran) or "-1" check
+     * penalties never become grants. */
+    var nre = /-(\d+)\s+([^.;+\-]+)/g;
+    while ((m = nre.exec(b)) !== null) {
+      pushNames(m[2], -parseInt(m[1], 10));
     }
     return out;
   }
@@ -503,11 +516,22 @@
   var EXPLOSIVE_SKILLS = ['bomb surgeon', 'improvised explosive device', 'explosives handling', 'goblin explosives', 'incendiary device handling'];
   var CRAFTING_SKILLS = ['alchemy', 'arcane', 'calligraphy', 'engineering', 'explosives handling', 'goblin explosives', 'smithing', 'tattoo artistry'];
 
+  /* Floor-driven natural attacks (see app.js FLOOR_ATTACKS): their
+   * rank is the floor, never a trained rank, so no group bonus applies
+   * to them. Keep in step with the app.js table. */
+  var FLOOR_ATTACK_NAMES = ['tendrils', 'tongue lash'];
+
   /* Group bonuses, as Rank adjustments. lib is the Chapter 4 entry for
    * the card (or null for custom cards); keywords is the spell's
-   * keyword list (or []). Returns the total group amount. */
-  function groupBonusFor(card, raceName, className, lib, keywords) {
+   * keyword list (or []). floor is the character's current floor
+   * (missing floor counts as 0, so a floor-gated group stays off).
+   * Returns the total group amount. */
+  function groupBonusFor(card, raceName, className, lib, keywords, floor) {
     var key = normName(card.name);
+    // Floor-driven natural attacks (TENDRILS, TONGUE LASH) own their
+    // rank from the floor: no group bonus ever applies to them, or a
+    // Spellforge Smith's INT group would lift TENDRILS off its floor.
+    if (FLOOR_ATTACK_NAMES.indexOf(key) >= 0) return 0;
     var statKey = card.stat || '';
     var isTrap = TRAP_SKILLS.indexOf(key) >= 0;
     var isExplosive = EXPLOSIVE_SKILLS.indexOf(key) >= 0;
@@ -516,6 +540,7 @@
     var isMuscleMove = ['running', 'climbing', 'swimming', 'jumping'].indexOf(key) >= 0;
     var isEfiSpell = card.kind === 'spell' && lib && /Electric|Fire|Ice/.test((lib.base_damage || '') + ' ' + (lib.effect || ''));
     var isHealSpell = card.kind === 'spell' && (keywords || []).some(function (k) { return k.toLowerCase() === 'heal'; });
+    var isInt = (lib && lib.stat === 'INT') || statKey === 'int';
     var total = 0;
     [raceName, className].forEach(function (name) {
       if (!name) return;
@@ -527,6 +552,11 @@
       if ((name === 'Boring Ol\u2019 Monk' || name === 'Street Monk') && card.kind === 'skill' && lib && lib.kind === 'attack' && statKey === 'dex') total += 1;
       if (name === 'Elemental Monk' && isEfiSpell) total += 1;
       if (name === 'Lifebringer' && isHealSpell) total += 1;
+      // Spellforge Smith: +1 to all Intelligence-based Skills, skills
+      // AND spells (same as the Lifebringer Heal group), but only from
+      // the 6th Floor — the master's eye sharpens once the forge is
+      // proven. Below Floor 6 the group is 0.
+      if (name === 'Spellforge Smith' && isInt && (floor == null ? 0 : floor) >= 6) total += 1;
     });
     return total;
   }
@@ -552,7 +582,21 @@
   }
 
   function tigranMoveBonus(raceName, className) {
-    return (raceName === 'Tigran' || className === 'Tigran') ? 10 : 0;
+    return raceClassMoveBonus(raceName, className).move;
+  }
+
+  /* Flat Move/Step bonuses from a race/class (Tigran +10 Move;
+   * Lizardfolk +5 Move, +5 Step). Hardcoded by name on purpose: the
+   * benefits text also carries conditional Move ("+20ft Move when
+   * flying", Obsidian Butterfly), so a text parser would over-apply. */
+  function raceClassMoveBonus(raceName, className) {
+    var out = { move: 0, step: 0 };
+    [raceName, className].forEach(function (name) {
+      if (!name) return;
+      if (name === 'Tigran') out.move += 10;
+      if (name === 'Lizardfolk') { out.move += 5; out.step += 5; }
+    });
+    return out;
   }
 
 
@@ -627,6 +671,7 @@
     'UNARMED COMBAT': 'Melee Attack', "WRASSLIN'": 'Melee Attack',
     'HERDING WEAPONS': 'Melee Attack', 'LANCE': 'Melee Attack', 'POLEARM': 'Melee Attack', 'QUARTERSTAFF': 'Melee Attack',
     'TENDRILS': 'Melee Attack',
+    'TONGUE LASH': 'Melee Attack',
     'BOW': 'Ranged Attack', 'CROSSBOW': 'Ranged Attack', 'HANDGUN': 'Ranged Attack', 'JAVELIN': 'Ranged Attack',
     'SHOTGUN': 'Ranged Attack', 'SHURIKEN': 'Ranged Attack', 'SLINGSHOT': 'Ranged Attack'
   };
@@ -1036,7 +1081,8 @@
     parseChoiceGrants: parseChoiceGrants, groupBonusFor: groupBonusFor,
     parseCapGrants: parseCapGrants, capForCard: capForCard, CRAFTING_SKILLS: CRAFTING_SKILLS,
     magePenalty: magePenalty, effectiveRank: effectiveRank,
-    attackDamageStat: attackDamageStat, tigranMoveBonus: tigranMoveBonus,
+    attackDamageStat: attackDamageStat, tigranMoveBonus: tigranMoveBonus, raceClassMoveBonus: raceClassMoveBonus,
+    FLOOR_ATTACK_NAMES: FLOOR_ATTACK_NAMES,
     normName: normName, clampInt: clampInt, normalizeSlot: normalizeSlot, parseItemBonuses: parseItemBonuses,
     GEAR_SLOT_LABELS: GEAR_SLOT_LABELS, SLOT_LIMITS: SLOT_LIMITS, CONSUMABLE_SUBTYPES: CONSUMABLE_SUBTYPES,
     placementFamily: placementFamily, normalizeKind: normalizeKind,
