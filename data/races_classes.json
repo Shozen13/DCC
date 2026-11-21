@@ -300,6 +300,16 @@
   "uncertain_reason": null
  },
  {
+  "benefits": "Well, well. You've bonded with a Klyntar \u2014 a living symbiote, shifting goo with white eyes, and it speaks as 'we.' It stepped straight out of an Earth comic book and into the dungeon, a hero from the pages made real. Most of its kind are hunters and killers. Yours is a healer. It cures disease, addiction, and radiation with a touch, mends your wounds, and shields your mind from the hive. Fire and sonics \u2014 the things that shred other symbiotes \u2014 cannot touch it. But its touch is corrosive to its own kind, and they will hate you on sight. Remember, crawler: it is not a costume. It is a partner. It will keep you alive. The only question is what it will want in return.\n\n\u2022 Size: Medium (4)\n\u2022 +4 Intelligence, +2 Constitution\n\u2022 +1 Heal Others, Nature's Breath, and Magic Missile Spells.\n\u2022 +1 Regeneration and Wisp Armor Spells.\n\u2022 Healing-type Spells heal one additional Health Bar, starting on the 6th Floor (no bonus on Floors 1-5)\n\u2022 Immune to Fire damage\n\u2022 See in total darkness\n\u2022 Tendrils:\n\u2013 To Hit: d20 + Rank + INT Mod\n\u2013 Damage: 1d8 + INT Mod Acid (Rank equals Floor Number; add one more d8 at Ranks 5, 10, and 15)\n\u2013 Reach +5 ft\n\u2022 Double mana regeneration (no limit): a Short Rest restores all of your Mana instead of half\n\u2022 Detriments:\n\u2013 Vulnerable to Necrotic damage (double damage from Necrotic attacks)\n\u2013 Cannot worship a deity\n\u2013 All Charisma-based skill checks at -1\n\u2013 Disadvantage on Charisma-based skill checks against other symbiotes\n\nCustom race by Shozen13, based on Marvel's Anti-Venom.",
+  "class_type": null,
+  "kind": "race",
+  "name": "Symbiote: Anti Venom",
+  "prerequisites": null,
+  "source_book_page": null,
+  "uncertain": false,
+  "uncertain_reason": null
+ },
+ {
   "benefits": "Gains +3 Intelligence and +2 Dexterity, +5 Arcane, +3 Salvage, and +2 in one crafting Skill of your choice and +1 in another crafting Skill of your choice. Gains a Tier 1 Arcanist table, and Arcane and one crafting skill can be raised to Rank 20.",
   "class_type": "Arcanist",
   "kind": "class",

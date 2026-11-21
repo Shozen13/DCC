@@ -1174,5 +1174,12 @@
     "stat": null,
     "check": null,
     "reason": "Spell Attack/Passive Type not captured in extraction; left editable"
+  },
+  {
+    "name": "TENDRILS",
+    "kind": "attack",
+    "stat": "INT",
+    "check": "Evade Check",
+    "reason": "Attack skill vs target Evade"
   }
 ]

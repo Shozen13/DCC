@@ -608,6 +608,7 @@
     'FOOT SOLDIER': 'Melee Attack', 'NOGGIN NOCKER': 'Melee Attack', 'PUGILISM': 'Melee Attack',
     'UNARMED COMBAT': 'Melee Attack', "WRASSLIN'": 'Melee Attack',
     'HERDING WEAPONS': 'Melee Attack', 'LANCE': 'Melee Attack', 'POLEARM': 'Melee Attack', 'QUARTERSTAFF': 'Melee Attack',
+    'TENDRILS': 'Melee Attack',
     'BOW': 'Ranged Attack', 'CROSSBOW': 'Ranged Attack', 'HANDGUN': 'Ranged Attack', 'JAVELIN': 'Ranged Attack',
     'SHOTGUN': 'Ranged Attack', 'SHURIKEN': 'Ranged Attack', 'SLINGSHOT': 'Ranged Attack'
   };

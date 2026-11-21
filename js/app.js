@@ -2073,13 +2073,47 @@
       setRaceClass(kind, c.name);
     });
   }
+  /* Render race/class benefit text for the "?" popup: bullet lines
+   * (starting with "\u2022", and "\u2013" sub-bullets) are left-aligned,
+   * while lore/credit paragraphs in a bulleted entry keep the centered
+   * look of the old sheet. Entries without bullets render exactly as
+   * before (one plain paragraph). */
+  function formatRaceClassBenefits(benefits) {
+    var text = esc(benefits || '');
+    var paras = text.split('\n\n');
+    var hasBullets = paras.some(function (para) {
+      return para.split('\n').some(function (l) { return l.charAt(0) === '\u2022' || l.charAt(0) === '\u2013'; });
+    });
+    return paras.map(function (para) {
+      var lines = para.split('\n');
+      var bullet = lines.some(function (l) { return l.charAt(0) === '\u2022' || l.charAt(0) === '\u2013'; });
+      if (!bullet) {
+        return hasBullets
+          ? '<p style="text-align:center">' + lines.join('<br>') + '</p>'
+          : '<p>' + lines.join('<br>') + '</p>';
+      }
+      var out = '';
+      var open = false;
+      lines.forEach(function (l) {
+        var isBullet = l.charAt(0) === '\u2022' || l.charAt(0) === '\u2013';
+        var isSub = l.charAt(0) === '\u2013';
+        if (isBullet && !open) { out += '<div style="text-align:left">'; open = true; }
+        if (!isBullet && open) { out += '</div>'; open = false; }
+        out += isBullet
+          ? '<div' + (isSub ? ' style="padding-left:1.2em"' : '') + '>' + l + '</div>'
+          : l + '<br>';
+      });
+      if (open) out += '</div>';
+      return out.replace(/<br>$/, '');
+    }).join('');
+  }
   async function showRaceClassInfo(kind) {
     var name = kind === 'race' ? state.race : state.class;
     if (!name) { alert('No ' + kind + ' selected yet.'); return; }
     var list = await ensureRaces();
     var entry = list.find(function (e) { return e.kind === kind && R.normName(e.name) === R.normName(name); });
     if (!entry) { alert('No rulebook entry found for ' + name + '.'); return; }
-    showInfo(entry.name + ' (' + kind + ')', '<p>' + esc(entry.benefits || '') + '</p>'
+    showInfo(entry.name + (entry.source_book_page ? ' (' + kind + ')' : ' (Custom race)'), formatRaceClassBenefits(entry.benefits)
       + (entry.prerequisites ? '<p><strong>Prerequisites:</strong> ' + esc(entry.prerequisites) + '</p>' : '')
       + (entry.source_book_page ? '<p>Book p.' + entry.source_book_page + '</p>' : '')
       + '<p class="hint">Text shown here is book text for reference. Only the auto-applied effects listed in the README are applied automatically; everything else is shown, not auto-applied.</p>');
