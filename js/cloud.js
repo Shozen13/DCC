@@ -913,6 +913,7 @@ function applyCloudState(data, id) {
   window.DCC.setState(st);
   window.DCC.ensureUnarmed();
   window.DCC.syncGearGrants();
+  window.DCC.syncTendrilsRank();
   window.DCC.saveNow();
   window.DCC.showTab((data && data.activeTab) || 'vitals');
   window.DCC.renderAll();

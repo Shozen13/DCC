@@ -569,6 +569,33 @@
       state.moveVal = state.moveVal + bonus;
     }
   }
+  /* Tendrils (Symbiote: Anti Venom) is auto-assigned: picking the race
+   * creates the TENDRILS attack card if it has none, and its rank always
+   * equals the current floor. The card leaves with the race. It is not a
+   * +1 grant, so it never goes through applyFixedBonus / raceClassApplied
+   * (that would add its rank on top of the floor-synced ownRank). */
+  var TENDRILS_RACE = 'Symbiote: Anti Venom';
+  function tendrilsCard() { return findCard('TENDRILS', 'skill'); }
+  function ensureTendrilsCard() {
+    var card = tendrilsCard();
+    if (!card) {
+      var bc = bookCheckFor('TENDRILS');
+      card = { id: uid(), name: 'TENDRILS', kind: 'skill', ownRank: Math.max(1, state.floor), stat: 'int', checkType: (bc && bc.check) || 'Evade Check', effect: '', used: false, gearGrants: {} };
+      state.skills.push(card);
+    }
+    syncTendrilsRank();
+    return card;
+  }
+  function syncTendrilsRank() {
+    if (state.race !== TENDRILS_RACE) return null;
+    var card = tendrilsCard();
+    if (card) card.ownRank = Math.max(1, state.floor);
+    return card;
+  }
+  function removeTendrilsCard() {
+    var card = tendrilsCard();
+    if (card) state.skills = state.skills.filter(function (c) { return c !== card; });
+  }
   async function setRaceClass(kind, name) {
     var oldName = kind === 'race' ? state.race : state.class;
     if (oldName === name) return;
@@ -588,6 +615,10 @@
       R.parseFixedSkillBonuses(entry, findLib).forEach(function (s) {
         applyFixedBonus(kind, name, s.name, s.kind === 'spell' ? 'spell' : 'skill', s.amount);
       });
+    }
+    if (kind === 'race') {
+      if (oldName === TENDRILS_RACE && name !== TENDRILS_RACE) removeTendrilsCard();
+      if (name === TENDRILS_RACE) ensureTendrilsCard();
     }
     syncMoveBonus();
     pruneBonusCards();
@@ -845,6 +876,7 @@
     // inspector does: leveling raises the trained rank, while the Rank
     // shown and edited here is the displayed rank (trained + bonuses).
     var rank = cardRank(card);
+    var tendrilsLocked = R.normName(card.name) === 'tendrils' && state.race === TENDRILS_RACE;
     var eff = R.effectiveRank(rank, card, state.race, state.class);
     var group = groupGivenFor(card);
     var lib = findLib(card.name);
@@ -860,7 +892,7 @@
     var open = !!(state.cardOpen && state.cardOpen[card.id]);
     return '<details class="card"' + (open ? ' open' : '') + ' ontoggle="DCC.setCardOpen(\'' + card.id + '\',this.open)"><summary>' + esc(card.name) + ' — Rank ' + rank + (card.used ? ' (Used)' : '') + '</summary>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(card.name) + '" onchange="DCC.renameCard(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
-      + '<label>Rank <select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select></label>'
+      + '<label>Rank ' + (tendrilsLocked ? '<select disabled title="Rank equals your Floor (Symbiote Tendrils)"><option>' + rank + '</option></select>' : '<select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select>') + '</label>'
       + '<label>Stat ' + (statNoStat
         ? '<select disabled title="No associated stat in the book (Passive), locked"><option value="">\u2014</option></select>'
         : '<select ' + (statLocked ? 'disabled title="Book stat (see Rulebook box)"' : '') + ' onchange="DCC.setCardStat(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + statOptions + '</select>') + '</label>'
@@ -2182,6 +2214,8 @@
   var levelUpResults = {};
   function levelUpEligible(card, minBase, maxBase) {
     var own = parseInt(card.ownRank, 10) || 0;
+    // Tendrils rank is the floor, not a trained rank: it never rolls.
+    if (R.normName(card.name) === 'tendrils' && state.race === TENDRILS_RACE) return false;
     return !!card.used && own >= minBase && own <= maxBase && own < rankCapFor(card);
   }
   function levelUpRows() {
@@ -2262,6 +2296,7 @@
     var next = state.floor + 1;
     if (!confirm('Advance to Floor ' + next + '? Used skills and spells at base rank 5 or higher get an advancement roll next.')) return;
     state.floor = next;
+    syncTendrilsRank();
     saveSoon();
     renderAll();
     openLevelUp(null, 5, Infinity);
@@ -2344,7 +2379,7 @@
   window.DCC = {
     getState: function () { return state; },
     baseTotal: function () { var st = computeStats(); return R.STAT_KEYS.reduce(function (a, k) { return a + st[k].derived; }, 0); },
-    syncGearGrants: syncGearGrants, ensureUnarmed: ensureUnarmed,
+    syncGearGrants: syncGearGrants, syncTendrilsRank: syncTendrilsRank, ensureUnarmed: ensureUnarmed,
     setState: function (s) { state = s; },
     blankState: blankState,
     renderAll: renderAll, showTab: showTab, saveNow: saveNow, saveSoon: saveSoon, fitAllTextareas: fitAllTextareas,
@@ -2367,6 +2402,7 @@
     },
     floorDelta: function (delta) {
       state.floor = Math.max(1, state.floor + delta);
+      syncTendrilsRank();
       saveSoon(); renderAll();
     },
     advanceFloor: advanceFloor,
@@ -2384,6 +2420,8 @@
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
       if (!card) return;
+      // Tendrils rank is the floor, not a trained rank.
+      if (R.normName(card.name) === 'tendrils' && state.race === TENDRILS_RACE) return;
       // The displayed rank cannot be set above the cap (15, or 20 for a
       // skill/spell a race/class clause raises).
       var total = Math.min(num(value, 1), rankCapFor(card));
@@ -2973,7 +3011,7 @@
     onChange('f-name', function (v) { state.name = v; });
     onChange('f-number', function (v) { state.number = v; });
     onChange('f-level', function (v) { state.level = Math.max(1, Math.min(250, num(v, 1))); });
-    onChange('f-floor', function (v) { state.floor = Math.max(1, num(v, 1)); });
+    onChange('f-floor', function (v) { state.floor = Math.max(1, num(v, 1)); syncTendrilsRank(); });
     onChange('f-armor', function (v) { state.ownArmor = Math.max(0, num(v, 0)); });
     onChange('f-evade-buffs', function (v) { state.evadeBuffs = num(v, 0); });
     onChange('f-dr-buffs', function (v) { state.drBuffs = num(v, 0); });
@@ -3193,6 +3231,7 @@
       if (state.activeTab) showTab(state.activeTab); else renderAll();
       // Keep any bonus-created cards consistent with current sources.
       syncGearGrants();
+      syncTendrilsRank();
       renderAll();
     } else {
       state.manaCurrent = 1;
