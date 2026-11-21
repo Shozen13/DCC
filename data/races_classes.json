@@ -848,5 +848,15 @@
   "source_book_page": null,
   "uncertain": false,
   "uncertain_reason": null
+ },
+ {
+  "benefits": "\u2022 +5 Intelligence.\n\u2022 +3 Tactics.\n\u2022 +2 Bulk Bomb Spell.\n\u2022 +2 Bulk Barrier Spell.\n\u2022 Double mana regeneration.\n\u2022 Member of the Dungeon Book of the Floor Club.\n\u2022 Resistance to Psychic damage.\n\u2022 At the start of combat, you may change your damage type for that combat.\n\u2022 Once per day, you may roll a Tactics check to grant your party a Tactics buff that lasts 30 hours.\n\nCustom class by Dukeofdoom.",
+  "class_type": null,
+  "kind": "class",
+  "name": "Cardboard Hoarder",
+  "prerequisites": null,
+  "source_book_page": null,
+  "uncertain": false,
+  "uncertain_reason": null
  }
 ]

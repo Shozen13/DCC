@@ -297,6 +297,45 @@ eq(R.shouldRemoveCard({ ownRank: 0, backgroundRank: 3 }, 0, 0, 0, 0), false, 'Ra
   eq(negs, ['Spellforge Smith:UNARMED COMBAT'], 'only Spellforge Smith has a negative grant in the whole file');
 })();
 
+// ?v=47.10: Cardboard Hoarder class by Dukeofdoom (30/30, no detriments).
+// Class Type and flavor text pending from Dukeofdoom; Bulk Bomb / Bulk
+// Barrier are placeholder spell entries until he supplies the details.
+(function () {
+  var rc = require('../data/races_classes.json');
+  var libData = require('../data/skills_spells.json');
+  var byName = {};
+  libData.forEach(function (e) { byName[e.name.toLowerCase()] = e; });
+  var realLib = function (n) { return byName[(n || '').toLowerCase()] || null; };
+  var ch = rc.find(function (e) { return e.name === 'Cardboard Hoarder'; });
+  eq(ch.kind, 'class', 'Cardboard Hoarder is a class');
+  eq(ch.class_type, null, 'Cardboard Hoarder: no Class Type yet (pending from Dukeofdoom)');
+  eq(ch.prerequisites, null, 'Cardboard Hoarder: no prerequisites');
+  eq(R.parseRaceClassStats(ch), { str: 0, con: 0, dex: 0, int: 5, cha: 0 }, 'Cardboard Hoarder: +5 INT');
+  eq(R.parseFixedSkillBonuses(ch, realLib).map(function (g) { return g.name + ':' + g.kind + ':' + g.amount; }),
+    ['Tactics:utility:3', 'BULK BOMB:spell:2', 'BULK BARRIER:spell:2'],
+    'Cardboard Hoarder: +3 Tactics, +2 Bulk Bomb, +2 Bulk Barrier, nothing else');
+  eq(R.parseFixedSkillBonuses(ch, realLib).map(function (g) { return g.kind === 'spell' ? 'spell' : 'skill'; }),
+    ['skill', 'spell', 'spell'],
+    'Cardboard Hoarder: Tactics lands as a skill card, Bulk Bomb/Barrier as spell cards');
+  eq(R.parseChoiceGrants(ch), [], 'Cardboard Hoarder: no choice grants');
+  eq(R.parseCapGrants(ch, realLib), [], 'Cardboard Hoarder: no Rank 20 clause');
+  eq(R.groupBonusFor({ name: 'Tactics', kind: 'skill', stat: 'int' }, '', 'Cardboard Hoarder', realLib('Tactics'), [], 6), 0, 'Cardboard Hoarder: no group bonus');
+  eq(R.raceClassMoveBonus('', 'Cardboard Hoarder'), { move: 0, step: 0 }, 'Cardboard Hoarder: no Move/Step bonus');
+  eq(ch.benefits.indexOf('Custom class by Dukeofdoom.') >= 0, true, 'Cardboard Hoarder carries the Dukeofdoom credit');
+  eq(ch.benefits.indexOf('null') >= 0, false, 'Cardboard Hoarder benefits contain no literal "null"');
+  // Placeholder spell entries (details pending from Dukeofdoom)
+  var bb = realLib('BULK BOMB');
+  var bbar = realLib('BULK BARRIER');
+  eq(bb.kind, 'spell', 'BULK BOMB kind is spell');
+  eq(bbar.kind, 'spell', 'BULK BARRIER kind is spell');
+  eq(bb.stat, 'INT', 'BULK BOMB stat placeholder is INT');
+  eq(bbar.stat, 'INT', 'BULK BARRIER stat placeholder is INT');
+  eq(bb.uncertain, true, 'BULK BOMB is flagged uncertain (details pending)');
+  eq(bbar.uncertain, true, 'BULK BARRIER is flagged uncertain (details pending)');
+  eq(bb.base_effect.indexOf('pending from Dukeofdoom') >= 0, true, 'BULK BOMB effect says details are pending');
+  eq(bbar.base_effect.indexOf('pending from Dukeofdoom') >= 0, true, 'BULK BARRIER effect says details are pending');
+})();
+
 
 
 // Gear taxonomy (2026-11-03): kinds, slots, placements, equip limits
