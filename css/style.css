@@ -112,7 +112,7 @@ details.modifier-ref summary { cursor:pointer; font-size:.8rem; color:var(--mute
  * a fixed full-screen track of cover images sliding on a 20s loop, under a
  * dark overlay so text stays readable. Panels themselves stay opaque. */
 .bg-slider { position:fixed; top:0; left:0; width:100%; height:100vh; z-index:-2; overflow:hidden; pointer-events:none; }
-.bg-track { display:flex; height:100%; width:max-content; animation:scrollTrack 20s linear infinite; }
+.bg-track { display:flex; height:100%; width:max-content; animation:scrollTrack 20s linear infinite; will-change:transform; }
 .bg-track img { height:100vh; width:auto; object-fit:cover; flex-shrink:0; }
 .bg-overlay { position:fixed; top:0; left:0; width:100%; height:100vh; z-index:-1; background:radial-gradient(circle at 10% 20%, rgba(224,79,95,.05) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(59,130,246,.05) 0%, transparent 40%), linear-gradient(rgba(15,17,26,.85), rgba(15,17,26,.85)); pointer-events:none; }
 @keyframes scrollTrack { 0% { transform:translateX(0); } 100% { transform:translateX(-50%); } }
