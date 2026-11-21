@@ -24,6 +24,16 @@
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+  // Escape for a value inside a single-quoted JS string in an inline
+  // onclick="..." attribute. esc() is wrong here: the browser HTML-decodes
+  // the attribute first, so &#39; becomes ' again and the string breaks.
+  // Entry names are library data today (no quotes in the 85 names), but
+  // a name with an apostrophe (e.g. a homebrew "Boring 'Ol Warlock")
+  // would otherwise break the button or, with a crafted name, run code.
+  function jsq(s) {
+    return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+  }
   function $(id) { return document.getElementById(id); }
   function setVal(id, val) {
     var el = $(id);
@@ -279,8 +289,21 @@
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(saveNow, 400);
   }
+  var lastQuotaToastAt = 0;
   function saveNow() {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); hasSaved = true; } catch (e) { /* storage full/blocked: sheet still works in memory */ }
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); hasSaved = true; }
+    catch (e) {
+      // ?v=47.9: a full browser storage used to fail silently, so a big
+      // avatar photo could break guest saves with no warning. Surface it
+      // visibly (throttled — saves run on a 400ms debounce, so an
+      // unthrottled toast would never clear). The sheet keeps working
+      // in memory, exactly as before.
+      var isQuota = e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22);
+      if (isQuota && typeof showMsgToast === 'function' && Date.now() - lastQuotaToastAt > 10000) {
+        lastQuotaToastAt = Date.now();
+        showMsgToast('Browser storage is full — this sheet could not be saved. Remove the avatar photo or clear old data, then try again.');
+      }
+    }
     try { if (window.Cloud && typeof window.Cloud.onLocalSave === 'function') window.Cloud.onLocalSave(); } catch (e) {}
   }
   /* Fold stored given ranks into ownRank for a character data object
@@ -304,6 +327,7 @@
       var data = JSON.parse(raw);
       if (!data || typeof data !== 'object') return false;
       state = Object.assign(blankState(), data);
+      sanitizeIds(state);
       migrateRanksOn(state);
       // Ensure every field exists even for older v2 saves.
       var b = blankState();
@@ -465,6 +489,7 @@
           return;
         }
         state = Object.assign(blankState(), ch);
+        sanitizeIds(state);
         migrateRanksOn(state);
         ensureUnarmed();
         saveNow();
@@ -1068,7 +1093,7 @@
         + ['None', 'Tank', 'Aggressive', 'Utility'].map(function (a) { return '<option' + ((c.role || 'None') === a ? ' selected' : '') + '>' + a + '</option>'; }).join('') + '</select></label></div>'
         + '<label>Notes <input type="text" value="' + esc(c.notes || '') + '" onchange="DCC.storySet(\'pets\',\'' + c.id + '\',\'notes\',this.value)"></label>'
         + '<p><strong>Attacks / Spells / Abilities (Rank = Floor ' + state.floor + '):</strong> ' + (c.skills || []).map(function (s) { return esc(s.name); }).join(', ') + '</p>'
-        + '<p><strong>Special Abilities:</strong> ' + (c.abilities || []).join(', ') + '</p>'
+        + '<p><strong>Special Abilities:</strong> ' + (c.abilities || []).map(esc).join(', ') + '</p>'
         + (function () {
           var allow = petRoleAllowance(c.role), extra = num(c.level, 1) >= 15 ? 1 : 0, total = allow === null ? null : allow + extra;
           var line = '';
@@ -1112,7 +1137,7 @@
         + '<label>Attitude <select onchange="DCC.storySet(\'mounts\',\'' + c.id + '\',\'attitude\',this.value)">'
         + ['Hostile', 'Calm', 'Friendly', 'Bonded'].map(function (a) { return '<option' + ((c.attitude || 'Calm') === a ? ' selected' : '') + '>' + a + '</option>'; }).join('') + '</select></label></div>'
         + '<label>Notes <input type="text" value="' + esc(c.notes || '') + '" onchange="DCC.storySet(\'mounts\',\'' + c.id + '\',\'notes\',this.value)"></label>'
-        + '<p><strong>Upgrades (5,000 gold each; non-attack upgrades stack):</strong> ' + ups.join(', ') + '</p>'
+        + '<p><strong>Upgrades (5,000 gold each; non-attack upgrades stack):</strong> ' + ups.map(esc).join(', ') + '</p>'
         + '<div class="row"><label>Upgrade <select id="comp-upgrade-' + c.id + '"><option>+5ft Move</option><option>+1 DR</option><option>+1 Size</option><option>Trample</option></select></label>'
         + '<button type="button" onclick="DCC.compSelectAdd(\'mounts\',\'' + c.id + '\',\'upgrades\',\'comp-upgrade-\')">Add upgrade</button>'
         + '<button type="button" onclick="DCC.storyDel(\'mounts\',\'' + c.id + '\')">Delete mount</button></div>'
@@ -1178,7 +1203,7 @@
     $('craft-list').innerHTML = story().crafting.map(function (c) {
       return '<div class="card"><h4>' + esc(c.name) + '</h4>'
         + '<p>Table: ' + esc(c.tableType || 'Other') + ' (tier ' + num(c.tableTier, 1) + ', +' + num(c.tableTier, 1) + ' to the Skill Check) · Effect: ' + esc(c.effect || 'Other') + ' · Skill needed: ' + esc(CRAFT_SKILL[c.effect] || '—') + '</p>'
-        + '<p><strong>Enchantments (no property twice):</strong> ' + (c.enchantments || []).join(', ') + '</p>'
+        + '<p><strong>Enchantments (no property twice):</strong> ' + (c.enchantments || []).map(esc).join(', ') + '</p>'
         + '<div class="row"><label>Status <select onchange="DCC.storySet(\'crafting\',\'' + c.id + '\',\'status\',this.value)">'
         + ['planned', 'in-progress', 'done'].map(function (s) { return '<option value="' + s + '"' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('')
         + '</select></label>'
@@ -1429,7 +1454,7 @@
       var override = R.attackDamageStat(a.name, state.race, state.class);
       var mod = stats[a.toHitStat] ? stats[a.toHitStat].mod : 0;
       return '<div class="card"><h4>' + esc(a.name) + '</h4>'
-        + '<p>To hit: d20 + ' + a.toHitStat.toUpperCase() + ' Mod (+' + mod + ')</p>'
+        + '<p>To hit: d20 + ' + esc((a.toHitStat || '').toUpperCase()) + ' Mod (+' + mod + ')</p>'
         + '<p>Damage: ' + esc(a.damage) + (override ? ' — damage uses ' + override.toUpperCase() + ' Mod instead (race/class override; to-hit unchanged)' : '') + '</p>'
         + damageEffectsFor(a.name)
         + '<p>' + esc(a.notes || '') + '</p>'
@@ -1448,7 +1473,7 @@
       var adjNote = adj.additions.length ? ' (includes ' + adj.additions.map(function (a) { return '+' + a.count + 'd' + a.sides + ' at Rank ' + a.tier; }).join(', ') + ')' : '';
       return '<div class="card"><h4>' + esc(c.name) + '</h4>'
         + '<p>' + (c.kind === 'spell' ? 'Attack spell' : esc(R.skillAttackType(c.name) || 'Attack skill')) + ' — Rank ' + cardRank(c) + '</p>'
-        + '<p>To hit: d20 + ' + cardRank(c) + ' + ' + c.stat.toUpperCase() + ' Mod (+' + mod + ')</p>'
+        + '<p>To hit: d20 + ' + cardRank(c) + ' + ' + esc((c.stat || '').toUpperCase()) + ' Mod (+' + mod + ')</p>'
         + '<p>Damage: ' + esc(adj.damage) + adjNote + (override ? ' — damage uses ' + override.toUpperCase() + ' Mod instead (race/class override; to-hit unchanged)' : '')
         + ((lib && lib.mana_cost) ? ' — Mana: ' + esc(lib.mana_cost) : '') + '</p>'
         + (c.kind === 'skill' ? damageEffectsFor(c.name) : '')
@@ -1704,16 +1729,16 @@
       if (s.type === 'cap') {
         var cur = s.cur;
         return '<div class="card"><strong>Source: ' + esc(s.entry.name) + ' (' + s.kind + ') — ' + esc(s.capGrant.label) + ' can be raised to Rank 20</strong><br>'
-          + '<button type="button" onclick="DCC.openCapPicker(\'' + s.cid + '\',\'' + s.kind + '\',\'' + esc(s.entry.name) + '\')">Pick from rulebook</button> '
-          + '<input type="text" placeholder="or custom name" value="' + esc(cur && cur.name ? cur.name : '') + '" onchange="DCC.pickCapChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + esc(s.entry.name) + '\',this.value)">'
-          + (cur && cur.name ? ' <button type="button" onclick="DCC.pickCapChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + esc(s.entry.name) + '\',\'\')">Clear pick</button>' : '')
+          + '<button type="button" onclick="DCC.openCapPicker(\'' + s.cid + '\',\'' + s.kind + '\',\'' + jsq(s.entry.name) + '\')">Pick from rulebook</button> '
+          + '<input type="text" placeholder="or custom name" value="' + esc(cur && cur.name ? cur.name : '') + '" onchange="DCC.pickCapChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + jsq(s.entry.name) + '\',this.value)">'
+          + (cur && cur.name ? ' <button type="button" onclick="DCC.pickCapChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + jsq(s.entry.name) + '\',\'\')">Clear pick</button>' : '')
           + '</div>';
       }
       var cur = s.cur;
       return '<div class="card"><strong>Source: ' + esc(s.entry.name) + ' (' + s.kind + ') — +' + s.grant.amount + ' ' + esc(s.grant.label) + '</strong><br>'
-        + '<button type="button" onclick="DCC.openChoicePicker(\'' + s.cid + '\',\'' + s.kind + '\',\'' + esc(s.entry.name) + '\',' + s.grant.amount + ',\'' + s.grant.category + '\')">Pick from rulebook</button> '
-        + '<input type="text" placeholder="or custom name" value="' + esc(cur && cur.name ? cur.name : '') + '" onchange="DCC.pickChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + esc(s.entry.name) + '\',' + s.grant.amount + ',\'' + s.grant.category + '\',this.value)">'
-        + (cur && cur.name ? ' <button type="button" onclick="DCC.pickChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + esc(s.entry.name) + '\',' + s.grant.amount + ',\'' + s.grant.category + '\',\'\')">Clear pick</button>' : '')
+        + '<button type="button" onclick="DCC.openChoicePicker(\'' + s.cid + '\',\'' + s.kind + '\',\'' + jsq(s.entry.name) + '\',' + s.grant.amount + ',\'' + s.grant.category + '\')">Pick from rulebook</button> '
+        + '<input type="text" placeholder="or custom name" value="' + esc(cur && cur.name ? cur.name : '') + '" onchange="DCC.pickChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + jsq(s.entry.name) + '\',' + s.grant.amount + ',\'' + s.grant.category + '\',this.value)">'
+        + (cur && cur.name ? ' <button type="button" onclick="DCC.pickChoice(\'' + s.cid + '\',\'' + s.kind + '\',\'' + jsq(s.entry.name) + '\',' + s.grant.amount + ',\'' + s.grant.category + '\',\'\')">Clear pick</button>' : '')
         + '</div>';
     }).join('') || '<p class="hint">No choices right now.</p>';
   }
@@ -1936,7 +1961,7 @@
     });
     $('picker-list').innerHTML = list.map(function (c, i) {
       var idx = candidates.indexOf(c);
-      return '<button type="button" class="picker-item" onclick="DCC.pickerPick(' + idx + ')"><strong>' + esc(c.name) + '</strong><small>' + esc(c.kind || '') + (c.source ? ' · ' + c.source : '') + (c.source_book_page ? ' · p.' + c.source_book_page : '') + '</small><small>' + esc((c.base_effect || c.effect || c.benefits || '').slice(0, 160)) + '</small></button>';
+      return '<button type="button" class="picker-item" onclick="DCC.pickerPick(' + idx + ')"><strong>' + esc(c.name) + '</strong><small>' + esc(c.kind || '') + (c.source ? ' · ' + esc(c.source) : '') + (c.source_book_page ? ' · p.' + esc(c.source_book_page) : '') + '</small><small>' + esc((c.base_effect || c.effect || c.benefits || '').slice(0, 160)) + '</small></button>';
     }).join('') || '<p class="hint">No matches.</p>';
     pickerMode.candidates = candidates;
   }
@@ -2473,10 +2498,44 @@
   }
 
   /* ---------------- public API (used by inline handlers & wizard) ---------------- */
+  /* ------------------------------------------------------------------
+   * sanitizeIds(st) — ?v=47.9. Imported and cloud-loaded state used to
+   * adopt record ids verbatim. Ids are interpolated raw into inline
+   * onclick="DCC.xxx('...','<id>',...)" handlers and id="...-<id>"
+   * attributes, so a crafted id such as
+   * '"><img src=x onerror=alert(1)>' would execute on render.
+   * uid()-generated ids are always safe; this only rewrites ids that
+   * fail /^[A-Za-z0-9_-]+$/ and remaps every reference to them (hotlist,
+   * loadout placements, active loadout). Returns the state object.
+   * ------------------------------------------------------------------ */
+  var SAFE_ID = /^[A-Za-z0-9_-]+$/;
+  function sanitizeIds(d) {
+    if (!d || typeof d !== 'object') return d;
+    var remap = {};
+    function fix(list) {
+      (list || []).forEach(function (it) {
+        if (!it || typeof it !== 'object' || typeof it.id !== 'string') return;
+        if (!SAFE_ID.test(it.id)) { var nid = uid(); remap[it.id] = nid; it.id = nid; }
+      });
+    }
+    fix(d.skills); fix(d.spells); fix(d.attacks); fix(d.items); fix(d.loadouts);
+    (d.loadouts || []).forEach(function (l) {
+      if (!l || typeof l !== 'object') return;
+      var pl = l.placements || {};
+      Object.keys(pl).forEach(function (slot) { if (remap[pl[slot]]) pl[slot] = remap[pl[slot]]; });
+    });
+    if (d.activeLoadoutId && remap[d.activeLoadoutId]) d.activeLoadoutId = remap[d.activeLoadoutId];
+    (d.hotlist || []).forEach(function (x) { if (x && x.id && remap[x.id]) x.id = remap[x.id]; });
+    var st = d.story || {};
+    ['quests', 'journal', 'pets', 'mounts', 'sponsors', 'crafting'].forEach(function (k) { fix(st[k]); });
+    (st.pets || []).forEach(function (c) { fix(c.skills); });
+    if (st.faith) { fix(st.faith.offerings); fix(st.faith.tithes); }
+    return d;
+  }
   window.DCC = {
     getState: function () { return state; },
     baseTotal: function () { var st = computeStats(); return R.STAT_KEYS.reduce(function (a, k) { return a + st[k].derived; }, 0); },
-    syncGearGrants: syncGearGrants, syncTendrilsRank: syncTendrilsRank, ensureUnarmed: ensureUnarmed, migrateRanksOn: migrateRanksOn,
+    syncGearGrants: syncGearGrants, syncTendrilsRank: syncTendrilsRank, ensureUnarmed: ensureUnarmed, migrateRanksOn: migrateRanksOn, sanitizeIds: sanitizeIds,
     setState: function (s) { state = s; },
     blankState: blankState,
     renderAll: renderAll, showTab: showTab, saveNow: saveNow, saveSoon: saveSoon, fitAllTextareas: fitAllTextareas,
@@ -3311,8 +3370,59 @@
     if (av) av.addEventListener('change', function () {
       var f = av.files[0];
       if (!f) return;
+      av.value = '';
+      // ?v=47.9: accept images only (a file with no type at all is
+      // allowed through and validated by the image decoder below).
+      if (f.type && f.type.indexOf('image/') !== 0) {
+        if (typeof showMsgToast === 'function') showMsgToast('That file is not an image. Choose an image file for your avatar.');
+        else alert('That file is not an image. Choose an image file for your avatar.');
+        return;
+      }
       var rd = new FileReader();
-      rd.onload = function () { state.avatarUrl = rd.result; saveSoon(); renderAll(); };
+      rd.onerror = function () {
+        if (typeof showMsgToast === 'function') showMsgToast('Could not read that image. Try a different file.');
+        else alert('Could not read that image. Try a different file.');
+      };
+      rd.onload = function () {
+        var img = new Image();
+        img.onerror = function () {
+          if (typeof showMsgToast === 'function') showMsgToast('That image could not be opened. Try a different file.');
+          else alert('That image could not be opened. Try a different file.');
+        };
+        img.onload = function () {
+          var w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+          var maxSide = Math.max(w0, h0);
+          // Already small enough and already a web-friendly format:
+          // keep the original file as-is (no re-encode quality loss).
+          if (maxSide <= 256 && (f.type === 'image/png' || f.type === 'image/jpeg')) {
+            state.avatarUrl = rd.result; saveSoon(); renderAll(); return;
+          }
+          var scale = Math.min(1, 256 / maxSide);
+          var w = Math.max(1, Math.round(w0 * scale)), h = Math.max(1, Math.round(h0 * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          // PNG keeps its format only if it actually uses transparency;
+          // opaque images go to JPEG (~0.85), which is far smaller.
+          var usePng = false;
+          if (f.type === 'image/png') {
+            try {
+              var px = ctx.getImageData(0, 0, w, h).data;
+              for (var i = 3; i < px.length; i += 4) { if (px[i] < 255) { usePng = true; break; } }
+            } catch (e) { usePng = true; }
+          }
+          try {
+            state.avatarUrl = usePng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.85);
+          } catch (e) {
+            if (typeof showMsgToast === 'function') showMsgToast('That image could not be saved as an avatar. Try a different file.');
+            else alert('That image could not be saved as an avatar. Try a different file.');
+            return;
+          }
+          saveSoon(); renderAll();
+        };
+        img.src = rd.result;
+      };
       rd.readAsDataURL(f);
     });
     click('avatar-remove', function () { state.avatarUrl = ''; saveSoon(); renderAll(); });

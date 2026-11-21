@@ -101,7 +101,15 @@ function isBlankSheet(data) {
 }
 function hpSlotsText(d) {
   if (!d) return '?';
-  return (d.hpCurrent === null || d.hpCurrent === undefined ? '?' : d.hpCurrent) + ' / 10 slots';
+  var n = parseInt(d.hpCurrent, 10);
+  return (isNaN(n) ? '?' : n) + ' / 10 slots';
+}
+// ?v=47.9: manaCurrent comes from another player's character row, so
+// coerce to a number instead of interpolating it raw.
+function manaText(d) {
+  if (!d) return '?';
+  var n = parseInt(d.manaCurrent, 10);
+  return isNaN(n) ? '?' : String(n);
 }
 function needLogin() {
   if (!sb) { cloudStatus('Supabase library failed to load. Check your connection and reload the page.'); return false; }
@@ -292,7 +300,7 @@ async function refreshManageTab() {
   var members = mem.members || [];
   html += '<div class="cloud-subhead">Players in this campaign</div><p class="hint">Tick members to make a party, then Confirm party below. Inspect opens the full character.</p>' + (members.length ? members.map(function (m) {
     var d = m.data || {};
-    return '<div class="cloud-row"><span><input type="checkbox" class="party-check" value="' + m.id + '"> ' + esc(m.name) + (d.npc ? ' (NPC)' : '') + (d.dead ? ' - DECEASED' : '') + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><span><button type="button" onclick="inspectCharacter(\'' + m.id + '\')">Inspect</button></span></div>';
+    return '<div class="cloud-row"><span><input type="checkbox" class="party-check" value="' + m.id + '"> ' + esc(m.name) + (d.npc ? ' (NPC)' : '') + (d.dead ? ' - DECEASED' : '') + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + manaText(d) + '</span><span><button type="button" onclick="inspectCharacter(\'' + m.id + '\')">Inspect</button></span></div>';
   }).join('') : '<p class="hint">No players in this campaign yet. Share the code with your players.</p>');
   html += '<div class="cloud-subhead">Create a non-player character</div><p class="hint">NPCs belong to this campaign and can be inspected, edited, and marked deceased like players, but they are never a loaded player sheet.</p>'
     + '<div><label>NPC name <input type="text" id="npc-name" placeholder="e.g. Barkeep Bruna"></label></div>'
@@ -581,7 +589,7 @@ async function renderInspector() {
    * Race/Class + buffs − penalties); saving back-computes ownEnh. */
   var statTotals = null;
   try { statTotals = await remoteStatTotals(d); } catch (e) {}
-  var num = function (id, val, min) { return '<input type="number" id="' + id + '" value="' + val + '"' + (min !== undefined ? ' min="' + min + '"' : '') + ' style="width:72px">'; };
+  var num = function (id, val, min) { var n = parseInt(val, 10); if (isNaN(n)) n = 0; return '<input type="number" id="' + id + '" value="' + n + '"' + (min !== undefined ? ' min="' + min + '"' : '') + ' style="width:72px">'; };
   var statOpts = ['str', 'con', 'dex', 'int', 'cha'].map(function (k) { return '<option value="' + k + '">' + k.toUpperCase() + '</option>'; }).join('');
   var html = await inspectPickerHtml() + '<p><strong>' + esc(d.name || row.data.name || 'Unnamed Crawler') + '</strong>'
     + (d.npc ? ' (NPC)' : '') + (d.dead ? ' - <strong>DECEASED</strong>' : '')
@@ -917,6 +925,9 @@ function applyCloudState(data, id) {
   // tell an already-loaded sheet from a different local one.
   st.cloudId = id || (data && data.cloudId) || null;
   window.DCC.setState(st);
+  // ?v=47.9: rewrite any crafted ids (imported/cloud ids are adopted
+  // verbatim; ids are interpolated into inline onclick handlers).
+  if (window.DCC.sanitizeIds) window.DCC.sanitizeIds(st);
   // Fold stored given ranks into ownRank (backgrounds + race/class
   // grants, ?v=47.5) before the save below writes this sheet back.
   if (window.DCC.migrateRanksOn) window.DCC.migrateRanksOn(st);
@@ -1489,13 +1500,13 @@ async function refreshDmDashboard() {
   }
   htmlOut += '<div class="cloud-subhead">Players (select one to alter)</div>' + (members.length ? members.map(function (m) {
     var d = m.data || {};
-    return '<div class="cloud-row"><span>' + esc(m.name) + (d.npc ? ' (NPC)' : '') + (d.dead ? ' - DECEASED' : '') + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><span><button type="button" onclick="selectDmPlayer(\'' + m.id + '\')">' + (m.id === dmSelectedPlayerId ? 'Selected' : 'Select') + '</button> <button type="button" onclick="inspectCharacter(\'' + m.id + '\')">Inspect</button></span></div>';
+    return '<div class="cloud-row"><span>' + esc(m.name) + (d.npc ? ' (NPC)' : '') + (d.dead ? ' - DECEASED' : '') + ' - Level ' + esc(m.level) + ' - HP ' + hpSlotsText(d) + ' - Mana ' + manaText(d) + '</span><span><button type="button" onclick="selectDmPlayer(\'' + m.id + '\')">' + (m.id === dmSelectedPlayerId ? 'Selected' : 'Select') + '</button> <button type="button" onclick="inspectCharacter(\'' + m.id + '\')">Inspect</button></span></div>';
   }).join('') : '<p class="hint">No players in this campaign yet.</p>');
   var sel = members.find(function (m) { return m.id === dmSelectedPlayerId; });
   if (sel) {
     var d = sel.data || {};
     htmlOut += '<div class="cloud-subhead">Alter selected player: ' + esc(sel.name) + '</div>';
-    htmlOut += '<div class="cloud-row"><span>HP ' + hpSlotsText(d) + ' - Mana ' + (d.manaCurrent === null || d.manaCurrent === undefined ? '?' : d.manaCurrent) + '</span><span><button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'hp\', -1)">HP -1</button> <button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'hp\', 1)">HP +1</button> <button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'mana\', -1)">Mana -1</button> <button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'mana\', 1)">Mana +1</button></span></div>';
+    htmlOut += '<div class="cloud-row"><span>HP ' + hpSlotsText(d) + ' - Mana ' + manaText(d) + '</span><span><button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'hp\', -1)">HP -1</button> <button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'hp\', 1)">HP +1</button> <button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'mana\', -1)">Mana -1</button> <button type="button" onclick="dmAdjust(\'' + sel.id + '\', \'mana\', 1)">Mana +1</button></span></div>';
     htmlOut += '<div><label>Buff or debuff name</label><input type="text" id="dm-dash-cond" placeholder="e.g. Blessed"></div><div class="btn-row"><button type="button" onclick="dmAddCondition(\'' + sel.id + '\', \'buff\', \'dm-dash-cond\')">Add buff</button><button type="button" onclick="dmAddCondition(\'' + sel.id + '\', \'debuff\', \'dm-dash-cond\')">Add debuff</button></div>';
   }
   htmlOut += '<div class="cloud-subhead">Parties</div>' + partyHtml;

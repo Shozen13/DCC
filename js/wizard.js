@@ -16,6 +16,12 @@
 (function () {
   'use strict';
   var R = window.DCCRules;
+  // ?v=47.9: wizard.js had no esc() of its own (app.js's is inside its
+  // IIFE). Same escaping as the sheet.
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
   var step = 0;
   var statMethod = 'array';
   var rolled = null; // {str,con,dex,int,cha} from the dice step, if any
@@ -124,9 +130,9 @@
   }
   function renderRaceClass(body) {
     var s = S();
-    body.innerHTML = '<p>Race: <strong>' + (s.race || '—') + '</strong> <button type="button" id="wiz-race">Pick race</button> '
+    body.innerHTML = '<p>Race: <strong>' + esc(s.race || '—') + '</strong> <button type="button" id="wiz-race">Pick race</button> '
       + '<button type="button" id="wiz-race-info">?</button> <button type="button" id="wiz-race-clear">Clear</button></p>'
-      + '<p>Class: <strong>' + (s.class || '—') + '</strong> <button type="button" id="wiz-class">Pick class</button> '
+      + '<p>Class: <strong>' + esc(s.class || '—') + '</strong> <button type="button" id="wiz-class">Pick class</button> '
       + '<button type="button" id="wiz-class-info">?</button> <button type="button" id="wiz-class-clear">Clear</button></p>'
       + '<p class="hint">Picking a race or class applies its fixed bonuses, split pools, and fixed skill/spell bonuses automatically. Split pools and choice picks live on the Choices tab after you finish — or open it from the sheet at any time. Full rulebook text is behind the ? button, never shown all at once.</p>'
       + '<p class="hint">You may leave race and class blank and pick them later on the sheet.</p>';
@@ -317,9 +323,9 @@
     var manaText = el('mana-text') ? el('mana-text').textContent : '';
     var evadeText = el('evade-disp') ? el('evade-disp').textContent : '';
     body.innerHTML = '<ul>'
-      + '<li>Name set: ' + (s.name || '— (empty)') + '</li>'
+      + '<li>Name set: ' + esc(s.name || '— (empty)') + '</li>'
       + '<li>Stats: ' + R.STAT_KEYS.map(function (k) { return k.toUpperCase() + ' ' + s.ownBase[k]; }).join(', ') + ' (own base, before race/class bonuses)</li>'
-      + '<li>Race: ' + (s.race || '—') + ' · Class: ' + (s.class || '—') + '</li>'
+      + '<li>Race: ' + esc(s.race || '—') + ' · Class: ' + esc(s.class || '—') + '</li>'
       + '<li>Skills: ' + s.skills.length + ' · Spells: ' + s.spells.length + ' · Items: ' + s.items.length + '</li>'
       + '<li>Health: ' + hpText + ' · Mana: ' + manaText + ' · Evade: ' + evadeText + '</li>'
       + '<li>Level ' + s.level + ', Floor ' + s.floor + ', Stat Bank ' + R.statBank(s.level, s.statPointsSpent) + '</li>'
