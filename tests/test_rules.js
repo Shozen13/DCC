@@ -202,6 +202,32 @@ eq(R.shouldRemoveCard({ ownRank: 0 }, 0, 0, 0, 3), false, 'background-only card 
   eq(rec3.backgroundRank, 3, 'fold recovers the combat background rank for Unarmed Combat');
 })();
 
+// Race/class grants are trained ranks (?v=47.5): foldRaceClassRank folds
+// the granted amounts into ownRank once, keeping the entries as the
+// reversal/protection record.
+(function () {
+  var applied = [
+    { source: 'race', sourceName: 'Elf, High', skillName: 'Dodge', kind: 'skill', amount: 2 },
+    { source: 'class', sourceName: 'Artist Alley Mogul', skillName: 'Dodge', kind: 'skill', amount: 1 },
+    { source: 'race', sourceName: 'Elf, High', skillName: 'Heal Others', kind: 'spell', amount: 1 }
+  ];
+  var c = R.foldRaceClassRank({ name: 'Dodge', kind: 'skill', ownRank: 0 }, applied);
+  eq(c.ownRank, 3, 'fold: race 2 + class 1 become trained 3');
+  eq(c.rcFolded, true, 'fold marks the card folded');
+  eq(R.displayRank(c, 0, 0, 0, 0), 3, 'folded card displays 3 with no race term');
+  var twice = R.foldRaceClassRank(c, applied);
+  eq(twice.ownRank, 3, 'fold is idempotent (no second add)');
+  var trained = R.foldRaceClassRank({ name: 'Dodge', kind: 'skill', ownRank: 3 }, applied);
+  eq(trained.ownRank, 6, 'fold keeps trained ranks: own 3 + grants 3 -> trained 6');
+  var spell = R.foldRaceClassRank({ name: 'Heal Others', kind: 'spell', ownRank: 0 }, applied);
+  eq(spell.ownRank, 1, 'fold matches kind: spell grant does not touch a skill card');
+  var other = R.foldRaceClassRank({ name: 'First Aid', kind: 'skill', ownRank: 2 }, applied);
+  eq(other.ownRank, 2, 'fold ignores entries for other skills');
+  var none = R.foldRaceClassRank({ name: 'Dodge', kind: 'skill', ownRank: 2 }, []);
+  eq(none.ownRank, 2, 'fold with no entries leaves ownRank alone but still marks folded');
+  eq(none.rcFolded, true, 'fold marks folded even with no entries');
+})();
+
 
 
 // Gear taxonomy (2026-11-03): kinds, slots, placements, equip limits

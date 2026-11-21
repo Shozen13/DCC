@@ -225,6 +225,24 @@
     if (combat && (key === 'unarmed combat' || normName(combat.name || '') === key)) return 3;
     return 0;
   }
+  /* Race/class fixed grants are trained ranks too (?v=47.5): the granted
+   * amount is folded into ownRank once (rcFolded), and the raceClassApplied
+   * entries stay as the record — how much to take back off when the
+   * race/class leaves, and the floor the trained rank cannot drop below
+   * while the race/class is held. Unlike the background fold there is no
+   * double-count shape to repair: under the old model ownRank never
+   * included the grant, so a straight add is exact. New grants are
+   * created folded by applyFixedBonus. */
+  function foldRaceClassRank(card, applied) {
+    if (!card || card.rcFolded) return card;
+    var total = 0, key = normName(card.name);
+    (applied || []).forEach(function (a) {
+      if (a.kind === card.kind && normName(a.skillName) === key) total += parseInt(a.amount, 10) || 0;
+    });
+    if (total > 0) card.ownRank = (card.ownRank || 0) + total;
+    card.rcFolded = true;
+    return card;
+  }
 
   /* ---- Race/class text parsing (data-driven, benefits text only) ---- */
   function parseRaceClassStats(entry) {
@@ -1011,7 +1029,7 @@
     rankDamageDie: rankDamageDie, naturesBreathHealFormula: naturesBreathHealFormula,
     displayRank: displayRank, combinedFloor: combinedFloor,
     ownRankForTotal: ownRankForTotal, shouldRemoveCard: shouldRemoveCard,
-    foldBackgroundRank: foldBackgroundRank,
+    foldBackgroundRank: foldBackgroundRank, foldRaceClassRank: foldRaceClassRank,
     parseRaceClassStats: parseRaceClassStats, parseRaceClassSplit: parseRaceClassSplit,
     parseRaceClassDR: parseRaceClassDR, evadeDiceCount: evadeDiceCount,
     healthBarUsesCha: healthBarUsesCha, parseFixedSkillBonuses: parseFixedSkillBonuses,

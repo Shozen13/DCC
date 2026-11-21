@@ -341,6 +341,9 @@ async function dmUpdateCharacter(id, mutate, msg) {
   var row = await sb.from('characters').select('id, name, level, data').eq('id', id).single();
   if (row.error) return inspectStatus('Could not load that character: ' + row.error.message);
   var d = row.data.data || {};
+  // Fold stored given ranks into ownRank before the mutation runs, so
+  // a DM rank edit computes against the same ranks the player sees.
+  if (window.DCC.migrateRanksOn) window.DCC.migrateRanksOn(d);
   // A mutate may return an error string instead of changing anything
   // (used by the slot-aware equip toggle); that aborts the save.
   var mutateErr = mutate(d);
@@ -569,6 +572,9 @@ async function renderInspector() {
   /* Rank math for the rows below needs the library + spell keywords. */
   try { await window.DCC.ensureSkills(); } catch (e) {}
   try { await window.DCC.ensureKeywords(); } catch (e) {}
+  // Fold stored given ranks into ownRank so the inspector shows the
+  // same ranks the player sees (backgrounds + race/class grants, ?v=47.5).
+  if (window.DCC.migrateRanksOn) window.DCC.migrateRanksOn(d);
   var base = d.ownBase || { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
   var enh = d.ownEnh || { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
   /* Enhance inputs show the same total the player sees (Base + Gear +
@@ -911,6 +917,9 @@ function applyCloudState(data, id) {
   // tell an already-loaded sheet from a different local one.
   st.cloudId = id || (data && data.cloudId) || null;
   window.DCC.setState(st);
+  // Fold stored given ranks into ownRank (backgrounds + race/class
+  // grants, ?v=47.5) before the save below writes this sheet back.
+  if (window.DCC.migrateRanksOn) window.DCC.migrateRanksOn(st);
   window.DCC.ensureUnarmed();
   window.DCC.syncGearGrants();
   window.DCC.syncTendrilsRank();

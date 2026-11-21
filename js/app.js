@@ -187,6 +187,16 @@
     return total;
   }
   function raceGivenFor(card) {
+    // Race/class fixed grants are trained ranks (?v=47.5): folded into
+    // ownRank on load by R.foldRaceClassRank, never a given source — see
+    // rules.js. The entries in state.raceClassApplied stay as the record
+    // of how much each grant gave (see raceClassGrantFor).
+    return 0;
+  }
+  /* How much of this card's trained rank came from race/class grants
+   * still held. Used as the protection floor in setRank/delCard, and as
+   * the amount reverseSource takes back off when a race/class leaves. */
+  function raceClassGrantFor(card) {
     var total = 0, key = R.normName(card.name);
     state.raceClassApplied.forEach(function (a) {
       if (a.kind === card.kind && R.normName(a.skillName) === key) total += num(a.amount, 0);
@@ -245,10 +255,10 @@
   function remoteCardRank(card, d) {
     var gear = 0;
     Object.keys(card.gearGrants || {}).forEach(function (k) { gear += num(card.gearGrants[k], 0); });
-    var race = 0, key = R.normName(card.name);
-    (d.raceClassApplied || []).forEach(function (a) {
-      if (a.kind === card.kind && R.normName(a.skillName) === key) race += num(a.amount, 0);
-    });
+    // Race/class grants are trained ranks (?v=47.5): folded into the
+    // card's ownRank by migrateRanksOn when the row is loaded, so the
+    // race term here is 0 — same as the player's raceGivenFor.
+    var race = 0;
     var lib = findLib(card.name);
     var kw = keywordCache[R.normName(card.name)] || [];
     var group = R.groupBonusFor(card, d.race, d.class, lib, kw);
@@ -273,6 +283,20 @@
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); hasSaved = true; } catch (e) { /* storage full/blocked: sheet still works in memory */ }
     try { if (window.Cloud && typeof window.Cloud.onLocalSave === 'function') window.Cloud.onLocalSave(); } catch (e) {}
   }
+  /* Fold stored given ranks into ownRank for a character data object
+   * (the live state, an imported file, or a cloud row the DM is
+   * inspecting). Background ranks fold via R.foldBackgroundRank; race/
+   * class fixed grants fold via R.foldRaceClassRank. Both folds are
+   * once-only (bgFolded / rcFolded flags), so calling this on an already
+   * folded object is a no-op. Every state-entry path must call it, or
+   * an unfolded sheet loses its given ranks on display (the given terms
+   * in rank math are 0 once folded). */
+  function migrateRanksOn(d) {
+    if (!d) return d;
+    (d.skills || []).forEach(function (c) { R.foldBackgroundRank(c, d.backgrounds); R.foldRaceClassRank(c, d.raceClassApplied); });
+    (d.spells || []).forEach(function (c) { R.foldBackgroundRank(c, d.backgrounds); R.foldRaceClassRank(c, d.raceClassApplied); });
+    return d;
+  }
   function loadSaved() {
     try {
       var raw = localStorage.getItem(SAVE_KEY);
@@ -280,8 +304,7 @@
       var data = JSON.parse(raw);
       if (!data || typeof data !== 'object') return false;
       state = Object.assign(blankState(), data);
-      (state.skills || []).forEach(function (c) { R.foldBackgroundRank(c, state.backgrounds); });
-      (state.spells || []).forEach(function (c) { R.foldBackgroundRank(c, state.backgrounds); });
+      migrateRanksOn(state);
       // Ensure every field exists even for older v2 saves.
       var b = blankState();
       Object.keys(b).forEach(function (k) { if (state[k] === undefined) state[k] = b[k]; });
@@ -433,6 +456,7 @@
               normalizeSlot: R.normalizeSlot
             });
             state = Object.assign(blankState(), converted);
+            migrateRanksOn(state);
             ensureUnarmed();
             syncGearGrants();
             saveNow();
@@ -441,6 +465,7 @@
           return;
         }
         state = Object.assign(blankState(), ch);
+        migrateRanksOn(state);
         ensureUnarmed();
         saveNow();
         renderAll();
@@ -543,16 +568,32 @@
     if (!card) {
       var lib = findLib(skillName);
       applied = Math.min(amount, 10);
-      card = { id: uid(), name: lib ? lib.name : skillName, kind: kind, ownRank: 0, stat: lib && lib.stat ? lib.stat.toLowerCase() : (kind === 'spell' ? 'int' : 'str'), checkType: 'Active Check', effect: '', used: false, gearGrants: {} };
+      card = { id: uid(), name: lib ? lib.name : skillName, kind: kind, ownRank: applied, stat: lib && lib.stat ? lib.stat.toLowerCase() : (kind === 'spell' ? 'int' : 'str'), checkType: 'Active Check', effect: '', used: false, gearGrants: {}, rcFolded: true };
       (kind === 'spell' ? state.spells : state.skills).push(card);
     } else {
       var before = cardRank(card);
       applied = Math.max(0, Math.min(amount, 10 - before)); // cap Rank 10 at selection
       if (applied <= 0) return;
+      // Race/class grants are trained ranks: fold the amount into
+      // ownRank. The raceClassApplied entry stays as the record of how
+      // much to take back off if this race/class leaves.
+      var wasZero = card.ownRank === 0;
+      card.ownRank = (card.ownRank || 0) + applied;
+      card.rcFolded = true;
+      state.raceClassApplied.push({ source: source, sourceName: sourceName, skillName: card.name, kind: kind, amount: applied, createdByBonus: wasZero });
+      return;
     }
-    state.raceClassApplied.push({ source: source, sourceName: sourceName, skillName: card.name, kind: kind, amount: applied, createdByBonus: card.ownRank === 0 });
+    state.raceClassApplied.push({ source: source, sourceName: sourceName, skillName: card.name, kind: kind, amount: applied, createdByBonus: true });
   }
   function reverseSource(source, sourceName) {
+    // Take the grant back off the trained rank before dropping the
+    // record: a rank trained above the grant stays, the grant itself
+    // leaves. (A race grant of +3 on a card trained to 6 leaves 3.)
+    state.raceClassApplied.forEach(function (a) {
+      if (a.source !== source || (sourceName && a.sourceName !== sourceName)) return;
+      var card = findCard(a.skillName, a.kind);
+      if (card) card.ownRank = Math.max(0, (card.ownRank || 0) - num(a.amount, 0));
+    });
     state.raceClassApplied = state.raceClassApplied.filter(function (a) {
       return !(a.source === source && (!sourceName || a.sourceName === sourceName));
     });
@@ -2383,7 +2424,7 @@
   window.DCC = {
     getState: function () { return state; },
     baseTotal: function () { var st = computeStats(); return R.STAT_KEYS.reduce(function (a, k) { return a + st[k].derived; }, 0); },
-    syncGearGrants: syncGearGrants, syncTendrilsRank: syncTendrilsRank, ensureUnarmed: ensureUnarmed,
+    syncGearGrants: syncGearGrants, syncTendrilsRank: syncTendrilsRank, ensureUnarmed: ensureUnarmed, migrateRanksOn: migrateRanksOn,
     setState: function (s) { state = s; },
     blankState: blankState,
     renderAll: renderAll, showTab: showTab, saveNow: saveNow, saveSoon: saveSoon, fitAllTextareas: fitAllTextareas,
@@ -2433,6 +2474,9 @@
       // Background protection: the trained rank can never drop below the
       // rank the card came with at creation (the DM inspector is exempt).
       if (card.background) card.ownRank = Math.max(card.ownRank, card.backgroundRank || 0);
+      // Race/class protection: the trained rank can never drop below the
+      // ranks a held race/class granted (same exemption as backgrounds).
+      card.ownRank = Math.max(card.ownRank, raceClassGrantFor(card));
       saveSoon(); renderAll();
     },
     setCardStat: function (kind, id, value) {
@@ -2472,6 +2516,9 @@
       // Background protection: a background skill/spell cannot be deleted
       // (the DM inspector is exempt — see dmInspDelCard in cloud.js).
       if (card.background && (card.backgroundRank || 0) > 0) { alert('This skill came from your background and cannot be deleted.'); return; }
+      // Race/class protection: a card a held race/class granted cannot
+      // be deleted (same exemption as backgrounds).
+      if (raceClassGrantFor(card) > 0) { alert('This card is granted by a race or class. Remove that race or class to remove the card.'); return; }
       if (cardFloor(card) > 0) { alert('This card is granted by a race, class, choice, or equipped item. Remove that source (or unequip the item) to remove the card.'); return; }
       if (kind === 'spell') state.spells = state.spells.filter(function (c) { return c.id !== id; });
       else state.skills = state.skills.filter(function (c) { return c.id !== id; });

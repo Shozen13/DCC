@@ -5,13 +5,16 @@
  * Rank conversion is the heart of it. An original card stores the DISPLAYED
  * rank (trained + givens, edited in place) plus side records: gearGrants
  * (item -> amount), raceClassSkillApplied (race/class fixed amounts) and
- * groupBonus. The merged card stores only ownRank (trained), and givens
- * are recomputed from live records on every render. So:
+ * groupBonus. The merged card stores ownRank (trained, including any
+ * race/class grants — those are folded into ownRank on import by
+ * R.foldRaceClassRank, ?v=47.5), while gear and group givens are still
+ * recomputed from live records on every render. So on import:
  *   ownRank = max(0, displayedRank - gearFloor - raceFloor - groupBonus)
- * and the race/class applied records are carried over so the givens
- * re-apply on top of ownRank, reproducing the original displayed rank.
- * In the other direction, displayed rank = ownRank + gear + race + group
- * (supplied by the caller, which owns the live computation).
+ * and the race/class applied records are carried over so the fold can
+ * put the race/class givens back into ownRank, reproducing the original
+ * displayed rank. In the other direction, displayed rank =
+ * ownRank + gear + group (race is already inside ownRank; supplied by
+ * the caller, which owns the live computation).
  *
  * Best-effort gaps (fields with no counterpart, documented not hidden):
  * - Original hotlistState is a map of select-element ids -> names; the
