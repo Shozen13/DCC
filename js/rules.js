@@ -408,8 +408,9 @@
    * Rank 20". Returns [{type, name, kind, category, count, options,
    * label}]. type: 'fixed' (a named skill/spell), 'all' (all skills),
    * 'crafting' (all crafting skills), 'explosiveTrap' (explosives and
-   * trap-making skills), 'choice' (the player picks: category 'weapon'
-   * | 'crafting' | 'cha' | 'skill' with options). A clause can hold
+   * trap-making skills), 'firearm' (all firearm skills), 'choice' (the
+   * player picks: category 'weapon' | 'crafting' | 'cha' | 'skill' with
+   * options). A clause can hold
    * both a fixed name and a choice ("Hide in Shadows and one crafting
    * Skill of your choice"), so choice patterns are extracted first and
    * the fixed-name scan runs on what is left. Names are validated
@@ -449,6 +450,7 @@
     if (/all crafting skills/.test(low)) { push({ type: 'crafting', label: 'all crafting Skills' }); skipFixed = true; }
     else if (/all skills/.test(low)) { push({ type: 'all', label: 'all Skills' }); skipFixed = true; }
     if (/all explosives and trap-making skills/.test(low)) { push({ type: 'explosiveTrap', label: 'all explosives and trap-making Skills' }); skipFixed = true; }
+    if (/firearm/.test(low)) { push({ type: 'firearm', label: 'all One-handed Firearm Skills' }); skipFixed = true; }
     // Choice patterns; each removes its phrase so the fixed scan below
     // does not re-read it.
     [{ re: /two different charisma-based skills?/i, category: 'cha', count: 2, label: 'two different Charisma-based Skills' },
@@ -510,6 +512,7 @@
       if (g.type === 'all' && card.kind === 'skill') cap = 20;
       else if (g.type === 'crafting' && CRAFTING_SKILLS.indexOf(key) >= 0) cap = 20;
       else if (g.type === 'explosiveTrap' && (TRAP_SKILLS.indexOf(key) >= 0 || EXPLOSIVE_SKILLS.indexOf(key) >= 0)) cap = 20;
+      else if (g.type === 'firearm' && FIREARM_SKILLS.indexOf(key) >= 0) cap = 20;
       else if (g.type === 'fixed' && normName(g.name) === key) cap = 20;
     });
     (capPicks || []).forEach(function (p) {
@@ -529,6 +532,19 @@
   var EXPLOSIVE_SKILLS = ['bomb surgeon', 'improvised explosive device', 'explosives handling', 'goblin explosives', 'incendiary device handling'];
   var CRAFTING_SKILLS = ['alchemy', 'arcane', 'calligraphy', 'engineering', 'explosives handling', 'goblin explosives', 'smithing', 'tattoo artistry'];
 
+  /* Firearm skills (?v=50, Antony 2026-11-22): Gun Bunny's "All
+   * One-handed Firearm Skills can be raised to Rank 20" covers ANY
+   * skill involving a firearm — Handgun, Shotgun, anything like that.
+   * The "one-handed" qualifier is overridden: Shotgun is two-handed
+   * (book p.182, "Requires two hands to wield") and is included.
+   * Pistol Whip is a melee attack made with a pistol, so it is in.
+   * Closed by name, not by text matching. EXCLUDED: AIMING (utility,
+   * p.184 — general ranged-attack support), Double Tap (utility,
+   * p.190 — any weapon or Spell, not firearm-specific), GOLDEN GUN
+   * (a "Handgun Damage Effect, Passive", not a firearm skill),
+   * SLINGSHOT (attack, but not a firearm). */
+  var FIREARM_SKILLS = ['handgun', 'shotgun', 'combat rifle', 'sniper rifle', 'long guns', 'smg', 'pistol whip'];
+
   /* Floor-driven natural attacks (see app.js FLOOR_ATTACKS): their
    * rank is the floor, never a trained rank, so no group bonus applies
    * to them. Keep in step with the app.js table. */
@@ -537,6 +553,37 @@
     'elemental breath', 'hand claw', 'horn gore', 'ursine claw', 'vampyr bite',
     'vampiric bite', 'hellfire spittle', 'wilting breath', 'bladed arms',
     'beak', 'shadow claws'];
+
+  /* Descent-driven skills (?v=50, Antony 2026-11-22): HIJACK (granted
+   * +3 by the Wannabe class) and FLASH CRAFTING (granted +3 by the Elf,
+   * Christmas race) are granted at Rank 3 and rank up one level
+   * whenever the crawler goes down a floor. The +3 fixed grant stays a
+   * trained rank; the descent bump adds +1 to ownRank per floor
+   * descended (app.js syncDescentSkillRanks, capped at the card's rank
+   * cap). A card only counts when a raceClassApplied record ties it to
+   * the granting race/class — a manually added HIJACK card does not
+   * bump, and its rank stays freely editable. `applied` is the
+   * state.raceClassApplied array: entries {source: 'race'|'class',
+   * sourceName, skillName, kind, amount}. */
+  var DESCENT_SKILLS = [
+    { name: 'HIJACK', sourceKind: 'class', sourceName: 'Wannabe' },
+    { name: 'FLASH CRAFTING', sourceKind: 'race', sourceName: 'Elf, Christmas' }
+  ];
+  function descentSkillSpec(name, applied) {
+    var key = normName(name);
+    for (var i = 0; i < DESCENT_SKILLS.length; i++) {
+      var spec = DESCENT_SKILLS[i];
+      if (normName(spec.name) !== key) continue;
+      var tied = (applied || []).some(function (a) {
+        return a.source === spec.sourceKind &&
+          normName(a.sourceName) === normName(spec.sourceName) &&
+          normName(a.skillName) === key;
+      });
+      if (tied) return spec;
+    }
+    return null;
+  }
+  function isDescentSkill(name, applied) { return !!descentSkillSpec(name, applied); }
 
   /* Group bonuses, as Rank adjustments. lib is the Chapter 4 entry for
    * the card (or null for custom cards); keywords is the spell's
@@ -726,6 +773,10 @@
     'HAND CLAW': 'Melee Attack', 'HORN GORE': 'Melee Attack', 'URSINE CLAW': 'Melee Attack',
     'VAMPYR BITE': 'Melee Attack', 'VAMPIRIC BITE': 'Melee Attack',
     'BLADED ARMS': 'Melee Attack', 'BEAK': 'Melee Attack', 'SHADOW CLAWS': 'Melee Attack',
+    // ?v=50: PISTOL WHIP is a granted attack (Gun Bunny "+2 Pistol Whip"),
+    // not floor-driven — it needs the type here or a granted card never
+    // appears in the Attacks tab (skillAttackType returned null before).
+    'PISTOL WHIP': 'Melee Attack',
     'ELEMENTAL BREATH': 'Ranged Attack', 'HELLFIRE SPITTLE': 'Ranged Attack',
     'WILTING BREATH': 'Ranged Attack', 'CHAKRAM': 'Ranged Attack',
     'BOW': 'Ranged Attack', 'CROSSBOW': 'Ranged Attack', 'HANDGUN': 'Ranged Attack', 'JAVELIN': 'Ranged Attack',
@@ -1349,12 +1400,13 @@
     healthBarUsesCha: healthBarUsesCha, parseFixedSkillBonuses: parseFixedSkillBonuses,
     parseChoiceGrants: parseChoiceGrants, groupBonusFor: groupBonusFor,
     parseCapGrants: parseCapGrants, capForCard: capForCard, CRAFTING_SKILLS: CRAFTING_SKILLS,
-    TRAP_SKILLS: TRAP_SKILLS, EXPLOSIVE_SKILLS: EXPLOSIVE_SKILLS,
+    TRAP_SKILLS: TRAP_SKILLS, EXPLOSIVE_SKILLS: EXPLOSIVE_SKILLS, FIREARM_SKILLS: FIREARM_SKILLS,
     CLUBS: CLUBS, parsePrereqs: parsePrereqs, checkPrereqs: checkPrereqs, prereqSkillFlags: prereqSkillFlags,
     floor3Required: floor3Required,
     magePenalty: magePenalty, effectiveRank: effectiveRank,
     attackDamageStat: attackDamageStat, tigranMoveBonus: tigranMoveBonus, raceClassMoveBonus: raceClassMoveBonus,
     FLOOR_ATTACK_NAMES: FLOOR_ATTACK_NAMES,
+    DESCENT_SKILLS: DESCENT_SKILLS, descentSkillSpec: descentSkillSpec, isDescentSkill: isDescentSkill,
     normName: normName, clampInt: clampInt, normalizeSlot: normalizeSlot, parseItemBonuses: parseItemBonuses,
     GEAR_SLOT_LABELS: GEAR_SLOT_LABELS, SLOT_LIMITS: SLOT_LIMITS, CONSUMABLE_SUBTYPES: CONSUMABLE_SUBTYPES,
     placementFamily: placementFamily, normalizeKind: normalizeKind,

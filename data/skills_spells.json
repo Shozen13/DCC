@@ -4177,22 +4177,6 @@
   },
   {
     "base_damage": null,
-    "base_effect": "Homebrew weapon skill granted by the Super Earth Super Medic class. No definition in the source; possibly the same skill as Handgun.",
-    "kind": "attack",
-    "mana_cost": null,
-    "name": "PISTOL",
-    "range": null,
-    "source_book_page": null,
-    "stat": "DEX",
-    "uncertain": true,
-    "upgrades": {
-      "5": "",
-      "10": "",
-      "15": ""
-    }
-  },
-  {
-    "base_damage": null,
     "base_effect": "Homebrew weapon skill granted by the Super Earth Super Medic class (as an alternative to SMG). No definition in the source.",
     "kind": "attack",
     "mana_cost": null,
@@ -4337,7 +4321,7 @@
   },
   {
     "base_damage": "1d6 + Dex Bludgeoning",
-    "base_effect": "Melee attack. [Rank=F] + Dex to hit. 1d6 + Dex Bludgeoning.",
+    "base_effect": "Melee attack. [Rank = Floor] + Dex to hit. 1d6 + Dex Bludgeoning.",
     "kind": "attack",
     "mana_cost": null,
     "name": "PISTOL WHIP",

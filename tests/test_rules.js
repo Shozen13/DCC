@@ -508,7 +508,8 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
     var rules = R.parseCapGrants(e, realLib);
     if (rules.length) caps[e.name] = rules;
   });
-  eq(Object.keys(caps).length, 74, 'cap clauses: 74 race/class entries have a Rank 20 clause (23 book/custom + 51 homebrew)');
+  eq(Object.keys(caps).length, 75, 'cap clauses: 75 race/class entries have a Rank 20 clause (23 book/custom + 52 homebrew)');
+  eq(caps['Gun Bunny'].map(function (r) { return r.type; }), ['firearm'], 'v50b: Gun Bunny: firearm cap');
   eq(caps['Dwarf, Classic'].map(function (r) { return r.type; }), ['crafting'], 'Dwarf: all crafting skills');
   eq(caps['Elf, High'][0].category, 'cha', 'Elf, High: two CHA skills (choice)');
   eq(caps['Elf, High'][0].count, 2, 'Elf, High: pick two');
@@ -657,7 +658,7 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
   libData.forEach(function (e) { byName[e.name.toLowerCase()] = e; });
   var realLib = function (n) { return byName[(n || '').toLowerCase()] || null; };
   eq(rc.length, 295, 'v49: 86 live + 209 homebrew races/classes');
-  eq(libData.length, 290, 'v49: 172 live + 118 homebrew skills/spells');
+  eq(libData.length, 289, 'v50: 172 live + 117 homebrew skills/spells (PISTOL dropped)');
   // Choice-grant dedupe fix: distinct same-amount choices both parse.
   var fom = rc.find(function (e) { return e.name === 'Fomorian'; });
   eq(R.parseChoiceGrants(fom).length, 2, 'v49 dedupe: Fomorian keeps both +1 skill choices');
@@ -743,6 +744,91 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
   eq(R.raceClassMoveBonus('Capoeirista', ''), { move: 0, step: 0 }, 'Capoeirista: Amazing-Success Step is conditional, not applied');
   eq(R.raceClassMoveBonus('Lizardfolk', ''), { move: 5, step: 5 }, 'Lizardfolk unchanged');
   eq(R.raceClassMoveBonus('Tigran', ''), { move: 10, step: 0 }, 'Tigran unchanged');
+})();
+
+// ?v=50: PISTOL is Handgun, F = Floor, HIJACK / FLASH CRAFTING descent ranks
+(function () {
+  var rc = require('../data/races_classes.json');
+  var libData = require('../data/skills_spells.json');
+  var byName = {};
+  libData.forEach(function (e) { byName[e.name.toLowerCase()] = e; });
+  var realLib = function (n) { return byName[(n || '').toLowerCase()] || null; };
+  eq(libData.length, 289, 'v50: 289 skills (PISTOL dropped, PISTOL WHIP kept)');
+  eq(realLib('PISTOL'), null, 'v50: PISTOL entry gone');
+  eq(realLib('PISTOL WHIP') && realLib('PISTOL WHIP').kind, 'attack', 'v50: PISTOL WHIP stays (distinct attack)');
+  eq(realLib('PISTOL WHIP').base_effect, 'Melee attack. [Rank = Floor] + Dex to hit. 1d6 + Dex Bludgeoning.', 'v50: PISTOL WHIP "[Rank=F]" -> "[Rank = Floor]"');
+  eq(realLib('HANDGUN') && realLib('HANDGUN').kind, 'attack', 'v50: HANDGUN is the live book skill (attack, DEX, p.181)');
+  // Super Earth Super Medic: the grant now reads Handgun and parses.
+  var sem = rc.find(function (e) { return e.name === 'Super Earth Super Medic'; });
+  eq(sem.benefits.indexOf('+2 First Aid, Nonaddictive Stim, Handgun, and Throwing.') >= 0, true, 'v50: SEM grant reads Handgun');
+  eq(sem.benefits.indexOf('you may roll the Handgun skill') >= 0, true, 'v50: Stim Pistol rolls the Handgun skill');
+  eq(sem.benefits.indexOf('Pistol, and Throwing') < 0, true, 'v50: no Pistol grant left in SEM');
+  eq(R.parseFixedSkillBonuses(sem, realLib).filter(function (g) { return g.name === 'HANDGUN'; }),
+    [{ name: 'HANDGUN', kind: 'attack', amount: 2 }], 'v50: SEM grants HANDGUN at Rank 2');
+  // F = Floor readings.
+  var fom = rc.find(function (e) { return e.name === 'Fomorian'; });
+  eq(fom.benefits.indexOf('make an Opposed Con + Floor check against a target within 30ft.') >= 0, true, 'v50: Fomorian "Opposed Con + Floor check"');
+  var gb = rc.find(function (e) { return e.name === 'Gun Bunny'; });
+  eq(gb.benefits.indexOf('+2 Pistol Whip. Melee attack; [Rank = Floor] + Dex to hit.') >= 0, true, 'v50a: Gun Bunny "+2 Pistol Whip" grant (Antony 2026-11-22)');
+  eq(gb.uncertain_reason, null, 'v50a: Gun Bunny uncertain_reason cleared (Pistol Whip rank resolved)');
+  eq(gb.uncertain, false, 'v50a: Gun Bunny no longer uncertain');
+  eq(R.parseFixedSkillBonuses(gb, realLib).filter(function (g) { return g.name === 'PISTOL WHIP'; }),
+    [{ name: 'PISTOL WHIP', kind: 'attack', amount: 2 }], 'v50a: Gun Bunny grants PISTOL WHIP at Rank 2');
+  eq(R.skillAttackType('PISTOL WHIP'), 'Melee Attack', 'v50a: PISTOL WHIP is a Melee Attack (SKILL_ATTACK_TYPES)');
+  eq(R.isAttackSkill('PISTOL WHIP'), true, 'v50a: isAttackSkill(PISTOL WHIP) true — granted card appears in the Attacks tab');
+  // v50b: Gun Bunny's "All One-handed Firearm Skills can be raised to
+  // Rank 20" now parses as a firearm cap rule (Antony 2026-11-22: ANY
+  // skill involving a firearm — Handgun, Shotgun, anything like that;
+  // the "one-handed" qualifier is overridden).
+  eq(R.parseCapGrants(gb, realLib), [{ type: 'firearm', label: 'all One-handed Firearm Skills' }], 'v50b: Gun Bunny parses the firearm cap rule');
+  eq(R.FIREARM_SKILLS, ['handgun', 'shotgun', 'combat rifle', 'sniper rifle', 'long guns', 'smg', 'pistol whip'], 'v50b: FIREARM_SKILLS set (closed by name)');
+  var gbRules = R.parseCapGrants(gb, realLib);
+  ['HANDGUN', 'SHOTGUN', 'COMBAT RIFLE', 'SNIPER RIFLE', 'LONG GUNS', 'SMG', 'PISTOL WHIP'].forEach(function (n) {
+    eq(R.capForCard({ name: n, kind: 'skill' }, gbRules), 20, 'v50b: ' + n + ' caps at 20 under Gun Bunny');
+  });
+  eq(R.capForCard({ name: 'Dodge', kind: 'skill' }, gbRules), 15, 'v50b: Dodge stays 15 under Gun Bunny (not a firearm)');
+  // Excluded by name: Aiming (general ranged support), Double Tap (any
+  // weapon or Spell), GOLDEN GUN (a Handgun Damage Effect, not a skill),
+  // SLINGSHOT (not a firearm).
+  eq(R.capForCard({ name: 'Aiming', kind: 'skill' }, gbRules), 15, 'v50b: Aiming excluded (general ranged support)');
+  eq(R.capForCard({ name: 'Double Tap', kind: 'skill' }, gbRules), 15, 'v50b: Double Tap excluded (any weapon or Spell)');
+  eq(R.capForCard({ name: 'GOLDEN GUN', kind: 'skill' }, gbRules), 15, 'v50b: GOLDEN GUN excluded (a Damage Effect, not a firearm skill)');
+  eq(R.capForCard({ name: 'SLINGSHOT', kind: 'skill' }, gbRules), 15, 'v50b: SLINGSHOT excluded (not a firearm)');
+  var pm = rc.find(function (e) { return e.name === 'Pyre-Mancer'; });
+  eq(pm.benefits.indexOf('inflicts 1d4 + Floor mixed fire and necrotic damage') >= 0, true, 'v50: Pyre-Mancer "1d4 + Floor"');
+  // v50b: F = Floor for the two BOOK entries (Antony 2026-11-22) — direct
+  // port edits of book text; must be carried forward on any rebuild.
+  var cd = rc.find(function (e) { return e.name === 'Changbi Demon'; });
+  eq(cd.benefits.indexOf('takes 1d4 + Floor Acid') >= 0, true, 'v50b: Changbi Demon "1d4 + Floor Acid"');
+  eq(cd.benefits.indexOf('1d4+F') < 0, true, 'v50b: no "1d4+F" left in Changbi Demon');
+  var ig = rc.find(function (e) { return e.name === 'Igneous'; });
+  eq(ig.benefits.indexOf('deal 1d8 + Floor Fire damage') >= 0, true, 'v50b: Igneous "1d8 + Floor Fire damage"');
+  eq(ig.benefits.indexOf('1d8+F') < 0, true, 'v50b: no "1d8+F" left in Igneous');
+  eq(rc.some(function (e) { return /1d\d\+F/.test(e.benefits || ''); }), false, 'v50b: no "1dN+F" left in race/class text');
+  eq(rc.some(function (e) { return (e.benefits || '').indexOf('[Rank=F]') >= 0; }), false, 'v50: no "[Rank=F]" left in race/class text');
+  eq(libData.some(function (e) { return (e.base_effect || '').indexOf('[Rank=F]') >= 0; }), false, 'v50: no "[Rank=F]" left in library text');
+  // Descent skills: the +3 grants stand, and the record tie decides.
+  var wan = rc.find(function (e) { return e.name === 'Wannabe'; });
+  eq(R.parseFixedSkillBonuses(wan, realLib), [{ name: 'HIJACK', kind: 'utility', amount: 3 }], 'v50: Wannabe still grants HIJACK +3');
+  var elf = rc.find(function (e) { return e.name === 'Elf, Christmas'; });
+  eq(R.parseFixedSkillBonuses(elf, realLib), [{ name: 'FLASH CRAFTING', kind: 'utility', amount: 3 }], 'v50: Elf, Christmas still grants FLASH CRAFTING +3');
+  eq(R.DESCENT_SKILLS.length, 2, 'v50: two descent skills');
+  var hijackRec = [{ source: 'class', sourceName: 'Wannabe', skillName: 'HIJACK', kind: 'skill', amount: 3 }];
+  var flashRec = [{ source: 'race', sourceName: 'Elf, Christmas', skillName: 'FLASH CRAFTING', kind: 'skill', amount: 3 }];
+  eq(R.isDescentSkill('HIJACK', hijackRec), true, 'v50: HIJACK tied to Wannabe counts');
+  eq(R.isDescentSkill('HIJACK', []), false, 'v50: HIJACK with no record does not count (manual card)');
+  eq(R.isDescentSkill('HIJACK', [{ source: 'class', sourceName: 'Wannabe', skillName: 'HANDGUN', kind: 'skill', amount: 2 }]), false, 'v50: record for another skill does not tie HIJACK');
+  eq(R.isDescentSkill('HIJACK', [{ source: 'race', sourceName: 'Wannabe', skillName: 'HIJACK', kind: 'skill', amount: 3 }]), false, 'v50: wrong source kind (race vs class) does not tie');
+  eq(R.isDescentSkill('FLASH CRAFTING', flashRec), true, 'v50: FLASH CRAFTING tied to Elf, Christmas counts');
+  eq(R.isDescentSkill('FLASH CRAFTING', hijackRec), false, 'v50: Wannabe record does not tie FLASH CRAFTING');
+  eq(R.isDescentSkill('TENDRILS', hijackRec), false, 'v50: floor attacks are not descent skills');
+  eq(R.descentSkillSpec('HIJACK', hijackRec), { name: 'HIJACK', sourceKind: 'class', sourceName: 'Wannabe' }, 'v50: descent spec for HIJACK');
+  eq(R.descentSkillSpec('FLASH CRAFTING', flashRec), { name: 'FLASH CRAFTING', sourceKind: 'race', sourceName: 'Elf, Christmas' }, 'v50: descent spec for FLASH CRAFTING');
+  eq(R.descentSkillSpec('HIJACK', []), null, 'v50: no spec without a tying record');
+  // Caps for the descent bump: HIJACK is 20 while Wannabe is held (its
+  // "All Skills" clause); FLASH CRAFTING is 15 (not in the crafting set).
+  eq(R.capForCard({ name: 'HIJACK', kind: 'skill' }, R.parseCapGrants(wan, realLib)), 20, 'v50: HIJACK caps at 20 under Wannabe');
+  eq(R.capForCard({ name: 'FLASH CRAFTING', kind: 'skill' }, R.parseCapGrants(elf, realLib)), 15, 'v50: FLASH CRAFTING caps at 15 under Elf, Christmas');
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

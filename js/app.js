@@ -72,7 +72,7 @@
   /* ---------------- lazy data ---------------- */
   var cache = { skills: null, items: null, races: null, keywords: null, bookChecks: null, _p: {} };
   function loadJSON(path) {
-    return fetch(path + '?v=11').then(function (r) {
+    return fetch(path + '?v=12').then(function (r) {
       if (!r.ok) throw new Error('Failed to load ' + path);
       return r.json();
     });
@@ -709,6 +709,24 @@
     return null;
   }
   function isFloorAttackCard(card) { return !!floorAttackSpecForCard(card); }
+  /* Descent-driven skills (?v=50): HIJACK (Wannabe) and FLASH CRAFTING
+   * (Elf, Christmas) are granted at Rank 3 and rank up one level each
+   * time the crawler goes down a floor (Antony 2026-11-22). The +3
+   * fixed grant stays a trained rank; the bump adds +1 to ownRank per
+   * floor descended, capped at the card's rank cap (HIJACK is 20 while
+   * Wannabe is held — its "All Skills" cap clause; FLASH CRAFTING is
+   * 15). Only a card whose raceClassApplied record ties it to the
+   * granting race/class bumps; a manually added card does not. The rank
+   * is otherwise locked: no rank select, no Level Up rolls (mirrors
+   * the floor-attack guards). Group bonuses still apply to these cards
+   * (unlike floor attacks) — they are ordinary INT skills whose
+   * displayed rank may carry a group bonus. */
+  function isDescentSkillCard(card) { return card ? R.isDescentSkill(card.name, state.raceClassApplied) : false; }
+  function syncDescentSkillRanks() {
+    state.skills.forEach(function (c) {
+      if (isDescentSkillCard(c)) c.ownRank = Math.min((parseInt(c.ownRank, 10) || 0) + 1, rankCapFor(c));
+    });
+  }
   function ensureFloorAttackCard(raceName) {
     var spec = floorAttackForRace(raceName);
     if (!spec) return null;
@@ -1035,6 +1053,8 @@
     var rank = cardRank(card);
     var faSpec = floorAttackSpecForCard(card);
     var tendrilsLocked = !!faSpec;
+    var descentSpec = R.descentSkillSpec(card.name, state.raceClassApplied);
+    var descentLocked = !!descentSpec;
     var eff = R.effectiveRank(rank, card, state.race, state.class);
     var group = groupGivenFor(card);
     var lib = findLib(card.name);
@@ -1050,7 +1070,7 @@
     var open = !!(state.cardOpen && state.cardOpen[card.id]);
     return '<details class="card"' + (open ? ' open' : '') + ' ontoggle="DCC.setCardOpen(\'' + card.id + '\',this.open)"><summary>' + esc(card.name) + ' — Rank ' + rank + (card.used ? ' (Used)' : '') + '</summary>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(card.name) + '" onchange="DCC.renameCard(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
-      + '<label>Rank ' + (tendrilsLocked ? '<select disabled title="Rank equals your Floor' + (faSpec.offset ? ' + ' + faSpec.offset : '') + ' (' + faSpec.title + ')"><option>' + rank + '</option></select>' : '<select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select>') + '</label>'
+      + '<label>Rank ' + (tendrilsLocked ? '<select disabled title="Rank equals your Floor' + (faSpec.offset ? ' + ' + faSpec.offset : '') + ' (' + faSpec.title + ')"><option>' + rank + '</option></select>' : descentLocked ? '<select disabled title="Rank 3 when granted; +1 each floor descended (' + descentSpec.sourceName + ')"><option>' + rank + '</option></select>' : '<select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select>') + '</label>'
       + '<label>Stat ' + (statNoStat
         ? '<select disabled title="No associated stat in the book (Passive), locked"><option value="">\u2014</option></select>'
         : '<select ' + (statLocked ? 'disabled title="Book stat (see Rulebook box)"' : '') + ' onchange="DCC.setCardStat(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + statOptions + '</select>') + '</label>'
@@ -2605,6 +2625,8 @@
     var own = parseInt(card.ownRank, 10) || 0;
     // A floor-driven attack's rank is the floor, not a trained rank: it never rolls.
     if (isFloorAttackCard(card)) return false;
+    // A descent-driven skill's rank is the grant + floors descended, not a trained rank: it never rolls.
+    if (isDescentSkillCard(card)) return false;
     return !!card.used && own >= minBase && own <= maxBase && own < rankCapFor(card);
   }
   function levelUpRows() {
@@ -2690,6 +2712,7 @@
     if (!confirm('Advance to Floor ' + next + '? Used skills and spells at base rank 5 or higher get an advancement roll next.')) return;
     state.floor = next;
     syncFloorAttackRank();
+    syncDescentSkillRanks(); // ?v=50: HIJACK / FLASH CRAFTING +1 per floor descended
     saveSoon();
     renderAll();
     // Entering floor 3: after the Level Up popup closes, the race/class
@@ -2837,6 +2860,7 @@
     floorDelta: function (delta) {
       state.floor = Math.max(1, state.floor + delta);
       syncFloorAttackRank();
+      if (delta > 0) syncDescentSkillRanks(); // ?v=50: descent bump only on descent
       saveSoon(); renderAll();
     },
     advanceFloor: advanceFloor,
@@ -2856,6 +2880,8 @@
       if (!card) return;
       // A floor-driven attack's rank is the floor, not a trained rank.
       if (isFloorAttackCard(card)) return;
+      // A descent-driven skill's rank is the grant + floors descended, not a trained rank.
+      if (isDescentSkillCard(card)) return;
       // The displayed rank cannot be set above the cap (15, or 20 for a
       // skill/spell a race/class clause raises).
       var total = Math.min(num(value, 1), rankCapFor(card));
