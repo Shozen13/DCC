@@ -155,7 +155,7 @@ eq(R.damageStatFromText(pug.base_damage), 'str', 'Pugilism damage stat is STR');
 eq(libAll2.find(e => e.name === 'PUGILISM').stat, 'DEX', 'Pugilism to-hit stat is DEX (book data)');
 eq(R.damageStatFromText(libAll2.find(e => e.name === 'NOGGIN NOCKER').base_damage), 'con', 'Noggin Nocker damage stat is CON');
 eq(R.damageStatFromText('1d4 Piercing'), null, 'No stat word in damage: null');
-eq(de.map(e => e.name).sort(), ['CHOKE OUT', 'DIRTY FIGHTING', 'IRON PUNCH', 'POWERFUL STRIKE', 'SKULLCRACKER', 'SMUSH', 'TOSS'], 'exactly 7 Damage Effects in the library');
+eq(de.map(e => e.name).sort(), ['ASSASSINATE', 'CHOKE OUT', 'DIRTY FIGHTING', 'GOLDEN GUN', 'IRON PUNCH', 'POWERFUL STRIKE', 'REND', 'SKULLCRACKER', 'SMUSH', 'TOSS'], 'exactly 10 Damage Effects in the library (7 book + 3 homebrew: REND, GOLDEN GUN, ASSASSINATE)');
 eq(de.every(e => R.damageEffectParents(e.base_effect).length >= 1), true, 'every Damage Effect names a parent attack');
 eq(R.damageEffectParents('Melee bashing weapon attack with no additional base effect stated.'), [], 'Club is not a Damage Effect');
 eq(R.normalizeKeywordMap({ 'FIREBALL': ['Attack', 'Fire'] }), { 'fireball': ['Attack', 'Fire'] }, 'keyword map keys normalised to lowercase');
@@ -508,7 +508,7 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
     var rules = R.parseCapGrants(e, realLib);
     if (rules.length) caps[e.name] = rules;
   });
-  eq(Object.keys(caps).length, 23, 'cap clauses: 23 race/class entries have a Rank 20 clause');
+  eq(Object.keys(caps).length, 74, 'cap clauses: 74 race/class entries have a Rank 20 clause (23 book/custom + 51 homebrew)');
   eq(caps['Dwarf, Classic'].map(function (r) { return r.type; }), ['crafting'], 'Dwarf: all crafting skills');
   eq(caps['Elf, High'][0].category, 'cha', 'Elf, High: two CHA skills (choice)');
   eq(caps['Elf, High'][0].count, 2, 'Elf, High: pick two');
@@ -532,6 +532,217 @@ eq(R.placementFitsItem('Right Hand', 'Hands/Holding'), true, 'Right Hand fits he
   eq(R.capForCard({ name: 'Heal Others', kind: 'spell' }, caps['Fire Spiritualist'], []), 20, 'cap: fixed spell');
   eq(R.capForCard({ name: 'Longsword', kind: 'skill' }, [], [{ name: 'Longsword', kind: 'skill', cap: 20 }]), 20, 'cap: picked cap choice lifts the skill');
   eq(R.capForCard({ name: 'Longsword', kind: 'skill' }, [], [{ name: 'Rapier', kind: 'skill', cap: 20 }]), 15, 'cap: a different pick does not lift it');
+})();
+
+// ?v=48: floor-3 race/class prerequisites (parser + evaluation)
+(function () {
+  var rc = require('../data/races_classes.json');
+  var libData = require('../data/skills_spells.json');
+  var byName = {};
+  libData.forEach(function (e) { byName[e.name.toLowerCase()] = e; });
+  var realLib = function (n) { return byName[(n || '').toLowerCase()] || null; };
+  function parsed(name) {
+    var e = rc.find(function (x) { return x.name === name; });
+    return R.parsePrereqs(e && e.prerequisites);
+  }
+  function types(p) { return p.checks.map(function (c) { return c.type; }); }
+  function labels(p) { return p.checks.map(function (c) { return c.label; }); }
+  // Every entry with prerequisites in the live library, parsed as expected.
+  eq(types(parsed('Amazonian')), ['statSkill'], 'Amazonian: STR/DEX skill Rank 5+');
+  eq(labels(parsed('Amazonian')), ['any Strength/Dexterity-based Skill Rank 5+'], 'Amazonian label');
+  eq(types(parsed('Cat')), ['race'], 'Cat: already a Cat');
+  eq(labels(parsed('Cat')), ['Race: Cat'], 'Cat label');
+  eq(types(parsed('Obsidian Butterfly')), ['category'], 'Obsidian Butterfly: any Edged Weapon');
+  eq(types(parsed('Sasquatch')), ['skill'], 'Sasquatch: Smush 5+');
+  eq(types(parsed('Bune')), ['popularity'], 'Bune: Popularity 3+');
+  eq(types(parsed('Grulke')), ['skillOr'], 'Grulke: Jumping or Light on Your Feet');
+  eq(types(parsed('Hobgoblin')), ['skill', 'category'], 'Hobgoblin: Explosives Handling + any Trap-based Skill');
+  eq(types(parsed('Feral Cat Berserker')), ['race'], 'Feral Cat Berserker: cat-based races');
+  eq(labels(parsed('Feral Cat Berserker')), ['Race: Cat or Cat Girl or Tigran'], 'Feral Cat Berserker label');
+  eq(types(parsed('Monster Truck Driver')), ['skill'], 'Monster Truck Driver: Driving 5+');
+  eq(types(parsed('Prizefighter')), ['skill'], 'Prizefighter: Pugilism 5+');
+  eq(types(parsed('Compensated Anarchist')), ['skill', 'popularity'], 'Compensated Anarchist: Explosives Handling + Popularity');
+  // Achievements and gender are display-only, never blocking checks.
+  eq(types(parsed('Shieldmaiden')), [], 'Shieldmaiden: female-only is display-only');
+  eq(parsed('Shieldmaiden').display.length, 1, 'Shieldmaiden: display note kept');
+  eq(types(parsed('Bomb Squad Tech')), [], 'Bomb Squad Tech: Boom! achievement is display-only');
+  eq(types(parsed('Former Child Actor')), ['popularity'], 'Former Child Actor: only Popularity is a check');
+  eq(parsed('Former Child Actor').display.join(' ').indexOf('Cut!') >= 0, true, 'Former Child Actor: Cut! kept as a display note');
+  // Synthetic forms the current library does not have yet.
+  eq(types(R.parsePrereqs('Strength 5+')), ['stat'], 'synthetic: stat minimum');
+  eq(labels(R.parsePrereqs('Strength 5+')), ['Strength 5+'], 'synthetic: stat label');
+  eq(types(R.parsePrereqs('Must have killed a crawler')), ['pk'], 'synthetic: killed a crawler = 1 PK');
+  eq(labels(R.parsePrereqs('Must have killed a crawler')), ['Player Kills 1+'], 'synthetic: PK label');
+  eq(types(R.parsePrereqs('3 Player Kills')), ['pk'], 'synthetic: 3 Player Kills');
+  eq(types(R.parsePrereqs('Must be a member of the Desperado Club')), ['club'], 'synthetic: club membership');
+  eq(labels(R.parsePrereqs('Must be a member of the Desperado Club')), ['Member of Desperado Club'], 'synthetic: club label');
+  eq(types(R.parsePrereqs('Must worship the Armorer')), ['deity'], 'synthetic: named deity');
+  eq(types(R.parsePrereqs('Must worship a deity')), ['deity'], 'synthetic: any deity');
+  eq(types(R.parsePrereqs('Only with the DM approval')), ['dmApproval'], 'synthetic: DM approval');
+  eq(types(R.parsePrereqs('Only available to crawlers who have Rank 5+ in the Smush Skill')), ['skill'], 'synthetic: boilerplate stripped, Smush 5+');
+  eq(types(R.parsePrereqs('')), [], 'empty prerequisites: no checks');
+  eq(types(R.parsePrereqs(null)), [], 'null prerequisites: no checks');
+  var unparsed = R.parsePrereqs('Must be truly, deeply, spiritually committed to the cause');
+  eq(unparsed.checks.length, 0, 'unparseable text: no checks');
+  eq(unparsed.display.length, 1, 'unparseable text: kept as a display note');
+  // Evaluation against a context.
+  function ctx(over) {
+    var base = { stats: { str: 6, con: 4, dex: 3, int: 3, cha: 2 }, popularity: 3, pkKills: 1,
+      clubs: ['Desperado Club'], deity: 'The Armorer', race: 'Cat', dmApproved: false,
+      skills: [
+        { name: 'Smush', rank: 5, stat: 'str', isEdged: false, isTrap: false, isExplosive: false },
+        { name: 'Dodge', rank: 5, stat: 'dex', isEdged: false, isTrap: false, isExplosive: false },
+        { name: 'Longsword', rank: 5, stat: 'str', isEdged: true, isTrap: false, isExplosive: false },
+        { name: 'Trap Engineer', rank: 4, stat: 'int', isEdged: false, isTrap: true, isExplosive: false },
+        { name: 'Explosives Handling', rank: 5, stat: 'int', isEdged: false, isTrap: false, isExplosive: true }
+      ] };
+    Object.keys(over || {}).forEach(function (k) { base[k] = over[k]; });
+    return base;
+  }
+  function checkPass(text, c) { return R.checkPrereqs(R.parsePrereqs(text).checks, c).pass; }
+  eq(checkPass('Popularity 3+', ctx()), true, 'eval: Popularity 3 meets 3+');
+  eq(checkPass('Popularity 3+', ctx({ popularity: 2 })), false, 'eval: Popularity 2 fails 3+');
+  eq(checkPass('Rank 5+ in the Smush Skill', ctx()), true, 'eval: Smush 5 meets 5+');
+  eq(checkPass('Rank 5+ in the Smush Skill', ctx({ skills: [] })), false, 'eval: missing skill fails');
+  eq(checkPass('Rank 5+ in the Jumping or Light on Your Feet Skill', ctx()), false, 'eval: neither of an or-list fails');
+  eq(checkPass('at least one Strength or Dexterity-based Skill at Rank 5+', ctx()), true, 'eval: DEX Dodge 5 meets the stat-skill check');
+  eq(checkPass('Rank 5+ with any Edged Weapon', ctx()), true, 'eval: Longsword 5 is an edged weapon');
+  eq(checkPass('Rank 5+ with any Edged Weapon', ctx({ skills: [{ name: 'Dodge', rank: 5, stat: 'dex', isEdged: false, isTrap: false, isExplosive: false }] })), false, 'eval: no edged weapon fails');
+  eq(checkPass('Rank 5+ in the Explosives Handling Skill and any Trap-based Skill', ctx()), false, 'eval: Trap Engineer 4 fails the trap half');
+  eq(checkPass('Rank 5+ in the Explosives Handling Skill and any Trap-based Skill', ctx({ skills: [{ name: 'Explosives Handling', rank: 5, stat: 'int', isEdged: false, isTrap: false, isExplosive: true }, { name: 'Trap Engineer', rank: 5, stat: 'int', isEdged: false, isTrap: true, isExplosive: false }] })), true, 'eval: both halves pass');
+  eq(checkPass('Strength 5+', ctx()), true, 'eval: STR 6 meets 5+');
+  eq(checkPass('Strength 5+', ctx({ stats: { str: 4, con: 4, dex: 3, int: 3, cha: 2 } })), false, 'eval: STR 4 fails 5+');
+  eq(checkPass('3 Player Kills', ctx()), false, 'eval: 1 PK fails 3');
+  eq(checkPass('3 Player Kills', ctx({ pkKills: 3 })), true, 'eval: 3 PK meets 3');
+  eq(checkPass('Must be a member of the Desperado Club', ctx()), true, 'eval: Desperado Club member passes');
+  eq(checkPass('Must be a member of the Desperado Club', ctx({ clubs: [] })), false, 'eval: no club fails');
+  eq(checkPass('Must worship the Armorer', ctx()), true, 'eval: named deity matches');
+  eq(checkPass('Must worship the Armorer', ctx({ deity: '' })), false, 'eval: no deity fails');
+  eq(checkPass('Must worship a deity', ctx({ deity: 'The Armorer' })), true, 'eval: any deity set passes');
+  eq(checkPass('Only with the DM approval', ctx()), false, 'eval: DM approval unchecked fails');
+  eq(checkPass('Only with the DM approval', ctx({ dmApproved: true })), true, 'eval: DM approval ticked passes');
+  eq(checkPass('already a Cat', ctx()), true, 'eval: race Cat passes');
+  eq(checkPass('already a Cat', ctx({ race: 'Human' })), false, 'eval: race Human fails a Cat prereq');
+  eq(checkPass('already a Cat', ctx({ race: 'Cat Girl/Cat Boy' })), false, 'eval: Cat does not match Cat Girl/Cat Boy');
+  eq(checkPass('cat-based Races, such as Cat, Cat Girl, and Tigran', ctx({ race: 'Tigran' })), true, 'eval: Tigran is in the cat-based list');
+  // Category flags.
+  var ls = R.prereqSkillFlags({ name: 'Longsword', kind: 'skill' }, realLib('Longsword'));
+  eq(ls.isEdged, true, 'flags: Longsword is edged (Slashing damage)');
+  var dg = R.prereqSkillFlags({ name: 'Dodge', kind: 'skill' }, realLib('Dodge'));
+  eq(dg.isEdged, false, 'flags: Dodge is not edged');
+  var te = R.prereqSkillFlags({ name: 'Trap Engineer', kind: 'skill' }, realLib('Trap Engineer'));
+  eq(te.isTrap, true, 'flags: Trap Engineer is a trap skill');
+  var eh = R.prereqSkillFlags({ name: 'Explosives Handling', kind: 'skill' }, realLib('Explosives Handling'));
+  eq(eh.isExplosive, true, 'flags: Explosives Handling is explosive');
+  // Banked stat points: (Level - 1) * 3 - spent.
+  eq(R.statBank(1, 0), 0, 'bank: level 1 has none');
+  eq(R.statBank(5, 0), 12, 'bank: level 5, nothing spent');
+  eq(R.statBank(5, 7), 5, 'bank: level 5, 7 spent');
+  eq(R.statBank(19, 54), 0, 'bank: level 19, all 54 spent');
+  // Confirmation-state rule (the pure part; the app stores the flag).
+  eq(R.floor3Required(2, false), false, 'floor3: floor 2 never requires it');
+  eq(R.floor3Required(3, false), true, 'floor3: floor 3 unconfirmed requires it');
+  eq(R.floor3Required(3, true), false, 'floor3: floor 3 confirmed does not');
+  eq(R.floor3Required(5, false), true, 'floor3: floor 5 unconfirmed requires it');
+  eq(R.floor3Required(1, false), false, 'floor3: floor 1 never requires it');
+  // Club set.
+  eq(R.CLUBS, ['Desperado Club', 'Club Vanquisher', 'Dungeon Book of the Floor Club'], 'club set: the three clubs');
+})();
+
+// ?v=49: homebrew library (209 entries) + parser fixes
+(function () {
+  var rc = require('../data/races_classes.json');
+  var libData = require('../data/skills_spells.json');
+  var byName = {};
+  libData.forEach(function (e) { byName[e.name.toLowerCase()] = e; });
+  var realLib = function (n) { return byName[(n || '').toLowerCase()] || null; };
+  eq(rc.length, 295, 'v49: 86 live + 209 homebrew races/classes');
+  eq(libData.length, 290, 'v49: 172 live + 118 homebrew skills/spells');
+  // Choice-grant dedupe fix: distinct same-amount choices both parse.
+  var fom = rc.find(function (e) { return e.name === 'Fomorian'; });
+  eq(R.parseChoiceGrants(fom).length, 2, 'v49 dedupe: Fomorian keeps both +1 skill choices');
+  eq(R.parseChoiceGrants(fom).map(function (g) { return g.label; }),
+    ['skill from Bite, Back Claw, or Ice Blast', 'skill from Riding, Animal Handling, Smithing, or Intimidate'], 'v49 dedupe: Fomorian labels differ');
+  var sen = rc.find(function (e) { return e.name === 'Sentai Ranger'; });
+  eq(R.parseChoiceGrants(sen).length, 3, 'v49 dedupe: Sentai Ranger keeps all three +3 choices');
+  eq(R.parseChoiceGrants({ name: 'X', benefits: '+1 in one skill of your choice. +1 in one skill of your choice.' }).length, 1,
+    'v49 dedupe: identical choices still collapse to one');
+  // Minotaur (confirmed by Antony 2026-11-22): +3 Pathfinder + weapon choice.
+  var mn = rc.find(function (e) { return e.name === 'Minotaur'; });
+  eq(R.parseFixedSkillBonuses(mn, realLib), [{ name: 'Pathfinder', kind: 'utility', amount: 3 }], 'Minotaur: +3 Pathfinder');
+  eq(R.parseChoiceGrants(mn), [{ amount: 3, count: 1, category: 'weapon', label: 'weapon Skill', options: null }], 'Minotaur: +3 weapon choice');
+  eq(mn.uncertain, false, 'Minotaur: split confirmed, no longer uncertain');
+  // Antony's 2026-11-22 corrections.
+  eq(rc.some(function (e) { return e.name === 'Incubus/Succubus'; }), true, 'Incubus/Succubus spelling');
+  eq(rc.some(function (e) { return e.name === 'Incubus/Sucubus'; }), false, 'old Sucubus spelling gone');
+  var af = rc.find(function (e) { return e.name === 'Aura Farmer'; });
+  eq(af.benefits.indexOf('Must worship Dagda.') >= 0, true, 'Aura Farmer worships Dagda');
+  eq(R.parsePrereqs('Must worship Dagda.').checks[0].type, 'deity', 'Dagda parses as a deity check');
+  var hd = rc.find(function (e) { return e.name === 'Half-Djinns'; });
+  eq(hd.benefits.indexOf('Choose a natural attack related to the forest creature you are an offshoot from.') >= 0, true, 'Half-Djinns: natural attack is a player choice');
+  // Goliath heritage grants (merge fix-up): the "+N bonus to X" wording
+  // the parser drops is rewritten so the grants land.
+  var go = rc.find(function (e) { return e.name === 'Goliath'; });
+  eq(R.parseFixedSkillBonuses(go, realLib).map(function (g) { return g.name; }).sort(),
+    ['Determine Value', 'EMBIGGEN', 'Iron Stomach', 'Regeneration'], 'Goliath: heritage grants land');
+  // Bear, Black: stats + Perception grant; the claw is floor-driven, not a grant.
+  var bb = rc.find(function (e) { return e.name === 'Bear, Black'; });
+  eq(R.parseRaceClassStats(bb), { str: 0, con: 6, dex: 0, int: 0, cha: 0 }, 'Bear, Black: +6 CON');
+  eq(R.parseFixedSkillBonuses(bb, realLib), [{ name: 'Perception', kind: 'utility', amount: 1 }], 'Bear, Black: only +1 Perception (claw is floor-driven)');
+  // Lord of the Night: sentence-initial "Already a Vampyr." parses as a
+  // race check (?v=49 parser fix — the race regex is case-insensitive now).
+  var lotn = rc.find(function (e) { return e.name === 'Lord of the Night'; });
+  eq(R.parsePrereqs(lotn.prerequisites).checks.map(function (c) { return c.type; }), ['race'], 'Lord of the Night: Already a Vampyr is a race check');
+  eq(R.parsePrereqs(lotn.prerequisites).checks[0].names, ['Vampyr'], 'Lord of the Night: race is Vampyr');
+  eq(R.parsePrereqs('This limited Race is only available to crawlers who are already a Cat').checks.map(function (c) { return c.type; }), ['race'], 'Cat prereq still parses');
+  // Floor-attack library entries: all in SKILL_ATTACK_TYPES, all in the
+  // group-bonus exclusion list.
+  ['BLACK BEAR CLAW', 'CLAW', 'SLAM', 'TRASH PANDA BITE', 'HODEN BITE', 'HAND CLAW', 'HORN GORE',
+   'URSINE CLAW', 'VAMPYR BITE', 'VAMPIRIC BITE', 'BLADED ARMS', 'BEAK', 'SHADOW CLAWS'].forEach(function (n) {
+    eq(R.skillAttackType(n), 'Melee Attack', n + ' is Melee Attack');
+  });
+  ['ELEMENTAL BREATH', 'HELLFIRE SPITTLE', 'WILTING BREATH', 'CHAKRAM'].forEach(function (n) {
+    eq(R.skillAttackType(n), 'Ranged Attack', n + ' is Ranged Attack');
+  });
+  eq(R.isAttackSkill('BEAK'), true, 'BEAK counts as an attack');
+  eq(realLib('BEAK').stat, null, 'BEAK has no stat');
+  eq(R.FLOOR_ATTACK_NAMES.indexOf('black bear claw') >= 0, true, 'floor list: black bear claw');
+  eq(R.FLOOR_ATTACK_NAMES.indexOf('claw') >= 0, true, 'floor list: claw');
+  eq(R.FLOOR_ATTACK_NAMES.indexOf('bite') >= 0, true, 'floor list: bite');
+  eq(R.FLOOR_ATTACK_NAMES.indexOf('beak') >= 0, true, 'floor list: beak');
+  eq(R.FLOOR_ATTACK_NAMES.indexOf('shadow claws') >= 0, true, 'floor list: shadow claws');
+  eq(R.FLOOR_ATTACK_NAMES.length, 19, 'floor list: 2 book + 17 homebrew');
+  // Floor attacks are excluded from group bonuses (Spellforge INT group).
+  eq(R.groupBonusFor({ name: 'BLACK BEAR CLAW', kind: 'skill', stat: 'str' }, 'Bear, Black', 'Spellforge Smith', realLib('BLACK BEAR CLAW'), [], 6), 0, 'group: Black Bear Claw excluded');
+  eq(R.groupBonusFor({ name: 'BEAK', kind: 'skill', stat: '' }, 'Vulturans', 'Spellforge Smith', realLib('BEAK'), [], 6), 0, 'group: BEAK excluded');
+  // Damage Effects: REND/GOLDEN GUN/ASSASSINATE are kind attack, stat null,
+  // and their parents resolve from the base_effect.
+  eq(realLib('REND').kind, 'attack', 'REND kind is attack');
+  eq(realLib('REND').stat, null, 'REND stat is null');
+  eq(R.damageEffectParents(realLib('REND').base_effect), ['Claw'], 'REND parent: Claw');
+  eq(R.damageEffectParents(realLib('GOLDEN GUN').base_effect), ['Handgun'], 'GOLDEN GUN parent: Handgun');
+  eq(R.damageEffectParents(realLib('ASSASSINATE').base_effect), ['Dagger'], 'ASSASSINATE parent: Dagger');
+  // DISINTEGRATION: full Skybreaker-doc definition.
+  var dis = realLib('DISINTEGRATION');
+  eq(dis.kind, 'spell', 'DISINTEGRATION kind is spell');
+  eq(dis.mana_cost, 20, 'DISINTEGRATION mana 20');
+  eq(dis.base_damage, '1d12 + Int Fire', 'DISINTEGRATION damage');
+  eq(dis.uncertain, false, 'DISINTEGRATION no longer uncertain');
+  // Move/Step table: flat homebrew bonuses apply, conditional ones do not.
+  eq(R.raceClassMoveBonus('Blue-Spined Goblin', ''), { move: 15, step: 0 }, 'Blue-Spined Goblin +15 Move');
+  eq(R.raceClassMoveBonus('Brownie (Quickling)', ''), { move: 0, step: 15 }, 'Brownie +15 Step');
+  eq(R.raceClassMoveBonus('Dwarf of Icecloak', ''), { move: -5, step: 0 }, 'Dwarf of Icecloak -5 Move');
+  eq(R.raceClassMoveBonus('Operatics', ''), { move: 0, step: -5 }, 'Operatics -5 Step');
+  eq(R.raceClassMoveBonus('Glacial', ''), { move: 0, step: 5 }, 'Glacial +5 Step');
+  eq(R.raceClassMoveBonus('Mantis (Female)', ''), { move: 5, step: 0 }, 'Mantis +5 Move');
+  eq(R.raceClassMoveBonus('Cassowary', ''), { move: 10, step: 0 }, 'Cassowary +10 Move');
+  eq(R.raceClassMoveBonus('Aerial Avenger', ''), { move: 10, step: 0 }, 'Aerial Avenger +10 Move');
+  eq(R.raceClassMoveBonus('Dog, Working', ''), { move: 5, step: 0 }, 'Dog, Working +5 Move');
+  eq(R.raceClassMoveBonus('Bear, Black', ''), { move: 0, step: 0 }, 'Bear, Black: quadruped Move is conditional, not applied');
+  eq(R.raceClassMoveBonus('Mantaur', ''), { move: 0, step: 0 }, 'Mantaur: quadruped Move is conditional, not applied');
+  eq(R.raceClassMoveBonus('Capoeirista', ''), { move: 0, step: 0 }, 'Capoeirista: Amazing-Success Step is conditional, not applied');
+  eq(R.raceClassMoveBonus('Lizardfolk', ''), { move: 5, step: 5 }, 'Lizardfolk unchanged');
+  eq(R.raceClassMoveBonus('Tigran', ''), { move: 10, step: 0 }, 'Tigran unchanged');
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

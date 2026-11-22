@@ -367,7 +367,12 @@
     var b = entry.benefits || '';
     var seen = {};
     function push(amount, count, category, label, options) {
-      var key = amount + '|' + count + '|' + category + '|' + (options || []).join(',');
+      // ?v=49: the dedupe key includes the label, so two distinct choices
+      // with the same amount/count/category (e.g. Fomorian's two "+1 in
+      // one skill from ..." picks) both reach the Choices tab. Identical
+      // grants (same label) still dedupe — Yautja's four identical
+      // "+1 to a single Skill" picks stay one choice by design.
+      var key = amount + '|' + count + '|' + category + '|' + label + '|' + (options || []).join(',');
       if (seen[key]) return;
       seen[key] = true;
       out.push({ amount: amount, count: count, category: category, label: label, options: options || null });
@@ -527,7 +532,11 @@
   /* Floor-driven natural attacks (see app.js FLOOR_ATTACKS): their
    * rank is the floor, never a trained rank, so no group bonus applies
    * to them. Keep in step with the app.js table. */
-  var FLOOR_ATTACK_NAMES = ['tendrils', 'tongue lash'];
+  var FLOOR_ATTACK_NAMES = ['tendrils', 'tongue lash',
+    'black bear claw', 'claw', 'slam', 'bite', 'trash panda bite', 'hoden bite',
+    'elemental breath', 'hand claw', 'horn gore', 'ursine claw', 'vampyr bite',
+    'vampiric bite', 'hellfire spittle', 'wilting breath', 'bladed arms',
+    'beak', 'shadow claws'];
 
   /* Group bonuses, as Rank adjustments. lib is the Chapter 4 entry for
    * the card (or null for custom cards); keywords is the spell's
@@ -596,13 +605,42 @@
   /* Flat Move/Step bonuses from a race/class (Tigran +10 Move;
    * Lizardfolk +5 Move, +5 Step). Hardcoded by name on purpose: the
    * benefits text also carries conditional Move ("+20ft Move when
-   * flying", Obsidian Butterfly), so a text parser would over-apply. */
+   * flying", Obsidian Butterfly), so a text parser would over-apply.
+   * ?v=49 adds the homebrew flat bonuses below. Conditional ones stay
+   * text-only: Bear, Black / Bear, Dreadmaw / Mantaur quadruped Move,
+   * Capoeirista (Amazing Success), Tursips (under water), Combat Medic
+   * (Seconds Matter), Mad Chemist (while Enraged). */
   function raceClassMoveBonus(raceName, className) {
     var out = { move: 0, step: 0 };
     [raceName, className].forEach(function (name) {
       if (!name) return;
       if (name === 'Tigran') out.move += 10;
       if (name === 'Lizardfolk') { out.move += 5; out.step += 5; }
+      // ?v=49 homebrew (flat, unconditional bonuses only)
+      if (name === 'Blue-Spined Goblin') out.move += 15;
+      if (name === 'Goblin') out.move += 5;
+      if (name === 'Kobold, Draconic') out.step += 5;
+      if (name === 'Kobold, Hoden') out.move += 5;
+      if (name === 'Manbearpig') out.move += 5;
+      if (name === 'Pazuzu') out.move += 5;
+      if (name === 'Society Human, Gold') out.move += 5;
+      if (name === 'Post-Nuclear Centaur') out.step += 5;
+      if (name === 'Wraith, Gloom') out.step += 5;
+      if (name === 'Ultimate Body Builder') out.step += 5;
+      if (name === 'Dog, Working') out.move += 5;
+      if (name === 'Slasher') out.step += 5;
+      if (name === 'Handy Man') out.step += 5;
+      if (name === 'Day Walker') out.move += 5;
+      if (name === 'Brownie (Quickling)') out.step += 15;
+      if (name === 'Nuckelavee') out.move += 10;
+      if (name === 'Dwarf of Icecloak') out.move -= 5;
+      if (name === 'Aerial Avenger') out.move += 10;
+      if (name === 'Scared Paladin') out.step += 5;
+      if (name === 'Orc (Syndicate)') out.step += 5;
+      if (name === 'Operatics') out.step -= 5;
+      if (name === 'Mantis (Female)') out.move += 5;
+      if (name === 'Cassowary') out.move += 10;
+      if (name === 'Glacial') out.step += 5;
     });
     return out;
   }
@@ -680,6 +718,16 @@
     'HERDING WEAPONS': 'Melee Attack', 'LANCE': 'Melee Attack', 'POLEARM': 'Melee Attack', 'QUARTERSTAFF': 'Melee Attack',
     'TENDRILS': 'Melee Attack',
     'TONGUE LASH': 'Melee Attack',
+    // ?v=49 homebrew floor-driven natural attacks (see app.js
+    // FLOOR_ATTACKS) and the Chakram weapon skill. BEAK has no stat in
+    // its library entry — its card rolls d20 + rank with no stat mod.
+    'BLACK BEAR CLAW': 'Melee Attack', 'CLAW': 'Melee Attack', 'SLAM': 'Melee Attack',
+    'TRASH PANDA BITE': 'Melee Attack', 'HODEN BITE': 'Melee Attack',
+    'HAND CLAW': 'Melee Attack', 'HORN GORE': 'Melee Attack', 'URSINE CLAW': 'Melee Attack',
+    'VAMPYR BITE': 'Melee Attack', 'VAMPIRIC BITE': 'Melee Attack',
+    'BLADED ARMS': 'Melee Attack', 'BEAK': 'Melee Attack', 'SHADOW CLAWS': 'Melee Attack',
+    'ELEMENTAL BREATH': 'Ranged Attack', 'HELLFIRE SPITTLE': 'Ranged Attack',
+    'WILTING BREATH': 'Ranged Attack', 'CHAKRAM': 'Ranged Attack',
     'BOW': 'Ranged Attack', 'CROSSBOW': 'Ranged Attack', 'HANDGUN': 'Ranged Attack', 'JAVELIN': 'Ranged Attack',
     'SHOTGUN': 'Ranged Attack', 'SHURIKEN': 'Ranged Attack', 'SLINGSHOT': 'Ranged Attack'
   };
@@ -1071,6 +1119,219 @@
     return { subtype: p.subtype, use: Object.assign({}, p.use) };
   }
 
+  /* ---- Floor-3 race/class prerequisites (?v=48) ----------------------
+   * A race/class entry's `prerequisites` prose is free text. parsePrereqs
+   * recognises only the mechanical forms below; anything else is returned
+   * as a display-only note and NEVER blocks a pick. Achievements are
+   * never checks (Antony, 2026-11-09): any mention of an achievement is
+   * display-only, as are gender and anything else unrecognised.
+   * Recognised forms (case-insensitive):
+   *  - Popularity: "Popularity 3+", "Popularity 3 or higher", "3 or more Popularity"
+   *  - Named skill rank: "Rank 5+ in the Smush Skill"; an "or" list
+   *    ("Rank 5+ in the Jumping or Light on Your Feet Skill") is one
+   *    check satisfied by any one of the named skills.
+   *  - Stat-based skill: "at least one Strength or Dexterity-based Skill at Rank 5+"
+   *  - Category: "Rank 5+ with any Edged Weapon", "any Trap-based Skill"
+   *  - Stat minimum: "Strength 5+"
+   *  - Player Kills: "3 Player Kills", "must have killed a crawler" (min 1)
+   *  - Club: a name from the sheet's club set (below)
+   *  - Deity: "worship the Armorer", "must worship a deity" (any deity set)
+   *  - DM approval: "DM approval", "DM's approval" (satisfied by a checkbox)
+   *  - Race: "already a Cat", "cat-based Races, such as Cat, Cat Girl, and Tigran"
+   * checkPrereqs(checks, ctx) evaluates the parsed checks against a
+   * context the app builds from the live sheet:
+   *   { stats: {str,con,dex,int,cha} (displayed totals),
+   *     skills: [{name, rank, stat, isEdged, isTrap, isExplosive}],
+   *     popularity, pkKills, clubs: [names], deity, race, dmApproved }
+   * Skill ranks are the DISPLAYED rank (what the sheet shows). */
+  var CLUBS = ['Desperado Club', 'Club Vanquisher', 'Dungeon Book of the Floor Club'];
+  var STAT_WORDS = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Charisma'];
+
+  function prereqLabel(type, parts) {
+    if (type === 'popularity') return 'Popularity ' + parts.min + '+';
+    if (type === 'skill') return parts.name + ' Rank ' + parts.min + '+';
+    if (type === 'skillOr') return parts.names.join(' or ') + ' Rank ' + parts.min + '+ (any one)';
+    if (type === 'statSkill') return 'any ' + parts.stats.map(function (s) { return STAT_NAMES[s]; }).join('/') + '-based Skill Rank ' + parts.min + '+';
+    if (type === 'category') return 'any ' + (parts.category === 'edged' ? 'Edged Weapon' : parts.category === 'trap' ? 'Trap-based Skill' : 'Explosive Skill') + ' Rank ' + parts.min + '+';
+    if (type === 'stat') return STAT_NAMES[parts.stat] + ' ' + parts.min + '+';
+    if (type === 'pk') return 'Player Kills ' + parts.min + '+';
+    if (type === 'club') return 'Member of ' + parts.name;
+    if (type === 'deity') return parts.name ? 'Worships ' + parts.name : 'Worships a deity';
+    if (type === 'dmApproval') return 'DM approval (tick the box)';
+    if (type === 'race') return 'Race: ' + parts.names.join(' or ');
+    return '';
+  }
+  function prereqCheck(type, parts) {
+    var c = { type: type, label: prereqLabel(type, parts) };
+    Object.keys(parts).forEach(function (k) { c[k] = parts[k]; });
+    return c;
+  }
+  function parsePrereqs(text) {
+    var out = { checks: [], display: [] };
+    var raw = (text || '').trim();
+    if (!raw) return out;
+    function dedupeKey(c) {
+      return c.type + '|' + (c.name || '') + '|' + (c.names || []).join(',') + '|' + (c.stat || '') + '|' + (c.stats || []).join(',') + '|' + (c.category || '') + '|' + (c.min || '');
+    }
+    var seen = {};
+    function push(c) { var k = dedupeKey(c); if (!seen[k]) { seen[k] = true; out.checks.push(c); } }
+    function cleanName(n) {
+      return (n || '').replace(/^(the|a|an)\s+/i, '').replace(/[\s,.;]+$/g, '').trim();
+    }
+    function splitNames(s) {
+      return (s || '').split(/,|\s+and\s+|\s+or\s+/).map(cleanName).filter(function (n) { return n.length > 0; });
+    }
+    raw.split(/[.;]\s*/).forEach(function (sentence) {
+      var s = sentence.trim();
+      if (!s) return;
+      // Strip the boilerplate lead-in; what is left is the requirement.
+      s = s.replace(/^\s*this limited (race|class) is only available to crawlers who('ve)?\s+/i, '')
+        .replace(/^\s*this limited (race|class) is only available to\s+/i, '')
+        .replace(/^\s*must have\s+/i, '')
+        .replace(/\s*,?\s*to take this (class|race)\s*$/i, '');
+      if (!s) return;
+      var before = out.checks.length;
+      var work = ' ' + s + ' ';
+      var rankInSentence = null;
+      var rm = work.match(/rank\s+(\d+)\+?/i);
+      if (rm) rankInSentence = parseInt(rm[1], 10);
+      function cut(re) {
+        var m = work.match(re);
+        if (!m) return null;
+        work = work.replace(m[0], ' ');
+        return m;
+      }
+      // 1. Stat-based skill ("at least one Strength or Dexterity-based Skill at Rank 5+").
+      var m = cut(/at least one ((?:strength|dexterity|constitution|intelligence|charisma)(?:\s+or\s+(?:strength|dexterity|constitution|intelligence|charisma))*)-based skills?\s+at\s+rank\s+(\d+)\+?/i);
+      if (m) {
+        push(prereqCheck('statSkill', { stats: m[1].split(/\s+or\s+/).map(function (w) { return STAT_ABBR[w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()]; }).filter(Boolean), min: parseInt(m[2], 10) }));
+      }
+      // 2. Named skill ranks, possibly an "or" list ("Rank 5+ in the Jumping or Light on Your Feet Skill").
+      var nm;
+      while ((nm = cut(/rank\s+(\d+)\+?\s+in\s+(?:the\s+)?(.+?)\s+skill/i))) {
+        var names = splitNames(nm[2]);
+        if (names.length > 1) push(prereqCheck('skillOr', { names: names, min: parseInt(nm[1], 10) }));
+        else if (names.length === 1) push(prereqCheck('skill', { name: names[0], min: parseInt(nm[1], 10) }));
+      }
+      // 3. Categories ("Rank 5+ with any Edged Weapon", "any Trap-based Skill").
+      m = cut(/rank\s+(\d+)\+?\s+with\s+any\s+edged\s+weapon/i);
+      if (m) push(prereqCheck('category', { category: 'edged', min: parseInt(m[1], 10) }));
+      if (/any\s+trap-based\s+skill/i.test(work)) {
+        cut(/any\s+trap-based\s+skill/i);
+        if (rankInSentence) push(prereqCheck('category', { category: 'trap', min: rankInSentence }));
+      }
+      if (/any\s+explosive[a-z ]*skill/i.test(work)) {
+        cut(/any\s+explosive[a-z ]*skill/i);
+        if (rankInSentence) push(prereqCheck('category', { category: 'explosive', min: rankInSentence }));
+      }
+      // 4. Popularity.
+      m = cut(/popularity\s+(\d+)\s*(?:\+|or\s+(?:higher|more|greater))/i) || cut(/(\d+)\s+or more popularity/i);
+      if (m) push(prereqCheck('popularity', { min: parseInt(m[1], 10) }));
+      // 5. Plain stat minimum ("Strength 5+"). Runs after the stat-skill
+      // form above so "-based Skill" never false-positives here.
+      m = cut(/\b(strength|dexterity|constitution|intelligence|charisma)\s+(\d+)\+/i);
+      if (m) push(prereqCheck('stat', { stat: STAT_ABBR[m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase()], min: parseInt(m[2], 10) }));
+      // 6. Player Kills.
+      m = cut(/(\d+)\s+player kills?/i) || cut(/killed\s+(\d+)\s+crawlers?/i);
+      if (m) push(prereqCheck('pk', { min: parseInt(m[1], 10) }));
+      else if (cut(/must have killed\s+(?:a|an|one)\s+crawler/i) || cut(/kill(?:ed|ing)?\s+(?:a\s+|an\s+)?crawler/i)) push(prereqCheck('pk', { min: 1 }));
+      // 7. Club membership (a club name in the prerequisites).
+      CLUBS.forEach(function (club) {
+        if (new RegExp(club.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(work)) {
+          work = work.replace(new RegExp(club.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), ' ');
+          push(prereqCheck('club', { name: club }));
+        }
+      });
+      // 8. Deity.
+      m = cut(/worship(?:s|ping)?\s+(?:the\s+)?([A-Z][A-Za-z'’\-]+(?:\s+[A-Z][A-Za-z'’\-]+)*)/);
+      if (m) push(prereqCheck('deity', { name: cleanName(m[1]) }));
+      else if (cut(/must worship a deity/i)) push(prereqCheck('deity', { name: null }));
+      // 9. DM approval.
+      if (cut(/dm'?s?\s+approval/i) || cut(/dungeon master'?s?\s+approval/i)) push(prereqCheck('dmApproval', {}));
+      // 10. Race ("already a Cat", "cat-based Races, such as Cat, Cat Girl, and Tigran").
+      // ?v=49: case-insensitive "already" — a prereq that OPENS with
+      // "Already a X" (sentence-initial capital) must parse like the
+      // mid-sentence "already a X" the book entries use.
+      m = cut(/already a\s+([A-Z][A-Za-z'’\/ ]+?)(?:\.|,|\s+and\s+|$)/i);
+      if (m) push(prereqCheck('race', { names: [cleanName(m[1])] }));
+      m = cut(/races?,?\s+such as\s+(.+?)(?:\.|$)/i);
+      if (m) {
+        var rnames = splitNames(m[1]);
+        if (rnames.length) push(prereqCheck('race', { names: rnames }));
+      }
+      // Whatever is left, after stripping connectors, is display-only.
+      var got = out.checks.length - before;
+      if (!got) {
+        // No mechanical check came out of this sentence: show the
+        // requirement itself, verbatim (minus boilerplate), as a note.
+        var verbatim = s.replace(/^(only\s+)?available to\s+/i, '').replace(/\s*,?\s*to take this (class|race)\s*$/i, '').trim();
+        if (verbatim.length >= 4) out.display.push(verbatim);
+      } else {
+        var stop = /^(and|or|with|who|have|has|earn|earned|earning|attained|receiving|to|a|an|the|only|available|limited|cat|based|crawlers?|must|be|is|are|in|of|on|for|at|by|this|that|it|also|take|least)$/i;
+        var rest = work.replace(/[^A-Za-z0-9'’! ]+/g, ' ').split(/\s+/).filter(function (w) { return w && !stop.test(w); }).join(' ').trim();
+        if (rest.length >= 4) out.display.push(rest);
+      }
+    });
+    return out;
+  }
+  function checkPrereqs(checks, ctx) {
+    var c = ctx || {};
+    var skills = c.skills || [];
+    function skillByName(name) {
+      var key = normName(name);
+      for (var i = 0; i < skills.length; i++) if (normName(skills[i].name) === key) return skills[i];
+      return null;
+    }
+    function raceMatches(want) {
+      var cur = normName(c.race || '');
+      if (!cur) return false;
+      // "Cat Girl" matches the "Cat Girl/Cat Boy" entry (slash segments),
+      // but "Cat" must NOT match "Cat Girl/Cat Boy".
+      return cur.split('/').some(function (seg) { return normName(seg) === normName(want); });
+    }
+    // Deity names compare with a leading "The" ignored, so a stored
+    // "The Armorer" matches a parsed "worship the Armorer".
+    function deityKey(s) { return normName((s || '').replace(/^the\s+/i, '')); }
+    var results = (checks || []).map(function (ch) {
+      var pass = false;
+      if (ch.type === 'popularity') pass = (c.popularity || 0) >= ch.min;
+      else if (ch.type === 'skill') { var sk = skillByName(ch.name); pass = !!sk && (sk.rank || 0) >= ch.min; }
+      else if (ch.type === 'skillOr') pass = ch.names.some(function (n) { var sk2 = skillByName(n); return !!sk2 && (sk2.rank || 0) >= ch.min; });
+      else if (ch.type === 'statSkill') pass = skills.some(function (sk3) { return ch.stats.indexOf((sk3.stat || '').toLowerCase()) >= 0 && (sk3.rank || 0) >= ch.min; });
+      else if (ch.type === 'category') pass = skills.some(function (sk4) {
+        return (sk4.rank || 0) >= ch.min && ((ch.category === 'edged' && sk4.isEdged) || (ch.category === 'trap' && sk4.isTrap) || (ch.category === 'explosive' && sk4.isExplosive));
+      });
+      else if (ch.type === 'stat') pass = ((c.stats || {})[ch.stat] || 0) >= ch.min;
+      else if (ch.type === 'pk') pass = (c.pkKills || 0) >= ch.min;
+      else if (ch.type === 'club') pass = (c.clubs || []).some(function (cl) { return normName(cl) === normName(ch.name); });
+      else if (ch.type === 'deity') pass = ch.name ? deityKey(c.deity) === deityKey(ch.name) : !!(c.deity || '');
+      else if (ch.type === 'dmApproval') pass = !!c.dmApproved;
+      else if (ch.type === 'race') pass = ch.names.some(function (n) { return raceMatches(n); });
+      return { check: ch, label: ch.label, pass: pass };
+    });
+    return { results: results, pass: results.every(function (r) { return r.pass; }) };
+  }
+
+  /* Category flags for prereq checks: same classification as
+   * groupBonusFor's isEdged/isTrap/isExplosive (an edged weapon is an
+   * attack skill whose damage is Slashing, plus Dagger and Rapier). */
+  function prereqSkillFlags(card, lib) {
+    var key = normName(card.name);
+    return {
+      isEdged: card.kind === 'skill' && lib && lib.kind === 'attack' &&
+        (((lib.base_damage || '').indexOf('Slashing') >= 0) || ['dagger', 'rapier'].indexOf(key) >= 0),
+      isTrap: TRAP_SKILLS.indexOf(key) >= 0,
+      isExplosive: EXPLOSIVE_SKILLS.indexOf(key) >= 0
+    };
+  }
+
+  /* Floor-3 confirmation requirement (?v=48): the race/class
+   * confirmation is outstanding while the crawler is on floor 3 or
+   * higher and has not confirmed. Pure, so the node suite can test it. */
+  function floor3Required(floor, confirmed) {
+    return (floor || 0) >= 3 && !confirmed;
+  }
+
   var api = {
     STAT_KEYS: STAT_KEYS, STAT_NAMES: STAT_NAMES, STAT_ABBR: STAT_ABBR,
     getModifier: getModifier, derivedBase: derivedBase, statTotal: statTotal,
@@ -1088,6 +1349,9 @@
     healthBarUsesCha: healthBarUsesCha, parseFixedSkillBonuses: parseFixedSkillBonuses,
     parseChoiceGrants: parseChoiceGrants, groupBonusFor: groupBonusFor,
     parseCapGrants: parseCapGrants, capForCard: capForCard, CRAFTING_SKILLS: CRAFTING_SKILLS,
+    TRAP_SKILLS: TRAP_SKILLS, EXPLOSIVE_SKILLS: EXPLOSIVE_SKILLS,
+    CLUBS: CLUBS, parsePrereqs: parsePrereqs, checkPrereqs: checkPrereqs, prereqSkillFlags: prereqSkillFlags,
+    floor3Required: floor3Required,
     magePenalty: magePenalty, effectiveRank: effectiveRank,
     attackDamageStat: attackDamageStat, tigranMoveBonus: tigranMoveBonus, raceClassMoveBonus: raceClassMoveBonus,
     FLOOR_ATTACK_NAMES: FLOOR_ATTACK_NAMES,

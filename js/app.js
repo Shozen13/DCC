@@ -53,8 +53,8 @@
       moveVal: 20, stepVal: 10, bossKills: 0, pkKills: 0,
       buffs: [], debuffs: [], hotlist: [],
       skills: [], spells: [], attacks: [], items: [], pendingDamage: null,
-      story: { quests: [], journal: [], pets: [], mounts: [], sponsors: [], faith: { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] }, crafting: [], bio: { appearance: '', personality: '', backstory: '', pastTrauma: '', looseEnds: '', regrets: '', notes: '' } },
-      raceClassApplied: [], raceClassChoices: {}, raceClassMoveApplied: null, backgrounds: null, cardOpen: {},
+      story: { quests: [], journal: [], pets: [], mounts: [], sponsors: [], faith: { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] }, crafting: [], bio: { appearance: '', personality: '', backstory: '', pastTrauma: '', looseEnds: '', regrets: '', notes: '', clubs: [] } },
+      raceClassApplied: [], raceClassChoices: {}, raceClassMoveApplied: null, raceClassConfirmed: false, backgrounds: null, cardOpen: {},
       loadouts: [{ id: 'loadout-1', name: 'Loadout 1', placements: {} }, { id: 'loadout-2', name: 'Loadout 2', placements: {} }],
       activeLoadoutId: null,
       activeTab: 'vitals'
@@ -72,7 +72,7 @@
   /* ---------------- lazy data ---------------- */
   var cache = { skills: null, items: null, races: null, keywords: null, bookChecks: null, _p: {} };
   function loadJSON(path) {
-    return fetch(path + '?v=10').then(function (r) {
+    return fetch(path + '?v=11').then(function (r) {
       if (!r.ok) throw new Error('Failed to load ' + path);
       return r.json();
     });
@@ -404,22 +404,24 @@
     state.skills.concat(state.spells).forEach(function (c) {
       if (cardRank(c) < 1 || !isAttackCard(c) || manualNames[R.normName(c.name)]) return;
       var lib = findLib(c.name);
-      var cStat = c.stat || 'str';
-      var mod = stats[cStat] ? stats[cStat].mod : 0;
+      var noStat = !!(lib && !lib.stat);
+      var cStat = noStat ? '' : (c.stat || 'str');
+      var mod = cStat ? (stats[cStat] ? stats[cStat].mod : 0) : 0;
       var override = R.attackDamageStat(c.name, state.race, state.class);
       var adj = lib ? R.adjustedDamage(lib.base_damage, lib.upgrades, cardRank(c)) : { damage: '—', additions: [] };
       var adjNote = adj.additions.length ? ' (includes ' + adj.additions.map(function (a) { return '+' + a.count + 'd' + a.sides + ' at Rank ' + a.tier; }).join(', ') + ')' : '';
       attacks.push({ name: c.name,
-        toHit: cardRank(c) + ' ' + cStat.toUpperCase() + ' ' + fmtMod(mod),
+        toHit: cardRank(c) + (cStat ? ' ' + cStat.toUpperCase() + ' ' + fmtMod(mod) : ' +0'),
         damage: adj.damage,
         effects: (override ? 'Damage uses ' + override.toUpperCase() + ' Mod. ' : '') + adjNote + ((lib && lib.mana_cost) ? ' Mana: ' + lib.mana_cost : '') });
     });
     var cardRow = function (c) {
       var lib = findLib(c.name);
-      var cStat = c.stat || 'str';
-      var mod = stats[cStat] ? stats[cStat].mod : 0;
+      var noStat = !!(lib && !lib.stat);
+      var cStat = noStat ? '' : (c.stat || 'str');
+      var mod = cStat ? (stats[cStat] ? stats[cStat].mod : 0) : 0;
       return { name: c.name, rank: cardRank(c),
-        statMod: cStat.toUpperCase() + ' ' + fmtMod(mod),
+        statMod: cStat ? cStat.toUpperCase() + ' ' + fmtMod(mod) : '+0',
         check: c.checkType || '',
         notes: c.effect || (lib ? (lib.base_effect || '') : ''),
         used: !!c.used };
@@ -657,16 +659,42 @@
     }
   }
   /* Floor-driven natural attacks (?v=47.2 Tendrils, ?v=47.6 Tongue
-   * Lash): picking the race auto-assigns the attack card if it has
-   * none, and its rank always equals the current floor. The card leaves
-   * with the race. It is not a +N grant, so it never goes through
-   * applyFixedBonus / raceClassApplied (that would add its rank on top
-   * of the floor-synced ownRank). Keep in step with
-   * R.FLOOR_ATTACK_NAMES in rules.js (the group-bonus exclusion). */
+   * Lash; ?v=49 homebrew races): picking the race auto-assigns the
+   * attack card if it has none, and its rank always equals the current
+   * floor (plus `offset`, if any — Bear, Dreadmaw's Claw starts at
+   * Rank 4, i.e. floor + 1). The card leaves with the race. It is not
+   * a +N grant, so it never goes through applyFixedBonus /
+   * raceClassApplied (that would add its rank on top of the
+   * floor-synced ownRank). Keep in step with R.FLOOR_ATTACK_NAMES in
+   * rules.js (the group-bonus exclusion). Half-Djinns has NO row here
+   * on purpose: its natural attack is a player choice of an unnamed
+   * attack (Antony 2026-11-22). Manbearpig maps to CLAW (the claw
+   * form); the Hoof form is the same attack with Bludgeoning damage,
+   * text-only. BEAK has stat null: no stat mod applies to it. */
   var FLOOR_ATTACKS = [
     { race: 'Symbiote: Anti Venom', name: 'TENDRILS', stat: 'int', title: 'Symbiote Tendrils' },
-    { race: 'Lizardfolk', name: 'TONGUE LASH', stat: 'dex', title: 'Lizardfolk Tongue Lash' }
+    { race: 'Lizardfolk', name: 'TONGUE LASH', stat: 'dex', title: 'Lizardfolk Tongue Lash' },
+    { race: 'Bear, Black', name: 'BLACK BEAR CLAW', stat: 'str', title: 'Black Bear Claw' },
+    { race: 'Bear, Dreadmaw', name: 'CLAW', stat: 'str', title: 'Dreadmaw Claw', offset: 1 },
+    { race: 'Cielcin', name: 'CLAW', stat: 'str', title: 'Cielcin Claw' },
+    { race: 'Elemental', name: 'SLAM', stat: 'con', title: 'Elemental Slam' },
+    { race: 'Goblin, Feral Mutated', name: 'BITE', stat: 'str', title: 'Feral Goblin Bite' },
+    { race: 'Highly Evolved Trash Panda', name: 'TRASH PANDA BITE', stat: 'dex', title: 'Trash Panda Bite' },
+    { race: 'Kobold, Hoden', name: 'HODEN BITE', stat: 'str', title: 'Hoden Bite' },
+    { race: 'Drac-Kobolds', name: 'ELEMENTAL BREATH', stat: 'con', title: 'Elemental Breath' },
+    { race: 'Manbearpig', name: 'CLAW', stat: 'str', title: 'Manbearpig Claw' },
+    { race: 'Mantaur', name: 'HAND CLAW', stat: 'str', title: 'Mantaur Hand Claw' },
+    { race: 'Minotaur', name: 'HORN GORE', stat: 'str', title: 'Minotaur Horn Gore' },
+    { race: 'Ursine', name: 'URSINE CLAW', stat: 'str', title: 'Ursine Claw' },
+    { race: 'Vampyr', name: 'VAMPYR BITE', stat: 'dex', title: 'Vampyr Bite' },
+    { race: 'Day Walker', name: 'VAMPIRIC BITE', stat: 'str', title: 'Day Walker Vampiric Bite' },
+    { race: 'Hellhound', name: 'HELLFIRE SPITTLE', stat: 'con', title: 'Hellhound Hellfire Spittle' },
+    { race: 'Nuckelavee', name: 'WILTING BREATH', stat: 'con', title: 'Nuckelavee Wilting Breath' },
+    { race: 'Mantis (Female)', name: 'BLADED ARMS', stat: 'str', title: 'Mantis Bladed Arms' },
+    { race: 'Vulturans', name: 'BEAK', stat: null, title: 'Vulturan Beak' },
+    { race: 'Wraith, Gloom', name: 'SHADOW CLAWS', stat: 'cha', title: 'Gloom Wraith Shadow Claws' }
   ];
+  function floorAttackRank(spec) { return Math.max(1, state.floor + (spec.offset || 0)); }
   function floorAttackForRace(raceName) {
     for (var i = 0; i < FLOOR_ATTACKS.length; i++) if (FLOOR_ATTACKS[i].race === raceName) return FLOOR_ATTACKS[i];
     return null;
@@ -687,7 +715,7 @@
     var card = floorAttackCard(spec.name);
     if (!card) {
       var bc = bookCheckFor(spec.name);
-      card = { id: uid(), name: spec.name, kind: 'skill', ownRank: Math.max(1, state.floor), stat: spec.stat, checkType: (bc && bc.check) || 'Evade Check', effect: '', used: false, gearGrants: {} };
+      card = { id: uid(), name: spec.name, kind: 'skill', ownRank: floorAttackRank(spec), stat: spec.stat, checkType: (bc && bc.check) || 'Evade Check', effect: '', used: false, gearGrants: {} };
       state.skills.push(card);
     }
     syncFloorAttackRank(raceName);
@@ -697,7 +725,7 @@
     var spec = floorAttackForRace(raceName || state.race);
     if (!spec) return null;
     var card = floorAttackCard(spec.name);
-    if (card) card.ownRank = Math.max(1, state.floor);
+    if (card) card.ownRank = floorAttackRank(spec);
     return card;
   }
   function removeFloorAttackCard(raceName) {
@@ -713,9 +741,13 @@
   function ensureTendrilsCard() { return ensureFloorAttackCard(TENDRILS_RACE); }
   function syncTendrilsRank() { return syncFloorAttackRank(); }
   function removeTendrilsCard() { removeFloorAttackCard(TENDRILS_RACE); }
-  async function setRaceClass(kind, name) {
+  async function setRaceClass(kind, name, floor3Bypass) {
     var oldName = kind === 'race' ? state.race : state.class;
     if (oldName === name) return;
+    // Floor-3 lock (?v=48): a race/class change outside the confirmation
+    // popup re-opens the popup instead. The popup itself passes the
+    // bypass flag, because confirming there IS the confirmation.
+    if (floor3Locked() && !floor3Bypass) { openFloor3Popup(); return; }
     await ensureSkills();
     await ensureRaces();
     // Reverse this source's fixed bonuses and its choices.
@@ -739,11 +771,18 @@
     }
     syncMoveBonus();
     pruneBonusCards();
+    // Re-confirmation rule (?v=48): any race/class change clears the
+    // floor-3 confirmation (unless this change IS the confirmation, in
+    // which case the popup sets the flag itself right after). The new
+    // pick must be confirmed in the popup.
+    if (!floor3Bypass) state.raceClassConfirmed = false;
     saveSoon();
     renderAll();
     refreshWizard();
+    if (!floor3Bypass && state.floor >= 3 && !state.raceClassConfirmed) openFloor3Popup();
   }
   function setChoice(cid, kind, sourceName, grant, pickIdx, name) {
+    if (lockedGuard()) return;
     reverseSource('choice', cid);
     if (!name) { delete state.raceClassChoices[cid]; }
     else {
@@ -761,6 +800,7 @@
    * setRaceClass cid-prefix deletion already clears it on a race/class
    * change, since it shares the same cid namespace. */
   function setCapChoice(cid, kind, sourceName, capGrant, pickIdx, name) {
+    if (lockedGuard()) return;
     if (!name) { delete state.raceClassChoices[cid]; }
     else {
       state.raceClassChoices[cid] = { name: name, kind: capGrant.category === 'spell' ? 'spell' : 'skill', cap: 20 };
@@ -1010,7 +1050,7 @@
     var open = !!(state.cardOpen && state.cardOpen[card.id]);
     return '<details class="card"' + (open ? ' open' : '') + ' ontoggle="DCC.setCardOpen(\'' + card.id + '\',this.open)"><summary>' + esc(card.name) + ' — Rank ' + rank + (card.used ? ' (Used)' : '') + '</summary>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(card.name) + '" onchange="DCC.renameCard(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
-      + '<label>Rank ' + (tendrilsLocked ? '<select disabled title="Rank equals your Floor (' + faSpec.title + ')"><option>' + rank + '</option></select>' : '<select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select>') + '</label>'
+      + '<label>Rank ' + (tendrilsLocked ? '<select disabled title="Rank equals your Floor' + (faSpec.offset ? ' + ' + faSpec.offset : '') + ' (' + faSpec.title + ')"><option>' + rank + '</option></select>' : '<select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select>') + '</label>'
       + '<label>Stat ' + (statNoStat
         ? '<select disabled title="No associated stat in the book (Passive), locked"><option value="">\u2014</option></select>'
         : '<select ' + (statLocked ? 'disabled title="Book stat (see Rulebook box)"' : '') + ' onchange="DCC.setCardStat(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + statOptions + '</select>') + '</label>'
@@ -1049,8 +1089,13 @@
     if (!state.story) state.story = { quests: [], journal: [], pets: [], mounts: [], sponsors: [], faith: { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] }, crafting: [], bio: { appearance: '', personality: '', backstory: '', pastTrauma: '', looseEnds: '', regrets: '', notes: '' } };
     if (!state.story.faith) state.story.faith = { deity: '', tier: 'none', looted: 0, streak: 0, missed: 0, offerings: [], tithes: [] };
     ['tier', 'looted', 'streak', 'missed'].forEach(function (k) { if (state.story.faith[k] === undefined) state.story.faith[k] = k === 'tier' ? 'none' : 0; });
-    if (!state.story.bio) state.story.bio = { appearance: '', personality: '', backstory: '', pastTrauma: '', looseEnds: '', regrets: '', notes: '' };
+    if (!state.story.bio) state.story.bio = { appearance: '', personality: '', backstory: '', pastTrauma: '', looseEnds: '', regrets: '', notes: '', clubs: [] };
     ['appearance', 'personality', 'backstory', 'pastTrauma', 'looseEnds', 'regrets', 'notes'].forEach(function (k) { if (state.story.bio[k] === undefined) state.story.bio[k] = ''; });
+    if (!Array.isArray(state.story.bio.clubs)) state.story.bio.clubs = [];
+    // Club names are matched by normalised name; drop anything not in the
+    // sheet's club set so a stale or hand-edited value never blocks a check.
+    state.story.bio.clubs = state.story.bio.clubs.filter(function (c) { return R.CLUBS.some(function (cl) { return R.normName(cl) === R.normName(c); }); });
+    if (state.raceClassConfirmed === undefined) state.raceClassConfirmed = false;
     ['quests', 'journal', 'pets', 'mounts', 'sponsors', 'crafting'].forEach(function (k) { if (!state.story[k]) state.story[k] = []; });
     return state.story;
   }
@@ -1216,6 +1261,222 @@
         + '</div>';
     }).join('') || '<p class="hint">No crafting projects yet.</p>';
   }
+  /* ---- Floor-3 race/class confirmation (?v=48) ----------------------
+   * Book p.128: race + class are picked on entering the Third Floor.
+   * Until the player confirms a race and a class, the sheet is locked
+   * except for saving, loading, starting a new character, exporting and
+   * importing; any other action re-opens this popup. The unconfirmed
+   * state is stored on the character (state.raceClassConfirmed) and
+   * applies on load too. The DM inspector is exempt (it renders a
+   * character row, not the loaded sheet).
+   * Re-confirmation rule: any race/class change via setRaceClass clears
+   * the confirmation while the floor-3 requirement holds, so the
+   * player re-confirms the new pick in this popup; confirming here
+   * sets race/class and marks the sheet confirmed. */
+  function floor3Required() {
+    return R.floor3Required(state.floor, state.raceClassConfirmed);
+  }
+  function floor3Locked() {
+    if (!floor3Required()) return false;
+    if (window.Cloud && window.Cloud.isDm()) return false; // inspector exempt
+    if (!$('levelup-modal').hidden) return false; // Level Up runs first
+    if (!$('floor3-modal').hidden) return false; // popup already open
+    if (state.dead) return false;
+    return true;
+  }
+  function lockedGuard() {
+    if (!floor3Locked()) return false;
+    openFloor3Popup();
+    return true;
+  }
+  // Prereq evaluation context for the pending pick. Stats are the
+  // CURRENT displayed totals (the pending race/class is not applied
+  // yet); skill ranks are the displayed rank via cardRank. Class
+  // race-prereqs evaluate against the PENDING race; race prereqs
+  // against the current race (the pending race cannot be its own
+  // prerequisite).
+  function floor3Ctx(pendingRace, dmApproved) {
+    var totals = computeStats();
+    var stats = {};
+    R.STAT_KEYS.forEach(function (k) { stats[k] = totals[k].total; });
+    var cards = state.skills.concat(state.spells);
+    var skills = cards.map(function (c) {
+      var lib = findLib(c.name);
+      var st = lib && lib.stat ? (lib.stat || '').toLowerCase() : ((c.stat || '') + '').toLowerCase();
+      var flags = R.prereqSkillFlags(c, lib);
+      return { name: c.name, rank: cardRank(c), stat: st,
+        isEdged: flags.isEdged, isTrap: flags.isTrap, isExplosive: flags.isExplosive };
+    });
+    return { stats: stats, skills: skills, popularity: state.popularity || 0,
+      pkKills: state.pkKills || 0, clubs: (story().bio.clubs || []).slice(),
+      deity: (story().faith && story().faith.deity) || '', race: pendingRace || state.race,
+      dmApproved: !!dmApproved };
+  }
+  function floor3Parse(entry) {
+    return R.parsePrereqs(entry && entry.prerequisites);
+  }
+  var f3 = null; // transient popup state; never saved
+  function floor3Bank() { return R.statBank(state.level, state.statPointsSpent); }
+  function openFloor3Popup() {
+    if (state.dead) return;
+    if (!floor3Required()) return;
+    if (window.Cloud && window.Cloud.isDm()) return;
+    if (!$('floor3-modal').hidden) { renderFloor3(); return; }
+    ensureRaces().then(function () { if (f3) renderFloor3(); });
+    f3 = { race: state.race || '', cls: state.class || '', alloc: { str: 0, con: 0, dex: 0, int: 0, cha: 0 }, dm: false };
+    $('floor3-modal').hidden = false;
+    renderFloor3();
+  }
+  function floor3Close() {
+    $('floor3-modal').hidden = true;
+    f3 = null;
+    saveSoon(); renderAll();
+  }
+  function floor3Evaluate() {
+    // Returns { raceRes, classRes, ok } for the current f3 pick.
+    var ctx = floor3Ctx(f3.race, f3.dm);
+    var raceEntry = f3.race ? findRaceClass(f3.race, 'race') : null;
+    var classEntry = f3.cls ? findRaceClass(f3.cls, 'class') : null;
+    var raceRes = raceEntry ? R.checkPrereqs(floor3Parse(raceEntry).checks, ctx) : { results: [], pass: true };
+    var classRes = classEntry ? R.checkPrereqs(floor3Parse(classEntry).checks, ctx) : { results: [], pass: true };
+    return { raceRes: raceRes, classRes: classRes, ok: raceRes.pass && classRes.pass };
+  }
+  function floor3Select(kind, name) {
+    if (kind === 'race') f3.race = name;
+    else f3.cls = name;
+    renderFloor3();
+  }
+  function floor3AllocDelta(key, delta) {
+    var bank = floor3Bank();
+    var used = 0;
+    R.STAT_KEYS.forEach(function (k) { used += f3.alloc[k]; });
+    var next = Math.max(0, Math.min(bank - used + f3.alloc[key], f3.alloc[key] + delta));
+    f3.alloc[key] = next;
+    renderFloor3();
+  }
+  function floor3ClubToggle(name, on) {
+    // The popup checkboxes set the Bio clubs directly — the Bio tab is
+    // the single source of truth, so the prereq check reads them at once.
+    bioClubSet(name, on);
+    renderFloor3();
+  }
+  function floor3DmToggle(on) {
+    f3.dm = !!on;
+    renderFloor3();
+  }
+  function floor3NeedsClubCheck() {
+    // Show the club checkboxes only when a club prereq exists on the
+    // pending pick — otherwise the Bio checkboxes are the place to set them.
+    var ev = floor3Evaluate();
+    return ev.raceRes.results.concat(ev.classRes.results).some(function (r) { return r.check.type === 'club'; });
+  }
+  function floor3ResultHtml(label, res, parsed) {
+    var html = '<h4>' + esc(label) + '</h4>';
+    if (!res.results.length) {
+      html += '<p class="hint">No prerequisites.</p>';
+    } else {
+      html += '<ul>' + res.results.map(function (r) {
+        return '<li>' + (r.pass ? '✓ ' : '✗ ') + esc(r.label) + '</li>';
+      }).join('') + '</ul>';
+    }
+    if (parsed.display.length) {
+      html += '<p class="hint">Also required (not checkable here): ' + parsed.display.map(esc).join('; ') + '.</p>';
+    }
+    return html;
+  }
+  function renderFloor3() {
+    if (!f3) return;
+    var bank = floor3Bank();
+    var used = 0;
+    R.STAT_KEYS.forEach(function (k) { used += f3.alloc[k]; });
+    var races = (cache.races || []).filter(function (e) { return e.kind === 'race'; });
+    var classes = (cache.races || []).filter(function (e) { return e.kind === 'class'; });
+    function opts(list, cur) {
+      return '<option value="">— none —</option>' + list.map(function (e) {
+        return '<option value="' + esc(e.name) + '"' + (e.name === cur ? ' selected' : '') + '>' + esc(e.name) + '</option>';
+      }).join('');
+    }
+    $('floor3-race').innerHTML = opts(races, f3.race);
+    $('floor3-class').innerHTML = opts(classes, f3.cls);
+    $('floor3-bank').textContent = 'Banked stat points: ' + (bank - used) + ' of ' + bank + ' left (Level ' + state.level + ', ' + state.statPointsSpent + ' spent).';
+    $('floor3-alloc').innerHTML = R.STAT_KEYS.map(function (k) {
+      return '<p>' + k.toUpperCase() + ' (own base ' + state.ownBase[k] + '): <button type="button" onclick="DCC.floor3AllocDelta(\'' + k + '\',-1)">−</button> ' + f3.alloc[k] + ' <button type="button" onclick="DCC.floor3AllocDelta(\'' + k + '\',1)">+</button></p>';
+    }).join('');
+    var ev = floor3Evaluate();
+    var raceEntry = f3.race ? findRaceClass(f3.race, 'race') : null;
+    var classEntry = f3.cls ? findRaceClass(f3.cls, 'class') : null;
+    var raceParsed = raceEntry ? floor3Parse(raceEntry) : { checks: [], display: [] };
+    var classParsed = classEntry ? floor3Parse(classEntry) : { checks: [], display: [] };
+    $('floor3-results').innerHTML = floor3ResultHtml('Race: ' + (f3.race || '— none —'), ev.raceRes, raceParsed)
+      + floor3ResultHtml('Class: ' + (f3.cls || '— none —'), ev.classRes, classParsed);
+    var needDm = ev.raceRes.results.concat(ev.classRes.results).some(function (r) { return r.check.type === 'dmApproval'; });
+    $('floor3-dm-row').hidden = !needDm;
+    $('floor3-dm').checked = !!f3.dm;
+    var needClubs = floor3NeedsClubCheck();
+    $('floor3-clubs-row').hidden = !needClubs;
+    if (needClubs) {
+      $('floor3-clubs').innerHTML = R.CLUBS.map(function (c) {
+        var checked = (story().bio.clubs || []).some(function (cl) { return R.normName(cl) === R.normName(c); });
+        return '<label><input type="checkbox" data-floor3-club="' + esc(c) + '"' + (checked ? ' checked' : '') + '> ' + esc(c) + '</label>';
+      }).join('<br>');
+      $('floor3-clubs').querySelectorAll('input[data-floor3-club]').forEach(function (cb) {
+        cb.addEventListener('change', function () { floor3ClubToggle(cb.getAttribute('data-floor3-club'), cb.checked); });
+      });
+    }
+    $('floor3-msg').textContent = '';
+    $('floor3-confirm').disabled = false;
+  }
+  async function floor3Confirm() {
+    if (!f3) return;
+    var ev = floor3Evaluate();
+    if (!ev.ok) {
+      var missing = ev.raceRes.results.concat(ev.classRes.results).filter(function (r) { return !r.pass; }).map(function (r) { return r.label; });
+      $('floor3-msg').textContent = 'Missing: ' + missing.join('; ') + '.';
+      return;
+    }
+    var total = 0;
+    R.STAT_KEYS.forEach(function (k) { total += f3.alloc[k]; });
+    if (total > 0) {
+      R.STAT_KEYS.forEach(function (k) { state.ownBase[k] += f3.alloc[k]; });
+      state.statPointsSpent += total;
+    }
+    var race = f3.race, cls = f3.cls;
+    var hadRace = state.race, hadClass = state.class;
+    // Apply the picks without tripping the re-confirmation rule in
+    // setRaceClass (the popup itself is the confirmation).
+    if (race !== hadRace) await setRaceClass('race', race, true);
+    if (cls !== hadClass) await setRaceClass('class', cls, true);
+    state.raceClassConfirmed = true;
+    floor3Close();
+  }
+  function floor3Dismiss() {
+    floor3Close();
+  }
+  /* Bio club tracking (?v=48): the sheet's club set. Club membership
+   * is player-ticked here; race/class club grants are TEXT-ONLY and do
+   * NOT auto-check these boxes. The floor-3 popup reads these for its
+   * club prereqs. */
+  function bioClubSet(name, on) {
+    var b = story().bio;
+    if (!Array.isArray(b.clubs)) b.clubs = [];
+    var idx = b.clubs.findIndex(function (c) { return R.normName(c) === R.normName(name); });
+    if (on && idx === -1) b.clubs.push(name);
+    if (!on && idx !== -1) b.clubs.splice(idx, 1);
+    saveSoon();
+  }
+  function renderBioClubs() {
+    var el = $('bio-clubs');
+    if (!el) return;
+    var b = story().bio;
+    el.innerHTML = R.CLUBS.map(function (c) {
+      var checked = (b.clubs || []).some(function (cl) { return R.normName(cl) === R.normName(c); });
+      return '<label><input type="checkbox" data-bio-club="' + esc(c) + '"' + (checked ? ' checked' : '') + '> ' + esc(c) + '</label>';
+    }).join('<br>');
+    el.querySelectorAll('input[data-bio-club]').forEach(function (cb) {
+      cb.addEventListener('change', function () { bioClubSet(cb.getAttribute('data-bio-club'), cb.checked); });
+    });
+  }
+
   function renderBio() {
     var b = story().bio;
     $('bio-appearance').value = b.appearance || '';
@@ -1225,6 +1486,7 @@
     $('bio-loose-ends').value = b.looseEnds || '';
     $('bio-regrets').value = b.regrets || '';
     $('bio-notes').value = b.notes || '';
+    renderBioClubs();
     // Creation background, as chosen in the wizard: category, background
     // name, the two skills picked from it and their starting rank, plus
     // the combat choice (Unarmed Combat Rank 3 and any weapon/spell
@@ -1467,13 +1729,17 @@
       return cardRank(c) >= 1 && isAttackCard(c) && !manualNames[R.normName(c.name)];
     }).map(function (c) {
       var lib = findLib(c.name);
-      var mod = stats[c.stat] ? stats[c.stat].mod : 0;
+      // ?v=49: a library entry with no stat (BEAK) rolls d20 + rank with
+      // no stat mod (see rollCard) — the display must not print an empty
+      // stat label with a borrowed mod.
+      var noStat = !!(lib && !lib.stat);
+      var mod = noStat ? 0 : (stats[c.stat] ? stats[c.stat].mod : 0);
       var override = R.attackDamageStat(c.name, state.race, state.class);
       var adj = lib ? R.adjustedDamage(lib.base_damage, lib.upgrades, cardRank(c)) : { damage: '—', additions: [] };
       var adjNote = adj.additions.length ? ' (includes ' + adj.additions.map(function (a) { return '+' + a.count + 'd' + a.sides + ' at Rank ' + a.tier; }).join(', ') + ')' : '';
       return '<div class="card"><h4>' + esc(c.name) + '</h4>'
         + '<p>' + (c.kind === 'spell' ? 'Attack spell' : esc(R.skillAttackType(c.name) || 'Attack skill')) + ' — Rank ' + cardRank(c) + '</p>'
-        + '<p>To hit: d20 + ' + cardRank(c) + ' + ' + esc((c.stat || '').toUpperCase()) + ' Mod (+' + mod + ')</p>'
+        + '<p>To hit: d20 + ' + cardRank(c) + (noStat ? '' : ' + ' + esc((c.stat || '').toUpperCase()) + ' Mod (+' + mod + ')') + '</p>'
         + '<p>Damage: ' + esc(adj.damage) + adjNote + (override ? ' — damage uses ' + override.toUpperCase() + ' Mod instead (race/class override; to-hit unchanged)' : '')
         + ((lib && lib.mana_cost) ? ' — Mana: ' + esc(lib.mana_cost) : '') + '</p>'
         + (c.kind === 'skill' ? damageEffectsFor(c.name) : '')
@@ -1907,6 +2173,10 @@
     fitAllTextareas();
   }
   function showTab(tab) {
+    // Floor-3 lock (?v=48): while the race/class confirmation is
+    // outstanding, a tab switch re-opens the popup instead. The sheet
+    // behind is still rendered so the popup never opens over a blank page.
+    if (floor3Locked()) { renderAll(); openFloor3Popup(); return; }
     // Tab guards, ported from the original sheet: DM-only tabs fall back to
     // Vitals for non-DMs, and in DM mode every character-sheet tab falls
     // back to the DM Dashboard (DM tabs are dm/manage/inspect/sendbox/
@@ -2218,6 +2488,7 @@
     saveSoon(); renderAll(); showTab('inventory');
   }
   async function openRaceClassPicker(kind) {
+    if (lockedGuard()) return;
     var list = await ensureRaces();
     openPicker(kind === 'race' ? 'Pick a race' : 'Pick a class', list.filter(function (e) { return e.kind === kind; }), function (c) {
       setRaceClass(kind, c.name);
@@ -2406,17 +2677,24 @@
   function rollAllLevelUp() {
     levelUpRows().slice().forEach(function (c) { rollLevelUp(c.kind, c.id); });
   }
+  var levelUpOnClose = null; // one-shot callback run when the Level Up popup closes (?v=48)
   function closeLevelUp() {
     $('levelup-modal').hidden = true;
     levelUpResults = {};
+    var cb = levelUpOnClose; levelUpOnClose = null;
+    if (cb) cb();
   }
   function advanceFloor() {
+    if (lockedGuard()) return;
     var next = state.floor + 1;
     if (!confirm('Advance to Floor ' + next + '? Used skills and spells at base rank 5 or higher get an advancement roll next.')) return;
     state.floor = next;
     syncFloorAttackRank();
     saveSoon();
     renderAll();
+    // Entering floor 3: after the Level Up popup closes, the race/class
+    // confirmation popup opens (book p.128).
+    if (next >= 3 && !state.raceClassConfirmed) levelUpOnClose = function () { openFloor3Popup(); };
     openLevelUp(null, 5, Infinity);
   }
 
@@ -3148,8 +3426,36 @@
       showRoll('Evade: ' + formula + ' = ' + parts.concat([modTotal]).join(' + ') + ' = ' + total);
     },
     distStep: distStep,
-    renderPickerList: renderPickerList
+    renderPickerList: renderPickerList,
+    floor3Select: floor3Select, floor3AllocDelta: floor3AllocDelta, floor3Confirm: floor3Confirm, floor3Dismiss: floor3Dismiss,
+    floor3Required: floor3Required, floor3Locked: floor3Locked, openFloor3Popup: openFloor3Popup
   };
+  /* Floor-3 lock (?v=48): while the race/class confirmation is
+   * outstanding, the mutating sheet actions below re-open the popup
+   * instead of acting. Left alone: read-only actions (rolls, filters,
+   * sorting, the display-only race/class "?" popup), the Level Up flow
+   * (closeLevelUp / rollLevelUp / rollAllLevelUp — the lock is suspended
+   * while that popup is open), and internal/load paths (setState,
+   * sync*, migrate*, sanitizeIds, blankState, addLootItem — the last
+   * is how cloud.js applies an incoming loot box, not a user action). */
+  ['setOwnBase', 'setOwnEnh', 'setEnhTotal', 'levelDelta', 'floorDelta', 'killDelta',
+    'setRank', 'delCard', 'toggleUsed', 'setCardStat', 'setCardEffect', 'setCardCheck', 'setCardOpen',
+    'renameCard', 'addBonus', 'delBonus', 'setBonusAmount', 'setBonusKind', 'setBonusSkill', 'setBonusStat', 'setBonusType',
+    'pickBonusSkill', 'setSplit', 'delItem', 'renameItem', 'setItemKind', 'setItemSlot', 'setItemSubtype', 'setItemUseField',
+    'setEquipped', 'equipIntoPlacement', 'equipFirstFree', 'delAttack', 'useConsumable', 'clearPendingDamage', 'rollPendingDamage',
+    'addLoadout', 'delLoadout', 'renameLoadout', 'saveLoadout', 'applyLoadout', 'delHotlist', 'delNote',
+    'storySet', 'storyDel', 'compListAdd', 'compListDel', 'compSelectAdd', 'compSkillAdd', 'compSkillDel',
+    'faithSet', 'faithOffered', 'faithMissed', 'faithDel', 'bioSet', 'sponsorBanner', 'sponsorSend',
+    'pickerPick', 'pickChoice', 'pickCapChoice', 'pickGrantSuggest',
+    'openSkillPicker', 'openItemPicker', 'openHotlistPicker', 'openSlotPicker', 'openChoicePicker', 'openCapPicker',
+    'distStep'].forEach(function (name) {
+    var orig = window.DCC[name];
+    if (typeof orig !== 'function') return;
+    window.DCC[name] = function () {
+      if (lockedGuard()) return;
+      return orig.apply(window.DCC, arguments);
+    };
+  });
   // Keep the choice-grant maps current for the pickers.
   var origRenderChoices = renderChoices;
   renderChoices = function () {
@@ -3171,7 +3477,7 @@
     document.querySelectorAll('.tab-btn').forEach(function (b) {
       b.addEventListener('click', function () { showTab(b.dataset.tab); });
     });
-    function onChange(id, fn) { var el = $(id); if (el) el.addEventListener('change', function () { fn(el.value); saveSoon(); renderAll(); }); }
+    function onChange(id, fn) { var el = $(id); if (el) el.addEventListener('change', function () { if (lockedGuard()) { renderAll(); return; } fn(el.value); saveSoon(); renderAll(); }); }
     onChange('f-name', function (v) { state.name = v; });
     onChange('f-number', function (v) { state.number = v; });
     onChange('f-level', function (v) { state.level = Math.max(1, Math.min(250, num(v, 1))); });
@@ -3184,7 +3490,22 @@
     onChange('t-favor', function (v) { state.aiFavor = num(v, 0); });
     onChange('t-move', function (v) { state.moveVal = Math.max(0, num(v, 20)); });
     onChange('t-step', function (v) { state.stepVal = Math.max(0, num(v, 10)); });
-    function click(id, fn) { var el = $(id); if (el) el.addEventListener('click', fn); }
+    // Floor-3 lock (?v=48): while the race/class confirmation is
+    // outstanding, most sheet buttons re-open the popup instead of
+    // acting. These stay usable: save, load, new character, export,
+    // import, and closing/cancelling a modal, plus the popup's own
+    // buttons and the read-only race/class "?" and dice buttons.
+    var FLOOR3_CLICK_ALLOW = ['btn-new', 'btn-start-screen', 'btn-export', 'btn-export-orig', 'btn-import', 'btn-clear',
+      'gw-blank', 'gw-guided', 'gw-import', 'gw-close', 'picker-close', 'info-close', 'use-confirm-cancel',
+      'dist-cancel', 'item-create-cancel', 'levelup-close', 'levelup-rollall', 'roll-copy', 'dice-roll', 'dice-evade',
+      'race-info', 'class-info', 'floor3-confirm', 'floor3-dismiss'];
+    function click(id, fn) {
+      var el = $(id); if (!el) return;
+      el.addEventListener('click', function (e) {
+        if (floor3Locked() && FLOOR3_CLICK_ALLOW.indexOf(id) === -1) { openFloor3Popup(); return; }
+        fn(e);
+      });
+    }
     click('btn-export', exportJSON);
     click('btn-export-orig', exportOriginalJSON);
     click('btn-import', function () { $('import-file').click(); });
@@ -3331,6 +3652,14 @@
     click('skill-levelup', function () { openLevelUp('skill', 0, 4); });
     click('spell-levelup', function () { openLevelUp('spell', 0, 4); });
     click('levelup-close', function () { closeLevelUp(); });
+    // Floor-3 confirmation popup (?v=48). The selects are static
+    // elements whose options are re-rendered, so one listener each is
+    // enough; the confirm/dismiss buttons are in the lock allowlist.
+    click('floor3-confirm', function () { floor3Confirm(); });
+    click('floor3-dismiss', function () { floor3Dismiss(); });
+    var f3r = $('floor3-race'); if (f3r) f3r.addEventListener('change', function () { if (f3) floor3Select('race', f3r.value); });
+    var f3c = $('floor3-class'); if (f3c) f3c.addEventListener('change', function () { if (f3) floor3Select('class', f3c.value); });
+    var f3d = $('floor3-dm'); if (f3d) f3d.addEventListener('change', function () { if (f3) floor3DmToggle(f3d.checked); });
     click('levelup-rollall', function () { rollAllLevelUp(); });
     click('item-pick', openItemPicker);
     click('skill-add', function () {
@@ -3429,7 +3758,14 @@
     var ps = $('picker-search');
     if (ps) ps.addEventListener('input', function () { if (pickerMode) renderPickerList(pickerMode.candidates); });
     document.querySelectorAll('.overlay').forEach(function (ov) {
-      ov.addEventListener('click', function (e) { if (e.target === ov) ov.hidden = true; });
+      ov.addEventListener('click', function (e) {
+        if (e.target === ov) {
+          // Dismissing the Level Up popup by clicking outside it must
+          // still run its on-close hook (?v=48: the floor-3 popup chain).
+          if (ov.id === 'levelup-modal') closeLevelUp();
+          else ov.hidden = true;
+        }
+      });
     });
     // A scrolling page detaches the floating grant suggestions from
     // their input; hide them (scrolling inside the list itself is fine).
