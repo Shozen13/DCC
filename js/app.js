@@ -1832,7 +1832,7 @@
       + ((it.kind === 'coupon' || it.kind === 'material') && it.subtype ? ' · ' + it.subtype : '');
     var kindOpts = [['gear', 'Gear'], ['consumable', 'Consumable'], ['coupon', 'Coupon'], ['material', 'Material/Misc']];
     var html = '<div class="card"><h4>' + esc(it.name) + ((it.kind === 'consumable' || it.kind === 'material') ? ' ×' + getQty(it) : '') + (it.equipped ? ' — EQUIPPED' + (it.placement ? ' (' + it.placement + ')' : '') : '') + '</h4>'
-      + '<p>' + esc(it.effect || '') + '</p>'
+      + '<label>Effect / notes <textarea rows="3" onchange="DCC.setItemEffect(\'' + it.id + '\',this.value)">' + esc(it.effect || '') + '</textarea></label>'
       + '<p class="hint">' + esc(meta) + '</p>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(it.name) + '" onchange="DCC.renameItem(\'' + it.id + '\',this.value)"></label>'
       + '<label>Category <select onchange="DCC.setItemKind(\'' + it.id + '\',this.value)">'
@@ -2161,6 +2161,15 @@
     // embedded in the single file. Load it here, same lazy pattern.
     if (cache.races === null) {
       ensureRaces().then(function () { renderAll(); }).catch(function () {});
+    }
+    // The items library is needed for the "Rulebook:" reference box
+    // under rulebook items in the Inventory editor (?v=51: the item's
+    // own effect is editable, the Rulebook box is the book reference).
+    // Same gap as races above: it was only loaded when the item picker
+    // was opened, so after a reload the box was missing until the
+    // picker was opened again. Load it here, same lazy pattern.
+    if (cache.items === null) {
+      ensureItems().then(function () { renderAll(); }).catch(function () {});
     }
     if (activeTab === 'vitals') renderVitals(stats);
     else if (activeTab === 'attacks') renderAttacks();
@@ -3196,6 +3205,10 @@
       else it.use[field] = (typeof value === 'string' ? value.trim() : value) || null;
       saveSoon(); renderAll();
     },
+    setItemEffect: function (id, value) {
+      var it = state.items.find(function (i) { return i.id === id; });
+      if (it) { it.effect = (typeof value === 'string' ? value.trim() : value) || ''; saveSoon(); renderAll(); }
+    },
     /* Using a consumable: a confirmation window shows the effect
      * being applied first; confirming applies it, then drops the
      * quantity by one (removing the item at zero). */
@@ -3467,7 +3480,7 @@
   ['setOwnBase', 'setOwnEnh', 'setEnhTotal', 'levelDelta', 'floorDelta', 'killDelta',
     'setRank', 'delCard', 'toggleUsed', 'setCardStat', 'setCardEffect', 'setCardCheck', 'setCardOpen',
     'renameCard', 'addBonus', 'delBonus', 'setBonusAmount', 'setBonusKind', 'setBonusSkill', 'setBonusStat', 'setBonusType',
-    'pickBonusSkill', 'setSplit', 'delItem', 'renameItem', 'setItemKind', 'setItemSlot', 'setItemSubtype', 'setItemUseField',
+    'pickBonusSkill', 'setSplit', 'delItem', 'renameItem', 'setItemKind', 'setItemSlot', 'setItemSubtype', 'setItemUseField', 'setItemEffect',
     'setEquipped', 'equipIntoPlacement', 'equipFirstFree', 'delAttack', 'useConsumable', 'clearPendingDamage', 'rollPendingDamage',
     'addLoadout', 'delLoadout', 'renameLoadout', 'saveLoadout', 'applyLoadout', 'delHotlist', 'delNote',
     'storySet', 'storyDel', 'compListAdd', 'compListDel', 'compSelectAdd', 'compSkillAdd', 'compSkillDel',
