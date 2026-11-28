@@ -211,7 +211,7 @@ function remoteStatParts(d) {
       var kind = i === 0 ? 'race' : 'class';
       var entry = list.find(function (e) { return e.kind === kind && R.normName(e.name) === R.normName(name); });
       if (!entry) return;
-      var s = R.parseRaceClassStats(entry);
+      var s = R.parseRaceClassStats(entry, d.dayNight);
       R.STAT_KEYS.forEach(function (k) { fixed[k] += s[k]; });
     });
     var splits = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
@@ -240,10 +240,24 @@ function remoteStatTotals(d) {
     var out = {};
     R.STAT_KEYS.forEach(function (k) {
       var raceClass = (p.fixed[k] || 0) + (p.splits[k] || 0);
+      /* ?v=55 (corrected 2026-11-28): the Base box NEVER changes with
+       * the toggle — displayed Base = own base + Race/Class, exactly
+       * as ?v=53. A Lajabless crawler's STR gets a separate aspect
+       * value (displayed Base × factor) and the Enhanced Total follows
+       * from the aspect, so the inspector and the party-leader total
+       * see the same numbers the player sees. `aspect` is carried on
+       * the row for the inspector line below. */
+      var factor = (k === 'str') ? R.strFactorFor(d.race, d.dayNight) : 1;
+      var base = R.displayedBase(derived[k], raceClass);
+      var aspect = (k === 'str') ? R.aspectStr(base, d.race, d.dayNight) : base;
+      var total = (k === 'str' && factor !== 1)
+        ? R.statTotal(aspect, parseInt((d.ownEnh || {})[k], 10) || 0, p.gear[k], 0, R.statCapFor(d.race, d.class, k))
+        : R.statTotal(derived[k], parseInt((d.ownEnh || {})[k], 10) || 0, p.gear[k], raceClass, R.statCapFor(d.race, d.class, k));
       out[k] = {
-        base: R.displayedBase(derived[k], raceClass),
-        total: R.statTotal(derived[k], parseInt((d.ownEnh || {})[k], 10) || 0, p.gear[k], raceClass, R.statCapFor(d.race, d.class, k)),
-        gear: p.gear[k], raceClass: raceClass
+        base: base,
+        aspect: aspect,
+        total: total,
+        gear: p.gear[k], raceClass: raceClass, factor: factor
       };
     });
     return out;
@@ -409,6 +423,9 @@ async function dmInspSaveStats() {
       d.ownBase = d.ownBase || {};
       d.ownEnh = d.ownEnh || {};
       var t = totals && totals[k];
+      /* ?v=55 (corrected): the Base input holds the UNFACTORED
+       * displayed Base (own base + race/class), so the back-compute is
+       * the plain ?v=53 path — no factor inversion anywhere. */
       d.ownBase[k] = R.ownBaseForDisplayed(inspInt('insp-base-' + k, d.ownBase[k] || 1), t ? (t.raceClass || 0) : 0);
       d.ownEnh[k] = Math.max(0, inspInt('insp-enh-' + k, d.ownEnh[k] || 0));
     });
@@ -619,7 +636,8 @@ async function renderInspector() {
   ['str', 'con', 'dex', 'int', 'cha'].forEach(function (k) {
     var t = statTotals && statTotals[k];
     html += '<div><label>' + k.toUpperCase() + ' base ' + num('insp-base-' + k, t ? t.base : (base[k] === undefined ? 1 : base[k])) + '</label> '
-      + '<span>Bonuses: Gear ' + (t ? ((t.gear >= 0 ? '+' : '') + t.gear) : '?') + ' · </span><label>Enhance ' + num('insp-enh-' + k, enh[k] || 0, 0) + '</label></div>';
+      + '<span>Bonuses: Gear ' + (t ? ((t.gear >= 0 ? '+' : '') + t.gear) : '?') + ' · </span><label>Enhance ' + num('insp-enh-' + k, enh[k] || 0, 0) + '</label>'
+      + (k === 'str' && t && t.factor !== 1 ? ' <span class="hint">' + (t.factor === 2 ? 'Night Strength: ' + t.aspect : 'Day Strength: ' + t.aspect) + ' (Lajabless)</span>' : '') + '</div>';
   });
   html += '<div><label>Own armor ' + num('insp-armor', d.ownArmor || 0) + '</label></div>'
     + '<div class="btn-row"><button type="button" onclick="dmInspSaveStats()">Save stats</button></div>';

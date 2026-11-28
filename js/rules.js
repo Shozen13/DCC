@@ -79,6 +79,29 @@
     return Math.max(1, clampInt(displayed, 1) - (raceClass || 0));
   }
 
+  /* Lajabless day/night STR factor (?v=55, Antony 2026-11-28): the
+   * factor is its OWN display — the Base box never changes with the
+   * toggle. The aspect value is the displayed Base × factor: day
+   * halved (round DOWN, minimum 1 — confirmed by Antony 2026-11-28),
+   * night doubled. Any other race: no factor (1). */
+  function strFactorFor(raceName, dayNight) {
+    if (raceName !== 'Lajabless') return 1;
+    return dayNight === 'night' ? 2 : 0.5;
+  }
+  /* Aspect-adjusted STR (?v=55, corrected 2026-11-28): the halved /
+   * doubled STR shown as its own line under the Base box. The +5 night
+   * grant sits inside the displayed Base that gets doubled, so
+   * ownBase 50 at night is Base 55, aspect 110 (Antony's example said
+   * 50 → 100, which would double ownBase before the +5 or ignore it;
+   * the build doubles the Base box, per the sheet's Base model). */
+  function aspectStr(displayedBase, raceName, dayNight) {
+    var b = Math.max(1, clampInt(displayedBase, 1));
+    var f = strFactorFor(raceName, dayNight);
+    if (f === 2) return b * 2;
+    if (f === 0.5) return Math.max(1, Math.floor(b / 2));
+    return b;
+  }
+
   /* Back-compute the player's own enhancement from a typed Enhance
    * total: total = base + ownEnh + gear + race/class, clamped to
    * [1, cap]. Mirrors ownRankForTotal for the rank control. */
@@ -115,6 +138,20 @@
   function maxHpSlots() { return 10; }
   function totalHp(hbMod) { return 10 * hbMod; }
   function maxMana(intTotal) { return intTotal; }
+
+  /* Lajabless mana cost (?v=55, Antony 2026-11-28): spells cost half
+   * the Mana by day and double by night. Halved costs round down,
+   * minimum 1 (a 1-mana spell still costs 1 by day); a 0 cost stays 0.
+   * Any other race: the book cost, unchanged. Non-numeric costs
+   * (e.g. 'None') pass through untouched. */
+  function scaledManaCost(manaCost, raceName, dayNight) {
+    var c = parseInt(manaCost, 10);
+    if (isNaN(c)) return manaCost;
+    if (c === 0) return 0;
+    if (raceName !== 'Lajabless') return c;
+    if (dayNight === 'night') return c * 2;
+    return Math.max(1, Math.floor(c / 2));
+  }
 
   function evadeString(dexMod, evadeDiceCount, buffs, gear) {
     var total = dexMod + buffs + gear;
@@ -276,11 +313,22 @@
   }
 
   /* ---- Race/class text parsing (data-driven, benefits text only) ---- */
-  function parseRaceClassStats(entry) {
+  function parseRaceClassStats(entry, dayNight) {
     var out = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
     if (!entry) return out;
     if (entry.name === 'Human') { STAT_KEYS.forEach(function (k) { out[k] += 2; }); return out; }
     if (entry.name === 'Primal') { STAT_KEYS.forEach(function (k) { out[k] -= 1; }); return out; }
+    /* Lajabless (?v=55, book Ch.3 p.136): +5 Intelligence during the
+     * day, +5 Strength during the night — exactly one applies, never
+     * both. The generic +N Stat regex below would match both grants
+     * (it cannot see the "during the day/night" qualifiers), so this
+     * race returns early, like Human/Primal. Anything but 'night'
+     * reads as day, so old callers without the argument keep the day
+     * grant. */
+    if (entry.name === 'Lajabless') {
+      if (dayNight === 'night') out.str += 5; else out.int += 5;
+      return out;
+    }
     var b = entry.benefits || '';
     var re = /([+-])(\d+) (Strength|Dexterity|Constitution|Intelligence|Charisma)\b/g;
     var m;
@@ -1407,6 +1455,8 @@
   var api = {
     STAT_KEYS: STAT_KEYS, STAT_NAMES: STAT_NAMES, STAT_ABBR: STAT_ABBR,
     getModifier: getModifier, derivedBase: derivedBase, displayedBase: displayedBase, ownBaseForDisplayed: ownBaseForDisplayed, statTotal: statTotal,
+    strFactorFor: strFactorFor, aspectStr: aspectStr,
+    scaledManaCost: scaledManaCost,
     ownEnhForTotal: ownEnhForTotal,
     statCapFor: statCapFor, statBank: statBank,
     maxHpSlots: maxHpSlots, totalHp: totalHp, maxMana: maxMana,

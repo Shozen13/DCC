@@ -44,7 +44,7 @@
   /* ---------------- state ---------------- */
   function blankState() {
     return {
-      name: '', number: '', race: '', class: '', level: 1, floor: 1, avatarUrl: '', cloudId: null,
+      name: '', number: '', race: '', class: '', level: 1, floor: 1, avatarUrl: '', cloudId: null, dayNight: 'day',
       ownBase: { str: 1, con: 1, dex: 1, int: 1, cha: 1 },
       ownEnh: { str: 0, con: 0, dex: 0, int: 0, cha: 0 },
       ownArmor: 0, evadeBuffs: 0, drBuffs: 0,
@@ -126,10 +126,16 @@
   function classEntry() { return findRaceClass(state.class, 'class'); }
 
   /* ---------------- derived values ---------------- */
+  /* Day/Night (?v=55): the dungeon's time of day, player-controlled
+   * (Antony 2026-11-28 — the DM says in-game whether it is day or
+   * night; the player flips the toggle). Only a Lajabless crawler's
+   * mechanics change with it. Anything but 'night' reads as 'day',
+   * so old saves without the field default to day. */
+  function dayNight() { return state.dayNight === 'night' ? 'night' : 'day'; }
   function fixedStats() {
     var out = { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
     [raceEntry(), classEntry()].forEach(function (e) {
-      var s = R.parseRaceClassStats(e);
+      var s = R.parseRaceClassStats(e, dayNight());
       R.STAT_KEYS.forEach(function (k) { out[k] += s[k]; });
     });
     return out;
@@ -165,8 +171,21 @@
     var out = {};
     R.STAT_KEYS.forEach(function (k) {
       var raceClass = (fixed[k] || 0) + (splits[k] || 0);
-      var total = R.statTotal(derived[k], state.ownEnh[k] || 0, gear[k] || 0, raceClass, R.statCapFor(state.race, state.class, k));
-      out[k] = { derived: derived[k], base: R.displayedBase(derived[k], raceClass), fixed: fixed[k], split: splits[k], raceClass: raceClass, penalty: Math.min(0, fixed[k]), gear: gear[k] || 0, ownEnh: state.ownEnh[k] || 0, total: total, mod: R.getModifier(total) };
+      /* ?v=55 (corrected 2026-11-28): the Base box NEVER changes with
+       * the toggle — displayed Base = ownBase + race/class, exactly as
+       * ?v=53. For a Lajabless crawler, STR gets a separate aspect
+       * value (displayed Base × factor: halved by day, doubled by
+       * night) and the Enhanced Total follows from the ASPECT
+       * (aspect + Enhance + Gear), so the modifier reflects the
+       * halved/doubled STR. Every other stat uses the ?v=53 formula
+       * unchanged, so non-Lajabless sheets are byte-identical. */
+      var factor = (k === 'str') ? R.strFactorFor(state.race, dayNight()) : 1;
+      var base = R.displayedBase(derived[k], raceClass);
+      var aspect = (k === 'str') ? R.aspectStr(base, state.race, dayNight()) : base;
+      var total = (k === 'str' && factor !== 1)
+        ? R.statTotal(aspect, state.ownEnh[k] || 0, gear[k] || 0, 0, R.statCapFor(state.race, state.class, k))
+        : R.statTotal(derived[k], state.ownEnh[k] || 0, gear[k] || 0, raceClass, R.statCapFor(state.race, state.class, k));
+      out[k] = { derived: derived[k], base: base, aspect: aspect, fixed: fixed[k], split: splits[k], raceClass: raceClass, penalty: Math.min(0, fixed[k]), gear: gear[k] || 0, ownEnh: state.ownEnh[k] || 0, total: total, mod: R.getModifier(total), factor: factor };
     });
     return out;
   }
@@ -386,6 +405,14 @@
     document.body.appendChild(t);
     setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3000);
   }
+  /* Mana cost shown (?v=55): a Lajabless crawler's spells cost half
+   * the Mana by day and double by night (Antony 2026-11-28), so every
+   * mana_cost display uses this instead of the raw book cost. Casting
+   * never deducts mana in the sheet — mana is tracked with the +/-
+   * buttons, rests and potions — so this is display-only. */
+  function shownManaCost(manaCost) {
+    return R.scaledManaCost(manaCost, state.race, dayNight());
+  }
   /* Data for the PDF export (js/pdfexport.js): everything the paper sheet
    * has a box for, already in display form. The paper sheet has no boxes
    * for Gold, Boss Kills, Player Kills, Pets, Mounts, Sponsors, Faith or
@@ -430,7 +457,7 @@
       attacks.push({ name: c.name,
         toHit: cardRank(c) + (cStat ? ' ' + cStat.toUpperCase() + ' ' + fmtMod(mod) : ' +0'),
         damage: adj.damage,
-        effects: (override ? 'Damage uses ' + override.toUpperCase() + ' Mod. ' : '') + adjNote + ((lib && lib.mana_cost) ? ' Mana: ' + lib.mana_cost : '') });
+        effects: (override ? 'Damage uses ' + override.toUpperCase() + ' Mod. ' : '') + adjNote + ((lib && lib.mana_cost) ? ' Mana: ' + shownManaCost(lib.mana_cost) : '') });
     });
     var cardRow = function (c) {
       var lib = findLib(c.name);
@@ -897,7 +924,27 @@
     if (small) out += (out ? ' ' : '') + '<span class="mark-small ' + kind + '">' + icon + '</span> ×' + small;
     return out;
   }
+  /* Day/Night toggle silhouettes (?v=55): a solid sun disc with rays
+   * by day, a crescent moon by night (Feather icon paths). The icon
+   * colour comes from the button's day/night class in style.css. */
+  var SUN_SVG = '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></g></svg>';
+  var MOON_SVG = '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/></svg>';
+  function renderDayNight() {
+    var dn = dayNight();
+    var tgl = $('daynight-toggle');
+    if (!tgl) return;
+    tgl.classList.toggle('day', dn === 'day');
+    tgl.classList.toggle('night', dn === 'night');
+    var icon = $('daynight-icon');
+    if (icon) icon.innerHTML = dn === 'night' ? MOON_SVG : SUN_SVG;
+    var label = $('daynight-label');
+    if (label) label.textContent = dn === 'night' ? 'Night' : 'Day';
+    tgl.title = dn === 'night'
+      ? 'Night — the dungeon is in darkness. Click for Day.'
+      : 'Day — the dungeon is in daylight. Click for Night.';
+  }
   function renderSidebar() {
+    renderDayNight();
     $('profile-name').textContent = state.name || 'Unnamed Crawler';
     $('profile-number').textContent = 'Crawler #' + (state.number ? String(state.number).replace(/^#/, '') : '—');
     $('profile-sub').textContent = (state.race || '—') + ' • ' + (state.class || 'Unassigned') + ' • Floor ' + state.floor;
@@ -977,6 +1024,7 @@
         + '<p class="stat-total">Enhanced Total: <strong>' + s.total + '</strong> &nbsp; Modifier: <strong>+' + s.mod + '</strong></p>'
         + '<label>Base (edit to set) <input type="number" min="1" value="' + s.base + '" onchange="DCC.setBaseTotal(\'' + k + '\', this.value)"></label>'
         + '<p>Bonuses: Gear ' + (s.gear >= 0 ? '+' : '') + s.gear + ' · <label>Enhance <input type="number" min="0" value="' + s.ownEnh + '" onchange="DCC.setOwnEnh(\'' + k + '\', this.value)"></label></p>'
+        + (k === 'str' && s.factor !== 1 ? '<p>' + (s.factor === 2 ? 'Night Strength: ' + s.aspect : 'Day Strength: ' + s.aspect) + '</p>' : '')
         + (s.penalty < 0 ? '<p>Race/Class penalty: ' + s.penalty + ' (included in Base)</p>' : '') + '</div>';
     });
     $('stat-cards').innerHTML = cards;
@@ -1017,7 +1065,10 @@
   }
   /* The Base box shows the displayed base (own base + race/class, DM
    * ruling 2026-11-27). Typing a base back-computes the player's own
-   * base — like the rank control sets the displayed rank. */
+   * base — like the rank control sets the displayed rank. ?v=55: the
+   * Base box NEVER changes with the day/night toggle (the halving /
+   * doubling is a separate aspect line under it), so this is the plain
+   * ?v=53 back-compute with no factor inversion. */
   function setBaseTotal(key, value) {
     var s = computeStats()[key];
     state.ownBase[key] = R.ownBaseForDisplayed(value, s.raceClass || 0);
@@ -1033,7 +1084,7 @@
     if (!lib) return '';
     var html = '<div class="rulebook"><strong>Rulebook:</strong> ' + esc(lib.base_effect || '');
     if (lib.base_damage) html += '<br>Damage: ' + esc(lib.base_damage);
-    if (lib.mana_cost) html += '<br>Mana: ' + esc(lib.mana_cost);
+    if (lib.mana_cost) html += '<br>Mana: ' + esc(shownManaCost(lib.mana_cost));
     if (lib.range) html += '<br>Range: ' + esc(lib.range);
     if (lib.stat) html += '<br>Book stat: ' + esc(lib.stat);
     var bc = bookCheckFor(card.name);
@@ -1781,7 +1832,7 @@
         + '<p>' + (c.kind === 'spell' ? 'Attack spell' : esc(R.skillAttackType(c.name) || 'Attack skill')) + ' — Rank ' + cardRank(c) + '</p>'
         + '<p>To hit: d20 + ' + cardRank(c) + (noStat ? '' : ' + ' + esc((c.stat || '').toUpperCase()) + ' Mod (+' + mod + ')') + '</p>'
         + '<p>Damage: ' + esc(adj.damage) + adjNote + (override ? ' — damage uses ' + override.toUpperCase() + ' Mod instead (race/class override; to-hit unchanged)' : '')
-        + ((lib && lib.mana_cost) ? ' — Mana: ' + esc(lib.mana_cost) : '') + '</p>'
+        + ((lib && lib.mana_cost) ? ' — Mana: ' + esc(shownManaCost(lib.mana_cost)) : '') + '</p>'
         + (c.kind === 'skill' ? damageEffectsFor(c.name) : '')
         + '<p class="hint">From your ' + (c.kind === 'spell' ? 'Spells' : 'Skills') + ' tab — edit rank or stat there.</p>'
         + '<button type="button" onclick="DCC.rollCard(\'' + c.kind + '\',\'' + c.id + '\')">Roll to hit</button></div>';
@@ -3599,7 +3650,7 @@
     // acting. These stay usable: save, load, new character, export,
     // import, and closing/cancelling a modal, plus the popup's own
     // buttons and the read-only race/class "?" and dice buttons.
-    var FLOOR3_CLICK_ALLOW = ['btn-new', 'btn-start-screen', 'btn-export', 'btn-export-orig', 'btn-import', 'btn-clear',
+    var FLOOR3_CLICK_ALLOW = ['btn-new', 'btn-start-screen', 'btn-export', 'btn-export-orig', 'btn-import', 'btn-clear', 'daynight-toggle',
       'gw-blank', 'gw-guided', 'gw-import', 'gw-close', 'picker-close', 'info-close', 'use-confirm-cancel',
       'dist-cancel', 'item-create-cancel', 'levelup-close', 'levelup-rollall', 'roll-copy', 'dice-roll', 'dice-evade',
       'race-info', 'class-info', 'floor3-confirm', 'floor3-dismiss'];
@@ -3623,6 +3674,13 @@
     });
     click('btn-new', function () { $('gateway').hidden = false; });
     click('btn-start-screen', function () { if (window.Cloud) window.Cloud.showLanding(); else $('gateway').hidden = false; });
+    /* Day/Night toggle (?v=55): player-controlled — the DM says
+     * in-game whether it is day or night, the player flips it here.
+     * Only a Lajabless crawler's mechanics change with it. */
+    click('daynight-toggle', function () {
+      state.dayNight = dayNight() === 'night' ? 'day' : 'night';
+      saveSoon(); renderAll();
+    });
     click('gw-close', function () { $('gateway').hidden = true; });
     click('gw-blank', function () {
       if ((state.name || state.skills.length || state.spells.length) && !confirm('Start a blank sheet? This replaces the current sheet. Your cloud crawler is kept as-is.')) return;

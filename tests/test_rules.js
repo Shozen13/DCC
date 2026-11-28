@@ -50,6 +50,59 @@ eq(R.ownBaseForDisplayed(47, 6), 41, 'base back-compute 47 - 6 = 41');
 eq(R.ownBaseForDisplayed(12, 2), 10, 'base back-compute 12 - 2 = 10');
 eq(R.ownBaseForDisplayed(4, -1), 5, 'base back-compute with penalty 4 - (-1) = 5');
 eq(R.ownBaseForDisplayed(1, -1), 2, 'base back-compute clamp edge: displayed 1 with -1 stores 2');
+// Day/Night — Lajabless (?v=55, book Ch.3 p.136): +5 INT by day,
+// +5 STR by night — exactly one, never both. CORRECTED model
+// (Antony 2026-11-28): the Base box NEVER changes with the toggle —
+// displayed Base = ownBase + race/class, exactly as ?v=53. The
+// halving/doubling is its OWN display, the aspect value = displayed
+// Base × factor (day: floor(Base / 2), min 1 — halving rounds DOWN,
+// confirmed by Antony 2026-11-28; night: Base × 2). The +5 night
+// grant sits inside the Base that gets doubled (ownBase 50 at night
+// → Base 55 → aspect 110; confirmed by Antony 2026-11-28). The STR
+// Enhanced Total follows from the aspect, so the modifier derives
+// from the aspect Total.
+var laj = { name: 'Lajabless', benefits: 'Size: Medium (4). +5 Intelligence during the day and +5 Strength during the night, +2 in two Spells of your choice.' };
+eq(R.parseRaceClassStats(laj, 'day'), { str: 0, con: 0, dex: 0, int: 5, cha: 0 }, 'Lajabless day: +5 INT only');
+eq(R.parseRaceClassStats(laj, 'night'), { str: 5, con: 0, dex: 0, int: 0, cha: 0 }, 'Lajabless night: +5 STR only');
+eq(R.parseRaceClassStats(laj), { str: 0, con: 0, dex: 0, int: 5, cha: 0 }, 'Lajabless defaults to day');
+eq(R.parseRaceClassStats({ name: 'Human', benefits: '' }, 'night'), { str: 2, con: 2, dex: 2, int: 2, cha: 2 }, 'Human unaffected by night');
+eq(R.strFactorFor('Lajabless', 'day'), 0.5, 'Lajabless day factor 0.5');
+eq(R.strFactorFor('Lajabless', 'night'), 2, 'Lajabless night factor 2');
+eq(R.strFactorFor('Human', 'night'), 1, 'Human factor 1 at night');
+eq(R.strFactorFor('Lajabless', undefined), 0.5, 'Lajabless defaults to day factor');
+// Aspect = displayed Base × factor; Base itself never changes.
+eq(R.displayedBase(50, 0), 50, 'day: ownBase 50 -> Base 50 (unchanged by toggle)');
+eq(R.displayedBase(50, 5), 55, 'night: ownBase 50 + 5 grant -> Base 55');
+eq(R.aspectStr(50, 'Lajabless', 'day'), 25, 'day aspect: Base 50 -> 25');
+eq(R.aspectStr(10, 'Lajabless', 'day'), 5, 'day aspect: Base 10 -> 5');
+eq(R.aspectStr(5, 'Lajabless', 'day'), 2, 'day aspect: Base 5 -> 2 (floor)');
+eq(R.aspectStr(3, 'Lajabless', 'day'), 1, 'day aspect: Base 3 -> 1 (floor, min 1)');
+eq(R.aspectStr(1, 'Lajabless', 'day'), 1, 'day aspect: Base 1 -> 1 (min 1)');
+eq(R.aspectStr(55, 'Lajabless', 'night'), 110, 'night aspect: Base 55 -> 110');
+eq(R.aspectStr(15, 'Lajabless', 'night'), 30, 'night aspect: Base 15 -> 30');
+eq(R.aspectStr(12, 'Lajabless', 'night'), 24, 'night aspect: Base 12 -> 24');
+eq(R.aspectStr(50, 'Human', 'night'), 50, 'Human aspect = Base at night');
+eq(R.aspectStr(50, 'Lajabless', undefined), 25, 'aspect defaults to day');
+// STR Total and modifier derive from the aspect Total.
+eq(R.statTotal(25, 0, 0, 0, null), 25, 'day Total from aspect 25');
+eq(R.statTotal(110, 0, 0, 0, null), 110, 'night Total from aspect 110');
+eq(R.getModifier(25), 5, 'STR mod from day aspect Total 25');
+eq(R.getModifier(110), 7, 'STR mod from night aspect Total 110');
+eq(R.getModifier(5), 2, 'STR mod from day aspect Total 5 (ownBase 10)');
+// Level-up point goes to the actual base, and the aspect follows.
+eq(R.displayedBase(51, 5), 56, 'level-up at night: ownBase 51 + 5 -> Base 56');
+eq(R.aspectStr(56, 'Lajabless', 'night'), 112, 'level-up at night: Base 56 -> aspect 112');
+// Base edit back-compute is the plain ?v=53 path (no inversion).
+eq(R.ownBaseForDisplayed(56, 5), 51, 'Base edit 56 at night -> ownBase 51');
+// Mana cost scaling (?v=55): half by day (floor, min 1), double by night.
+eq(R.scaledManaCost(5, 'Lajabless', 'day'), 2, 'day: 5 mana -> 2');
+eq(R.scaledManaCost(1, 'Lajabless', 'day'), 1, 'day: 1 mana -> 1 (min 1)');
+eq(R.scaledManaCost(45, 'Lajabless', 'day'), 22, 'day: 45 mana -> 22');
+eq(R.scaledManaCost(5, 'Lajabless', 'night'), 10, 'night: 5 mana -> 10');
+eq(R.scaledManaCost(1, 'Lajabless', 'night'), 2, 'night: 1 mana -> 2');
+eq(R.scaledManaCost(5, 'Human', 'night'), 5, 'Human mana cost never scales');
+eq(R.scaledManaCost('5', 'Lajabless', 'day'), 2, 'string mana cost scales too');
+eq(R.scaledManaCost('None', 'Lajabless', 'day'), 'None', 'non-numeric mana cost passes through');
 eq(R.statCapFor('Hobgoblin', '', 'cha'), 10, 'Hobgoblin CHA cap');
 eq(R.statCapFor('Pocket Kuma', '', 'str'), 10, 'Pocket Kuma STR cap');
 eq(R.statCapFor('Human', '', 'cha'), null, 'no cap for Human');

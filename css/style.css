@@ -39,6 +39,14 @@ input[type=number] { width:90px; }
 .avatar-box img { width:100%; height:100%; object-fit:cover; }
 #avatar-placeholder { font-size:64px; color:var(--teal); }
 .raceclass-row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:.9rem; }
+/* Day/Night toggle (?v=55): prominent and always visible in the sidebar
+ * with the crawler name and class. Sun silhouette by day, moon
+ * silhouette by night; the icon colour follows the state. */
+.daynight-toggle { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:10px 12px; font-size:1.05rem; background:var(--panel2); color:var(--text); border:1px solid var(--line); }
+.daynight-toggle .daynight-icon { display:flex; }
+.daynight-toggle.day .daynight-icon { color:var(--yellow); }
+.daynight-toggle.night .daynight-icon { color:#cfe4ff; }
+.daynight-toggle:hover { filter:brightness(1.2); }
 .main { flex:1; min-width:0; max-width:1100px; margin:0 auto; }
 .counters { display:flex; flex-wrap:wrap; gap:8px 16px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:12px; }
 .counters span { color:var(--muted); font-size:.9rem; }
