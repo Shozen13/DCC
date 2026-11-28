@@ -21,8 +21,9 @@ eq(R.naturesBreathHealFormula(15), '1d8 + 1d6 + 3 slots', 'NB rank 15');
 eq(R.statBank(1, 0), 0, 'bank level 1');
 eq(R.statBank(10, 0), 27, 'bank level 10 (book example)');
 eq(R.statBank(4, 5), 4, 'bank level 4 spent 5');
-// Base is own base only (race/class NOT folded in); Total = Base +
-// Enhance + Gear + Race/Class, minimum Total 1
+// Stored base is own base only (derivedBase); the DISPLAYED Base adds
+// the race/class term (displayedBase, ?v=53). Enhanced Total =
+// displayed Base + Enhance + Gear, minimum Total 1
 eq(R.derivedBase({ str: 5, con: 5, dex: 5, int: 5, cha: 5 }),
   { str: 5, con: 5, dex: 5, int: 5, cha: 5 }, 'derived base is own base only');
 eq(R.derivedBase({ str: 0, con: 3, dex: 1, int: 1, cha: 1 }),
@@ -37,6 +38,18 @@ eq(R.ownEnhForTotal(10, 5, 1, 2, null), 2, 'enh back-compute 10 - 5 - 1 - 2 = 2'
 eq(R.ownEnhForTotal(3, 5, 0, 0, null), 0, 'enh cannot go below base');
 eq(R.ownEnhForTotal(20, 5, 0, 0, 10), 5, 'enh back-compute respects cap');
 eq(R.ownEnhForTotal(10, 5, 1, -1, null), 5, 'enh back-compute with penalty');
+// Displayed Base (?v=53, DM ruling 2026-11-27): Base shown = own base
+// + race/class term; typing a displayed Base back-computes own base.
+eq(R.displayedBase(41, 6), 47, 'Tony INT displayed base 41 + 6 = 47');
+eq(R.displayedBase(10, 2), 12, 'Tony CON displayed base 10 + 2 = 12');
+eq(R.displayedBase(10, 1), 11, 'Tony DEX displayed base 10 + 1 = 11');
+eq(R.displayedBase(3, 2), 5, 'Human displayed base own + 2');
+eq(R.displayedBase(5, -1), 4, 'negative race/class term lowers displayed base');
+eq(R.displayedBase(1, -1), 1, 'displayed base minimum 1 (Primal own 1, -1)');
+eq(R.ownBaseForDisplayed(47, 6), 41, 'base back-compute 47 - 6 = 41');
+eq(R.ownBaseForDisplayed(12, 2), 10, 'base back-compute 12 - 2 = 10');
+eq(R.ownBaseForDisplayed(4, -1), 5, 'base back-compute with penalty 4 - (-1) = 5');
+eq(R.ownBaseForDisplayed(1, -1), 2, 'base back-compute clamp edge: displayed 1 with -1 stores 2');
 eq(R.statCapFor('Hobgoblin', '', 'cha'), 10, 'Hobgoblin CHA cap');
 eq(R.statCapFor('Pocket Kuma', '', 'str'), 10, 'Pocket Kuma STR cap');
 eq(R.statCapFor('Human', '', 'cha'), null, 'no cap for Human');

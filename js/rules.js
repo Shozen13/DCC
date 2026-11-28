@@ -47,15 +47,36 @@
     return 10;
   }
 
-  /* Base = the player's own base only. Race/class bonuses (fixed +
-   * split) are NOT in Base; they add to Total instead (Antony,
-   * 2026-11-06). Penalties were never in Base either. */
+  /* Stored own base, clamped to a minimum of 1 per stat. This is NOT
+   * the Base the player sees: the displayed Base adds the race/class
+   * term on top (displayedBase, ?v=53). Race/class penalties were
+   * never in the stored base either. */
   function derivedBase(ownBase) {
     var out = {};
     STAT_KEYS.forEach(function (k) {
       out[k] = Math.max(1, clampInt(ownBase[k], 1));
     });
     return out;
+  }
+
+  /* Displayed Base (?v=53, DM ruling 2026-11-27, relayed by Antony):
+   * the Base the player sees is their own base PLUS the race/class
+   * stat term (fixed + split, may be negative), minimum 1. The stored
+   * own base is unchanged — this is a display merge, not a fold, so
+   * removing a race/class still takes its bonus back off the Base.
+   * The Total is unchanged: displayed Base + ownEnh + Gear = Total
+   * (before the minimum-1 and cap clamps). */
+  function displayedBase(ownBase, raceClass) {
+    return Math.max(1, Math.max(1, clampInt(ownBase, 1)) + (raceClass || 0));
+  }
+
+  /* Back-compute the stored own base from a typed displayed Base:
+   * ownBase = displayed − race/class, minimum 1. Mirrors
+   * ownEnhForTotal. Clamp edge: when the displayed Base was itself
+   * clamped at 1 (own base 1 with a −1 race/class term), typing 1
+   * stores own base 2 — the Total stays 1 either way. */
+  function ownBaseForDisplayed(displayed, raceClass) {
+    return Math.max(1, clampInt(displayed, 1) - (raceClass || 0));
   }
 
   /* Back-compute the player's own enhancement from a typed Enhance
@@ -1385,7 +1406,7 @@
 
   var api = {
     STAT_KEYS: STAT_KEYS, STAT_NAMES: STAT_NAMES, STAT_ABBR: STAT_ABBR,
-    getModifier: getModifier, derivedBase: derivedBase, statTotal: statTotal,
+    getModifier: getModifier, derivedBase: derivedBase, displayedBase: displayedBase, ownBaseForDisplayed: ownBaseForDisplayed, statTotal: statTotal,
     ownEnhForTotal: ownEnhForTotal,
     statCapFor: statCapFor, statBank: statBank,
     maxHpSlots: maxHpSlots, totalHp: totalHp, maxMana: maxMana,

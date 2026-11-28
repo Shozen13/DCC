@@ -149,10 +149,14 @@
   function raceClassDR() {
     return R.parseRaceClassDR(raceEntry()) + R.parseRaceClassDR(classEntry());
   }
-  /* Stat model (Antony, 2026-11-06): Base is the player's own base
-   * only — race/class is NOT folded into it. Total = Base + Enhance
-   * (own) + Gear + Race/Class (fixed + split, may be negative) with
-   * a minimum of 1 per stat and the race/class cap applied. */
+  /* Stat model (?v=53, DM ruling 2026-11-27, relayed by Antony):
+   * the Base the player sees is their own base + the race/class term
+   * (fixed + split, may be negative) — a display merge, not a fold:
+   * ownBase stays the player's own base and the race/class term is
+   * still computed live, so removing a race/class takes it back off.
+   * Enhanced Total = displayed Base + Enhance (own) + Gear, with a
+   * minimum of 1 per stat and the race/class cap applied. The stored
+   * stat bank still keys off ownBase, never the displayed Base. */
   function computeStats() {
     var fixed = fixedStats();
     var splits = splitAssignments();
@@ -162,7 +166,7 @@
     R.STAT_KEYS.forEach(function (k) {
       var raceClass = (fixed[k] || 0) + (splits[k] || 0);
       var total = R.statTotal(derived[k], state.ownEnh[k] || 0, gear[k] || 0, raceClass, R.statCapFor(state.race, state.class, k));
-      out[k] = { derived: derived[k], fixed: fixed[k], split: splits[k], raceClass: raceClass, penalty: Math.min(0, fixed[k]), gear: gear[k] || 0, ownEnh: state.ownEnh[k] || 0, total: total, mod: R.getModifier(total) };
+      out[k] = { derived: derived[k], base: R.displayedBase(derived[k], raceClass), fixed: fixed[k], split: splits[k], raceClass: raceClass, penalty: Math.min(0, fixed[k]), gear: gear[k] || 0, ownEnh: state.ownEnh[k] || 0, total: total, mod: R.getModifier(total) };
     });
     return out;
   }
@@ -392,7 +396,7 @@
     var fmtMod = function (m) { return (m >= 0 ? '+' : '') + m; };
     var statRows = ['str', 'int', 'con', 'dex', 'cha'].map(function (k) {
       var s = stats[k];
-      return { key: k, unenh: s.derived, enh: (s.ownEnh || 0) + (s.gear || 0), mod: fmtMod(s.mod) };
+      return { key: k, unenh: s.base, enh: (s.ownEnh || 0) + (s.gear || 0), mod: fmtMod(s.mod) };
     });
     var gearBon = equippedBonuses();
     var evadeDice = R.evadeDiceCount(raceEntry(), classEntry());
@@ -964,17 +968,19 @@
     R.STAT_KEYS.forEach(function (k) {
       var s = stats[k];
       cards += '<div class="stat-card"><h3>' + k.toUpperCase() + ' — ' + R.STAT_NAMES[k] + '</h3>'
-        + '<p class="stat-total">Total: <strong>' + s.total + '</strong> &nbsp; Modifier: <strong>+' + s.mod + '</strong></p>'
-        + '<label>Base (edit to set) <input type="number" min="1" value="' + s.derived + '" onchange="DCC.setOwnBase(\'' + k + '\', this.value)"></label>'
+        + '<p class="stat-total">Enhanced Total: <strong>' + s.total + '</strong> &nbsp; Modifier: <strong>+' + s.mod + '</strong></p>'
+        + '<label>Base (edit to set) <input type="number" min="1" value="' + s.base + '" onchange="DCC.setBaseTotal(\'' + k + '\', this.value)"></label>'
         + '<label>Enhance <input type="number" min="1" value="' + s.total + '" onchange="DCC.setEnhTotal(\'' + k + '\', this.value)"></label>'
-        + '<p>Gear: +' + s.gear + ' &nbsp; Race/Class: +' + (Math.max(0, s.fixed) + s.split) + '</p>'
-        + (s.penalty < 0 ? '<p>Race/Class penalty: ' + s.penalty + ' (subtracted from Total)</p>' : '') + '</div>';
+        + '<p>Bonuses: Gear ' + (s.gear >= 0 ? '+' : '') + s.gear + ' · Enhance ' + (s.ownEnh >= 0 ? '+' : '') + s.ownEnh + '</p>'
+        + (s.penalty < 0 ? '<p>Race/Class penalty: ' + s.penalty + ' (included in Base)</p>' : '') + '</div>';
     });
     $('stat-cards').innerHTML = cards;
-    // Note: Base shows the player's own base only (race/class is a
-    // separate line, not folded in). Enhance shows the computed total;
-    // typing a total back-computes the own enhancement (setEnhTotal),
-    // like the rank control sets the displayed rank.
+    // Note: Base shows the player's own base PLUS the race/class term
+    // (display merge, ?v=53 — the stored own base is untouched and the
+    // race/class term still reverses on removal). Enhance shows the
+    // Enhanced Total; typing a total back-computes the own enhancement
+    // (setEnhTotal), typing a Base back-computes the own base
+    // (setBaseTotal) — like the rank control sets the displayed rank.
     function listHtml(list, kind) {
       return list.map(function (x, i) {
         return '<li>' + esc(x) + ' <button type="button" onclick="DCC.delNote(\'' + kind + '\',' + i + ')">Remove</button></li>';
@@ -1001,13 +1007,21 @@
     state.ownBase[key] = Math.max(1, num(value, 1));
     saveSoon(); renderAll();
   }
+  /* The Base box shows the displayed base (own base + race/class, DM
+   * ruling 2026-11-27). Typing a base back-computes the player's own
+   * base, mirroring setEnhTotal. */
+  function setBaseTotal(key, value) {
+    var s = computeStats()[key];
+    state.ownBase[key] = R.ownBaseForDisplayed(value, s.raceClass || 0);
+    saveSoon(); renderAll();
+  }
   function setOwnEnh(key, value) {
     state.ownEnh[key] = Math.max(0, num(value, 0));
     saveSoon(); renderAll();
   }
-  /* The Enhance box shows the computed total (Base + Gear + Race/Class
-   * + buffs − penalties). Typing a total back-computes the player's
-   * own enhancement, like the rank control sets the displayed rank. */
+  /* The Enhance box shows the Enhanced Total (displayed Base + Gear +
+   * ownEnh). Typing a total back-computes the player's own
+   * enhancement, like the rank control sets the displayed rank. */
   function setEnhTotal(key, value) {
     var s = computeStats()[key];
     state.ownEnh[key] = R.ownEnhForTotal(value, state.ownBase[key] || 0, s.gear || 0, s.raceClass || 0, R.statCapFor(state.race, state.class, key));
@@ -2854,7 +2868,7 @@
   }
   window.DCC = {
     getState: function () { return state; },
-    baseTotal: function () { var st = computeStats(); return R.STAT_KEYS.reduce(function (a, k) { return a + st[k].derived; }, 0); },
+    baseTotal: function () { var st = computeStats(); return R.STAT_KEYS.reduce(function (a, k) { return a + st[k].base; }, 0); },
     syncGearGrants: syncGearGrants, syncTendrilsRank: syncTendrilsRank, ensureUnarmed: ensureUnarmed, migrateRanksOn: migrateRanksOn, sanitizeIds: sanitizeIds,
     setState: function (s) { state = s; },
     blankState: blankState,
@@ -2864,7 +2878,7 @@
     getExportData: getExportData,
     openSkillPicker: openSkillPicker, openItemPicker: openItemPicker, openRaceClassPicker: openRaceClassPicker,
     showRaceClassInfo: showRaceClassInfo, openChoicePicker: openChoicePicker, openCapPicker: openCapPicker, pickerPick: pickerPick,
-    setOwnBase: setOwnBase, setOwnEnh: setOwnEnh, setEnhTotal: setEnhTotal,
+    setOwnBase: setOwnBase, setBaseTotal: setBaseTotal, setOwnEnh: setOwnEnh, setEnhTotal: setEnhTotal,
     setCardOpen: function (id, open) {
       // Collapsed by default; a card the user opened stays open on reload.
       // No re-render here: re-rendering would rebuild the element mid-toggle.
@@ -3487,7 +3501,7 @@
    * while that popup is open), and internal/load paths (setState,
    * sync*, migrate*, sanitizeIds, blankState, addLootItem — the last
    * is how cloud.js applies an incoming loot box, not a user action). */
-  ['setOwnBase', 'setOwnEnh', 'setEnhTotal', 'levelDelta', 'floorDelta', 'killDelta',
+  ['setOwnBase', 'setBaseTotal', 'setOwnEnh', 'setEnhTotal', 'levelDelta', 'floorDelta', 'killDelta',
     'setRank', 'delCard', 'toggleUsed', 'setCardStat', 'setCardEffect', 'setCardCheck', 'setCardOpen',
     'renameCard', 'addBonus', 'delBonus', 'setBonusAmount', 'setBonusKind', 'setBonusSkill', 'setBonusStat', 'setBonusType',
     'pickBonusSkill', 'setSplit', 'delItem', 'renameItem', 'setItemKind', 'setItemSlot', 'setItemSubtype', 'setItemUseField', 'setItemEffect',

@@ -190,17 +190,18 @@ function racesData() {
   });
 }
 /* Combined TOTAL stat (the sum of the five displayed stat Totals) for a
- * character data object — the same Total the sheet shows: Base (own +
- * positive race/class bonuses + splits) + Enhance + equipped gear stat
- * bonuses, minus race/class penalties, minimum 1 per stat, then the
- * Hobgoblin CHA / Pocket Kuma STR caps. This is what picks a party
- * leader (Antony, 2026-11-06: total, not base — the old base-only rule
- * was a mistake). Needs the race/class library, which is why it is async. */
+ * character data object — the same Enhanced Total the sheet shows:
+ * displayed Base (own + race/class fixed + splits) + Enhance +
+ * equipped gear stat bonuses, minimum 1 per stat, then the Hobgoblin
+ * CHA / Pocket Kuma STR caps. This is what picks a party leader
+ * (Antony, 2026-11-06: total, not base — the old base-only rule was a
+ * mistake). Needs the race/class library, which is why it is async. */
 /* Per-stat parts for a remote character row: fixed race/class bonuses,
  * split assignments, and equipped gear stat bonuses. Shared by the
  * leader total and the inspector stat rows, so both use the same math
- * the player sees (Base = own base only; Total = Base + Enhance +
- * Gear + Race/Class, min 1, cap applied). */
+ * the player sees (displayed Base = own base + Race/Class, ?v=53;
+ * Enhanced Total = displayed Base + Enhance + Gear, min 1, cap
+ * applied). */
 function remoteStatParts(d) {
   return racesData().then(function (list) {
     var R = window.DCCRules;
@@ -240,7 +241,7 @@ function remoteStatTotals(d) {
     R.STAT_KEYS.forEach(function (k) {
       var raceClass = (p.fixed[k] || 0) + (p.splits[k] || 0);
       out[k] = {
-        base: derived[k],
+        base: R.displayedBase(derived[k], raceClass),
         total: R.statTotal(derived[k], parseInt((d.ownEnh || {})[k], 10) || 0, p.gear[k], raceClass, R.statCapFor(d.race, d.class, k)),
         gear: p.gear[k], raceClass: raceClass
       };
@@ -391,10 +392,11 @@ function dmInspSaveVitals() {
 }
 async function dmInspSaveStats() {
   if (!dmInspectId) return;
-  /* Enhance inputs hold the displayed total, so saving back-computes
-   * ownEnh from the row's gear/race/class (fetched first, as the
-   * inspector renders it). Falls back to a direct ownEnh set if the
-   * totals cannot be computed. */
+  /* Base inputs hold the displayed Base (own base + race/class, ?v=53)
+   * and Enhance inputs hold the displayed Enhanced Total, so saving
+   * back-computes ownBase and ownEnh from the row's gear/race/class
+   * (fetched first, as the inspector renders it). Falls back to direct
+   * ownBase/ownEnh sets if the totals cannot be computed. */
   var totals = null;
   try {
     var row = await sb.from('characters').select('data').eq('id', dmInspectId).single();
@@ -405,9 +407,9 @@ async function dmInspSaveStats() {
     ['str', 'con', 'dex', 'int', 'cha'].forEach(function (k) {
       d.ownBase = d.ownBase || {};
       d.ownEnh = d.ownEnh || {};
-      d.ownBase[k] = Math.max(1, inspInt('insp-base-' + k, d.ownBase[k] || 1));
-      var typed = inspInt('insp-enh-' + k, d.ownEnh[k] || 0);
       var t = totals && totals[k];
+      d.ownBase[k] = R.ownBaseForDisplayed(inspInt('insp-base-' + k, d.ownBase[k] || 1), t ? (t.raceClass || 0) : 0);
+      var typed = inspInt('insp-enh-' + k, d.ownEnh[k] || 0);
       d.ownEnh[k] = t ? R.ownEnhForTotal(typed, d.ownBase[k], t.gear, t.raceClass, R.statCapFor(d.race, d.class, k)) : Math.max(0, typed);
     });
     d.ownArmor = inspInt('insp-armor', d.ownArmor || 0);
@@ -585,8 +587,10 @@ async function renderInspector() {
   if (window.DCC.migrateRanksOn) window.DCC.migrateRanksOn(d);
   var base = d.ownBase || { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
   var enh = d.ownEnh || { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
-  /* Enhance inputs show the same total the player sees (Base + Gear +
-   * Race/Class + buffs − penalties); saving back-computes ownEnh. */
+  /* Enhance inputs show the same Enhanced Total the player sees
+   * (displayed Base + Gear + ownEnh); saving back-computes ownEnh.
+   * Base inputs show the same displayed Base (own base + Race/Class);
+   * saving back-computes the own base (dmInspSaveStats). */
   var statTotals = null;
   try { statTotals = await remoteStatTotals(d); } catch (e) {}
   var num = function (id, val, min) { var n = parseInt(val, 10); if (isNaN(n)) n = 0; return '<input type="number" id="' + id + '" value="' + n + '"' + (min !== undefined ? ' min="' + min + '"' : '') + ' style="width:72px">'; };
@@ -613,8 +617,8 @@ async function renderInspector() {
     + '<div class="btn-row"><button type="button" onclick="dmInspSaveVitals()">Save vitals</button></div>';
   html += '<div class="cloud-subhead">Stats (base / enhance / armor)</div>';
   ['str', 'con', 'dex', 'int', 'cha'].forEach(function (k) {
-    html += '<div><label>' + k.toUpperCase() + ' base ' + num('insp-base-' + k, base[k] === undefined ? 1 : base[k]) + '</label> '
-      + '<label>enhance (total) ' + num('insp-enh-' + k, statTotals ? statTotals[k].total : (enh[k] || 0)) + '</label></div>';
+    html += '<div><label>' + k.toUpperCase() + ' base ' + num('insp-base-' + k, statTotals ? statTotals[k].base : (base[k] === undefined ? 1 : base[k])) + '</label> '
+      + '<label>enhance (enhanced total) ' + num('insp-enh-' + k, statTotals ? statTotals[k].total : (enh[k] || 0)) + '</label></div>';
   });
   html += '<div><label>Own armor ' + num('insp-armor', d.ownArmor || 0) + '</label></div>'
     + '<div class="btn-row"><button type="button" onclick="dmInspSaveStats()">Save stats</button></div>';
