@@ -2723,33 +2723,33 @@
     "name": "BULK BOMB",
     "kind": "spell",
     "stat": "INT",
-    "base_effect": "Custom spell granted by the Cardboard Hoarder class. Details pending from Dukeofdoom.",
-    "mana_cost": null,
-    "range": null,
-    "base_damage": null,
+    "base_effect": "Throw a deluge of draft chaff at your foes. Deals 1d6 damage with a 25% chance to find a Rare card you can sell to vendors.",
+    "mana_cost": 5,
+    "range": "100 feet",
+    "base_damage": "1d6",
     "upgrades": {
-      "5": "",
-      "10": "",
-      "15": ""
+      "5": "+1d6 damage and 50% chance to find a Rare. You may also throw the Rare to deal an extra d8 damage.",
+      "10": "+1d6 damage and 75% chance to find a Rare. Collect a set of 5 Rares to sell for a big payout.",
+      "15": "+1d6 damage, always find 1 Rare, 50% chance for it to be Foil, which sells for the same price as a Set, or can be thrown to deal an extra d10 damage."
     },
     "source_book_page": null,
-    "uncertain": true
+    "uncertain": false
   },
   {
-    "name": "BULK BARRIER",
+    "name": "BULK BARRICADE",
     "kind": "spell",
     "stat": "INT",
-    "base_effect": "Custom spell granted by the Cardboard Hoarder class. Details pending from Dukeofdoom.",
-    "mana_cost": null,
+    "base_effect": "Summon a 10 foot wide wall of full 5-rows to hide behind. They have 2 health bars, with HP equal to your INT modifier. Lasts until destroyed.",
+    "mana_cost": 8,
     "range": null,
     "base_damage": null,
     "upgrades": {
-      "5": "",
-      "10": "",
-      "15": ""
+      "5": "They have 5 health bars, and you may have up to 2 Barricades. Should you summon another, your oldest Barricade is destroyed.",
+      "10": "They have 8 health bar slots, and you may have up to 4 Barricades.",
+      "15": "They have 11 Health Bar Slots, and you may have up to 6 Barricades."
     },
     "source_book_page": null,
-    "uncertain": true
+    "uncertain": false
   },
   {
     "base_damage": "1d6 + Str Slashing",

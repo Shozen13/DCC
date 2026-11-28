@@ -299,7 +299,8 @@ eq(R.shouldRemoveCard({ ownRank: 0, backgroundRank: 3 }, 0, 0, 0, 0), false, 'Ra
 
 // ?v=47.10: Cardboard Hoarder class by Dukeofdoom (30/30, no detriments).
 // Class Type and flavor text pending from Dukeofdoom; Bulk Bomb / Bulk
-// Barrier are placeholder spell entries until he supplies the details.
+// Barricade are Dukeofdoom's real spell definitions (?v=52 — Barricade was
+// renamed from Bulk Barrier at Antony's confirmation).
 (function () {
   var rc = require('../data/races_classes.json');
   var libData = require('../data/skills_spells.json');
@@ -312,28 +313,39 @@ eq(R.shouldRemoveCard({ ownRank: 0, backgroundRank: 3 }, 0, 0, 0, 0), false, 'Ra
   eq(ch.prerequisites, null, 'Cardboard Hoarder: no prerequisites');
   eq(R.parseRaceClassStats(ch), { str: 0, con: 0, dex: 0, int: 5, cha: 0 }, 'Cardboard Hoarder: +5 INT');
   eq(R.parseFixedSkillBonuses(ch, realLib).map(function (g) { return g.name + ':' + g.kind + ':' + g.amount; }),
-    ['Tactics:utility:3', 'BULK BOMB:spell:2', 'BULK BARRIER:spell:2'],
-    'Cardboard Hoarder: +3 Tactics, +2 Bulk Bomb, +2 Bulk Barrier, nothing else');
+    ['Tactics:utility:3', 'BULK BOMB:spell:2', 'BULK BARRICADE:spell:2'],
+    'Cardboard Hoarder: +3 Tactics, +2 Bulk Bomb, +2 Bulk Barricade, nothing else');
   eq(R.parseFixedSkillBonuses(ch, realLib).map(function (g) { return g.kind === 'spell' ? 'spell' : 'skill'; }),
     ['skill', 'spell', 'spell'],
-    'Cardboard Hoarder: Tactics lands as a skill card, Bulk Bomb/Barrier as spell cards');
+    'Cardboard Hoarder: Tactics lands as a skill card, Bulk Bomb/Barricade as spell cards');
   eq(R.parseChoiceGrants(ch), [], 'Cardboard Hoarder: no choice grants');
   eq(R.parseCapGrants(ch, realLib), [], 'Cardboard Hoarder: no Rank 20 clause');
   eq(R.groupBonusFor({ name: 'Tactics', kind: 'skill', stat: 'int' }, '', 'Cardboard Hoarder', realLib('Tactics'), [], 6), 0, 'Cardboard Hoarder: no group bonus');
   eq(R.raceClassMoveBonus('', 'Cardboard Hoarder'), { move: 0, step: 0 }, 'Cardboard Hoarder: no Move/Step bonus');
   eq(ch.benefits.indexOf('Custom class by Dukeofdoom.') >= 0, true, 'Cardboard Hoarder carries the Dukeofdoom credit');
   eq(ch.benefits.indexOf('null') >= 0, false, 'Cardboard Hoarder benefits contain no literal "null"');
-  // Placeholder spell entries (details pending from Dukeofdoom)
+  // Real spell definitions from Dukeofdoom (?v=52)
   var bb = realLib('BULK BOMB');
-  var bbar = realLib('BULK BARRIER');
+  var bbar = realLib('BULK BARRICADE');
+  eq(realLib('BULK BARRIER'), null, 'BULK BARRIER is gone (renamed to Bulk Barricade)');
   eq(bb.kind, 'spell', 'BULK BOMB kind is spell');
-  eq(bbar.kind, 'spell', 'BULK BARRIER kind is spell');
-  eq(bb.stat, 'INT', 'BULK BOMB stat placeholder is INT');
-  eq(bbar.stat, 'INT', 'BULK BARRIER stat placeholder is INT');
-  eq(bb.uncertain, true, 'BULK BOMB is flagged uncertain (details pending)');
-  eq(bbar.uncertain, true, 'BULK BARRIER is flagged uncertain (details pending)');
-  eq(bb.base_effect.indexOf('pending from Dukeofdoom') >= 0, true, 'BULK BOMB effect says details are pending');
-  eq(bbar.base_effect.indexOf('pending from Dukeofdoom') >= 0, true, 'BULK BARRIER effect says details are pending');
+  eq(bbar.kind, 'spell', 'BULK BARRICADE kind is spell');
+  eq(bb.stat, 'INT', 'BULK BOMB stat is INT');
+  eq(bbar.stat, 'INT', 'BULK BARRICADE stat is INT');
+  eq(bb.uncertain, false, 'BULK BOMB is no longer uncertain (real definition)');
+  eq(bbar.uncertain, false, 'BULK BARRICADE is no longer uncertain (real definition)');
+  eq(bb.mana_cost, 5, 'BULK BOMB mana 5');
+  eq(bbar.mana_cost, 8, 'BULK BARRICADE mana 8');
+  eq(bb.range, '100 feet', 'BULK BOMB range 100 feet');
+  eq(bbar.range, null, 'BULK BARRICADE has no range (none given)');
+  eq(bb.base_damage, '1d6', 'BULK BOMB damage 1d6');
+  eq(bbar.base_damage, null, 'BULK BARRICADE has no base damage');
+  eq(bb.base_effect.indexOf('draft chaff') >= 0, true, 'BULK BOMB effect mentions draft chaff');
+  eq(bb.base_effect.indexOf('25% chance to find a Rare') >= 0, true, 'BULK BOMB effect has the Rare chance');
+  eq(bb.upgrades['15'].indexOf('Foil') >= 0, true, 'BULK BOMB Rank 15 mentions Foil');
+  eq(bbar.base_effect.indexOf('10 foot wide wall') >= 0, true, 'BULK BARRICADE effect is a 10 foot wide wall');
+  eq(bbar.base_effect.indexOf('Lasts until destroyed') >= 0, true, 'BULK BARRICADE lasts until destroyed');
+  eq(bbar.upgrades['15'].indexOf('11 Health Bar Slots') >= 0, true, 'BULK BARRICADE Rank 15 has 11 Health Bar Slots');
 })();
 
 

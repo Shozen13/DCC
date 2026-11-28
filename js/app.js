@@ -72,7 +72,7 @@
   /* ---------------- lazy data ---------------- */
   var cache = { skills: null, items: null, races: null, keywords: null, bookChecks: null, _p: {} };
   function loadJSON(path) {
-    return fetch(path + '?v=12').then(function (r) {
+    return fetch(path + '?v=13').then(function (r) {
       if (!r.ok) throw new Error('Failed to load ' + path);
       return r.json();
     });
@@ -316,6 +316,16 @@
    * in rank math are 0 once folded). */
   function migrateRanksOn(d) {
     if (!d) return d;
+    /* ?v=52: the Cardboard Hoarder spell was renamed Bulk Barrier →
+     * Bulk Barricade. Sheets saved while the placeholder was live hold a
+     * BULK BARRIER spell card (ownRank 2, folded grant) plus a
+     * raceClassApplied record naming it; rename both so the grant keeps
+     * resolving against the library. Idempotent: once renamed, no
+     * BARRIER name remains to match. */
+    [d.skills, d.spells].forEach(function (list) {
+      (list || []).forEach(function (c) { if (c && R.normName(c.name) === 'bulk barrier') c.name = 'BULK BARRICADE'; });
+    });
+    (d.raceClassApplied || []).forEach(function (a) { if (a && R.normName(a.skillName) === 'bulk barrier') a.skillName = 'BULK BARRICADE'; });
     (d.skills || []).forEach(function (c) { R.foldBackgroundRank(c, d.backgrounds); R.foldRaceClassRank(c, d.raceClassApplied); });
     (d.spells || []).forEach(function (c) { R.foldBackgroundRank(c, d.backgrounds); R.foldRaceClassRank(c, d.raceClassApplied); });
     return d;
