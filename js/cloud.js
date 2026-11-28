@@ -392,11 +392,12 @@ function dmInspSaveVitals() {
 }
 async function dmInspSaveStats() {
   if (!dmInspectId) return;
-  /* Base inputs hold the displayed Base (own base + race/class, ?v=53)
-   * and Enhance inputs hold the displayed Enhanced Total, so saving
-   * back-computes ownBase and ownEnh from the row's gear/race/class
-   * (fetched first, as the inspector renders it). Falls back to direct
-   * ownBase/ownEnh sets if the totals cannot be computed. */
+  /* Base inputs hold the displayed Base (own base + race/class, ?v=53),
+   * so saving back-computes ownBase from the row's race/class term.
+   * Enhance inputs hold the own-enhancement AMOUNT directly (?v=53.1,
+   * same as the player sheet's Bonuses row), so saving stores it
+   * as-is. Falls back to direct ownBase sets if the totals cannot be
+   * computed. */
   var totals = null;
   try {
     var row = await sb.from('characters').select('data').eq('id', dmInspectId).single();
@@ -409,8 +410,7 @@ async function dmInspSaveStats() {
       d.ownEnh = d.ownEnh || {};
       var t = totals && totals[k];
       d.ownBase[k] = R.ownBaseForDisplayed(inspInt('insp-base-' + k, d.ownBase[k] || 1), t ? (t.raceClass || 0) : 0);
-      var typed = inspInt('insp-enh-' + k, d.ownEnh[k] || 0);
-      d.ownEnh[k] = t ? R.ownEnhForTotal(typed, d.ownBase[k], t.gear, t.raceClass, R.statCapFor(d.race, d.class, k)) : Math.max(0, typed);
+      d.ownEnh[k] = Math.max(0, inspInt('insp-enh-' + k, d.ownEnh[k] || 0));
     });
     d.ownArmor = inspInt('insp-armor', d.ownArmor || 0);
   }, 'Stats saved.');
@@ -587,10 +587,10 @@ async function renderInspector() {
   if (window.DCC.migrateRanksOn) window.DCC.migrateRanksOn(d);
   var base = d.ownBase || { str: 1, con: 1, dex: 1, int: 1, cha: 1 };
   var enh = d.ownEnh || { str: 0, con: 0, dex: 0, int: 0, cha: 0 };
-  /* Enhance inputs show the same Enhanced Total the player sees
-   * (displayed Base + Gear + ownEnh); saving back-computes ownEnh.
-   * Base inputs show the same displayed Base (own base + Race/Class);
-   * saving back-computes the own base (dmInspSaveStats). */
+  /* Bonuses rows mirror the player sheet (?v=53.1): Gear as text and
+   * the Enhance amount as an input; saving stores the amount as-is
+   * (dmInspSaveStats). Base inputs show the same displayed Base (own
+   * base + Race/Class); saving back-computes the own base. */
   var statTotals = null;
   try { statTotals = await remoteStatTotals(d); } catch (e) {}
   var num = function (id, val, min) { var n = parseInt(val, 10); if (isNaN(n)) n = 0; return '<input type="number" id="' + id + '" value="' + n + '"' + (min !== undefined ? ' min="' + min + '"' : '') + ' style="width:72px">'; };
@@ -615,10 +615,11 @@ async function renderInspector() {
     + '<label>Level ' + num('insp-level', d.level || 1, 1) + '</label> '
     + '<label>Floor ' + num('insp-floor', d.floor || 1, 1) + '</label></div>'
     + '<div class="btn-row"><button type="button" onclick="dmInspSaveVitals()">Save vitals</button></div>';
-  html += '<div class="cloud-subhead">Stats (base / enhance / armor)</div>';
+  html += '<div class="cloud-subhead">Stats (base / bonuses / armor)</div>';
   ['str', 'con', 'dex', 'int', 'cha'].forEach(function (k) {
-    html += '<div><label>' + k.toUpperCase() + ' base ' + num('insp-base-' + k, statTotals ? statTotals[k].base : (base[k] === undefined ? 1 : base[k])) + '</label> '
-      + '<label>enhance (enhanced total) ' + num('insp-enh-' + k, statTotals ? statTotals[k].total : (enh[k] || 0)) + '</label></div>';
+    var t = statTotals && statTotals[k];
+    html += '<div><label>' + k.toUpperCase() + ' base ' + num('insp-base-' + k, t ? t.base : (base[k] === undefined ? 1 : base[k])) + '</label> '
+      + '<span>Bonuses: Gear ' + (t ? ((t.gear >= 0 ? '+' : '') + t.gear) : '?') + ' · </span><label>Enhance ' + num('insp-enh-' + k, enh[k] || 0, 0) + '</label></div>';
   });
   html += '<div><label>Own armor ' + num('insp-armor', d.ownArmor || 0) + '</label></div>'
     + '<div class="btn-row"><button type="button" onclick="dmInspSaveStats()">Save stats</button></div>';

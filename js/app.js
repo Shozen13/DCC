@@ -970,17 +970,19 @@
       cards += '<div class="stat-card"><h3>' + k.toUpperCase() + ' — ' + R.STAT_NAMES[k] + '</h3>'
         + '<p class="stat-total">Enhanced Total: <strong>' + s.total + '</strong> &nbsp; Modifier: <strong>+' + s.mod + '</strong></p>'
         + '<label>Base (edit to set) <input type="number" min="1" value="' + s.base + '" onchange="DCC.setBaseTotal(\'' + k + '\', this.value)"></label>'
-        + '<label>Enhance <input type="number" min="1" value="' + s.total + '" onchange="DCC.setEnhTotal(\'' + k + '\', this.value)"></label>'
-        + '<p>Bonuses: Gear ' + (s.gear >= 0 ? '+' : '') + s.gear + ' · Enhance ' + (s.ownEnh >= 0 ? '+' : '') + s.ownEnh + '</p>'
+        + '<p>Bonuses: Gear ' + (s.gear >= 0 ? '+' : '') + s.gear + ' · <label>Enhance <input type="number" min="0" value="' + s.ownEnh + '" onchange="DCC.setOwnEnh(\'' + k + '\', this.value)"></label></p>'
         + (s.penalty < 0 ? '<p>Race/Class penalty: ' + s.penalty + ' (included in Base)</p>' : '') + '</div>';
     });
     $('stat-cards').innerHTML = cards;
     // Note: Base shows the player's own base PLUS the race/class term
     // (display merge, ?v=53 — the stored own base is untouched and the
-    // race/class term still reverses on removal). Enhance shows the
-    // Enhanced Total; typing a total back-computes the own enhancement
-    // (setEnhTotal), typing a Base back-computes the own base
-    // (setBaseTotal) — like the rank control sets the displayed rank.
+    // race/class term still reverses on removal). The Bonuses row
+    // (?v=53.1) holds the two add-ons NOT in Base: Gear (equipped
+    // items, text only) and Enhance (the own-enhancement amount,
+    // editable via setOwnEnh). The old standalone Enhance box that
+    // showed the Enhanced Total is gone — the headline already shows
+    // it. Typing a Base back-computes the own base (setBaseTotal) —
+    // like the rank control sets the displayed rank.
     function listHtml(list, kind) {
       return list.map(function (x, i) {
         return '<li>' + esc(x) + ' <button type="button" onclick="DCC.delNote(\'' + kind + '\',' + i + ')">Remove</button></li>';
@@ -1009,7 +1011,7 @@
   }
   /* The Base box shows the displayed base (own base + race/class, DM
    * ruling 2026-11-27). Typing a base back-computes the player's own
-   * base, mirroring setEnhTotal. */
+   * base — like the rank control sets the displayed rank. */
   function setBaseTotal(key, value) {
     var s = computeStats()[key];
     state.ownBase[key] = R.ownBaseForDisplayed(value, s.raceClass || 0);
@@ -1019,15 +1021,6 @@
     state.ownEnh[key] = Math.max(0, num(value, 0));
     saveSoon(); renderAll();
   }
-  /* The Enhance box shows the Enhanced Total (displayed Base + Gear +
-   * ownEnh). Typing a total back-computes the player's own
-   * enhancement, like the rank control sets the displayed rank. */
-  function setEnhTotal(key, value) {
-    var s = computeStats()[key];
-    state.ownEnh[key] = R.ownEnhForTotal(value, state.ownBase[key] || 0, s.gear || 0, s.raceClass || 0, R.statCapFor(state.race, state.class, key));
-    saveSoon(); renderAll();
-  }
-
   /* ---------------- rendering: cards ---------------- */
   function rulebookBox(card) {
     var lib = findLib(card.name);
@@ -2878,7 +2871,7 @@
     getExportData: getExportData,
     openSkillPicker: openSkillPicker, openItemPicker: openItemPicker, openRaceClassPicker: openRaceClassPicker,
     showRaceClassInfo: showRaceClassInfo, openChoicePicker: openChoicePicker, openCapPicker: openCapPicker, pickerPick: pickerPick,
-    setOwnBase: setOwnBase, setBaseTotal: setBaseTotal, setOwnEnh: setOwnEnh, setEnhTotal: setEnhTotal,
+    setOwnBase: setOwnBase, setBaseTotal: setBaseTotal, setOwnEnh: setOwnEnh,
     setCardOpen: function (id, open) {
       // Collapsed by default; a card the user opened stays open on reload.
       // No re-render here: re-rendering would rebuild the element mid-toggle.
@@ -3501,7 +3494,7 @@
    * while that popup is open), and internal/load paths (setState,
    * sync*, migrate*, sanitizeIds, blankState, addLootItem — the last
    * is how cloud.js applies an incoming loot box, not a user action). */
-  ['setOwnBase', 'setBaseTotal', 'setOwnEnh', 'setEnhTotal', 'levelDelta', 'floorDelta', 'killDelta',
+  ['setOwnBase', 'setBaseTotal', 'setOwnEnh', 'levelDelta', 'floorDelta', 'killDelta',
     'setRank', 'delCard', 'toggleUsed', 'setCardStat', 'setCardEffect', 'setCardCheck', 'setCardOpen',
     'renameCard', 'addBonus', 'delBonus', 'setBonusAmount', 'setBonusKind', 'setBonusSkill', 'setBonusStat', 'setBonusType',
     'pickBonusSkill', 'setSplit', 'delItem', 'renameItem', 'setItemKind', 'setItemSlot', 'setItemSubtype', 'setItemUseField', 'setItemEffect',
