@@ -418,7 +418,10 @@
     state.skills.concat(state.spells).forEach(function (c) {
       if (cardRank(c) < 1 || !isAttackCard(c) || manualNames[R.normName(c.name)]) return;
       var lib = findLib(c.name);
-      var noStat = !!(lib && !lib.stat);
+      // ?v=54: a card whose stat was explicitly overridden shows the
+      // override's modifier (see rollCard); untouched no-stat cards
+      // still show +0.
+      var noStat = !!(lib && !lib.stat) && !c.statOverride;
       var cStat = noStat ? '' : (c.stat || 'str');
       var mod = cStat ? (stats[cStat] ? stats[cStat].mod : 0) : 0;
       var override = R.attackDamageStat(c.name, state.race, state.class);
@@ -431,7 +434,10 @@
     });
     var cardRow = function (c) {
       var lib = findLib(c.name);
-      var noStat = !!(lib && !lib.stat);
+      // ?v=54: a card whose stat was explicitly overridden shows the
+      // override's modifier (see rollCard); untouched no-stat cards
+      // still show +0.
+      var noStat = !!(lib && !lib.stat) && !c.statOverride;
       var cStat = noStat ? '' : (c.stat || 'str');
       var mod = cStat ? (stats[cStat] ? stats[cStat].mod : 0) : 0;
       return { name: c.name, rank: cardRank(c),
@@ -1031,7 +1037,7 @@
     if (lib.range) html += '<br>Range: ' + esc(lib.range);
     if (lib.stat) html += '<br>Book stat: ' + esc(lib.stat);
     var bc = bookCheckFor(card.name);
-    if (bc && bc.check) html += '<br>Book check: ' + esc(bc.check) + ' (locked)';
+    if (bc && bc.check) html += '<br>Book check: ' + esc(bc.check);
     if (card.kind === 'spell') {
       var kw = keywordCache[R.normName(card.name)] || [];
       if (kw.length) html += '<br><span class="keywords">Keywords: ' + esc(kw.join(', ')) + '</span>';
@@ -1075,10 +1081,9 @@
     var eff = R.effectiveRank(rank, card, state.race, state.class);
     var group = groupGivenFor(card);
     var lib = findLib(card.name);
-    var statLocked = !!(lib && lib.stat);
-    var statNoStat = !!(lib && !lib.stat);
     var derivedCheck = bookCheckFor(card.name);
-    var checkLocked = !!(derivedCheck && derivedCheck.check);
+    var bookStat = lib && lib.stat ? String(lib.stat) : null;
+    var bookCheck = derivedCheck && derivedCheck.check ? derivedCheck.check : null;
     var statOptions = R.STAT_KEYS.map(function (k) {
       return '<option value="' + k + '"' + (card.stat === k ? ' selected' : '') + '>' + k.toUpperCase() + '</option>';
     }).join('');
@@ -1088,13 +1093,9 @@
     return '<details class="card"' + (open ? ' open' : '') + ' ontoggle="DCC.setCardOpen(\'' + card.id + '\',this.open)"><summary>' + esc(card.name) + ' — Rank ' + rank + (card.used ? ' (Used)' : '') + '</summary>'
       + '<div class="row"><label>Name <input type="text" value="' + esc(card.name) + '" onchange="DCC.renameCard(\'' + card.kind + '\',\'' + card.id + '\',this.value)"></label>'
       + '<label>Rank ' + (tendrilsLocked ? '<select disabled title="Rank equals your Floor' + (faSpec.offset ? ' + ' + faSpec.offset : '') + ' (' + faSpec.title + ')"><option>' + rank + '</option></select>' : descentLocked ? '<select disabled title="Rank 3 when granted; +1 each floor descended (' + descentSpec.sourceName + ')"><option>' + rank + '</option></select>' : '<select onchange="DCC.setRank(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + rankOptions + '</select>') + '</label>'
-      + '<label>Stat ' + (statNoStat
-        ? '<select disabled title="No associated stat in the book (Passive), locked"><option value="">\u2014</option></select>'
-        : '<select ' + (statLocked ? 'disabled title="Book stat (see Rulebook box)"' : '') + ' onchange="DCC.setCardStat(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + statOptions + '</select>') + '</label>'
-      + '<label>Check ' + (checkLocked
-        ? '<select disabled title="Book check type, locked (Chapter 4)"><option>' + esc(derivedCheck.check) + '</option></select>'
-        : '<select onchange="DCC.setCardCheck(\'' + card.kind + '\',\'' + card.id + '\',this.value)">'
-        + ['Active Check', 'Contested Check', 'Evade Check', 'Passive Effect'].map(function (c) { return '<option' + (card.checkType === c ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>') + '</label>'
+      + '<label>Stat <select' + (bookStat ? ' title="Overrides the book stat for this card"' : ' title="Stat this card rolls with"') + ' onchange="DCC.setCardStat(\'' + card.kind + '\',\'' + card.id + '\',this.value)">' + statOptions + '</select></label>'
+      + '<label>Check <select' + (bookCheck ? ' title="Overrides the book check for this card"' : ' title="Check type for this card"') + ' onchange="DCC.setCardCheck(\'' + card.kind + '\',\'' + card.id + '\',this.value)">'
+      + ['Active Check', 'Contested Check', 'Evade Check', 'Passive Effect'].map(function (c) { return '<option' + (card.checkType === c ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></label>'
       + '<label>Used <input type="checkbox"' + (card.used ? ' checked' : '') + ' onchange="DCC.toggleUsed(\'' + card.kind + '\',\'' + card.id + '\',this.checked)"></label>'
       + '<button type="button" onclick="DCC.rollCard(\'' + card.kind + '\',\'' + card.id + '\')">Roll d20</button>'
       + '<button type="button" onclick="DCC.delCard(\'' + card.kind + '\',\'' + card.id + '\')">Delete</button></div>'
@@ -1769,7 +1770,9 @@
       // ?v=49: a library entry with no stat (BEAK) rolls d20 + rank with
       // no stat mod (see rollCard) — the display must not print an empty
       // stat label with a borrowed mod.
-      var noStat = !!(lib && !lib.stat);
+      // ?v=54: a card whose stat was explicitly overridden shows the
+      // override's modifier; untouched no-stat cards still show none.
+      var noStat = !!(lib && !lib.stat) && !c.statOverride;
       var mod = noStat ? 0 : (stats[c.stat] ? stats[c.stat].mod : 0);
       var override = R.attackDamageStat(c.name, state.race, state.class);
       var adj = lib ? R.adjustedDamage(lib.base_damage, lib.upgrades, cardRank(c)) : { damage: '—', additions: [] };
@@ -2533,6 +2536,37 @@
     $('item-create-modal').hidden = true;
     saveSoon(); renderAll(); showTab('inventory');
   }
+  /* Custom skill/spell creation (?v=54): same modal pattern as custom
+   * items. The old placeholder push ("New Skill"/"New Spell" with no
+   * form) is gone — the builder opens first and nothing is created
+   * until Create is pressed with a name. */
+  function openSkillCreate(kind) {
+    $('skill-create-name').value = '';
+    $('skill-create-type').value = kind;
+    $('skill-create-stat').value = kind === 'spell' ? 'int' : 'str';
+    $('skill-create-check').value = 'Active Check';
+    $('skill-create-rank').value = '1';
+    $('skill-create-effect').value = '';
+    $('skill-create-error').hidden = true;
+    $('skill-create-title').textContent = kind === 'spell' ? 'Add custom spell' : 'Add custom skill';
+    $('skill-create-modal').hidden = false;
+    fitAllTextareas();
+    $('skill-create-name').focus();
+  }
+  function createCustomSkill() {
+    var name = $('skill-create-name').value.trim();
+    var err = $('skill-create-error');
+    function fail(msg) { err.textContent = msg; err.hidden = false; }
+    if (!name) return fail('Give the skill a name first.');
+    var kind = $('skill-create-type').value === 'spell' ? 'spell' : 'skill';
+    var rank = Math.max(1, Math.min(15, num($('skill-create-rank').value, 1)));
+    var card = { id: uid(), name: name, kind: kind, ownRank: rank, stat: $('skill-create-stat').value, checkType: $('skill-create-check').value, effect: $('skill-create-effect').value.trim(), used: false, gearGrants: {} };
+    (kind === 'spell' ? state.spells : state.skills).push(card);
+    state.cardOpen = state.cardOpen || {};
+    state.cardOpen[card.id] = true;
+    $('skill-create-modal').hidden = true;
+    saveSoon(); renderAll(); showTab(kind === 'spell' ? 'spells' : 'skills');
+  }
   async function openRaceClassPicker(kind) {
     if (lockedGuard()) return;
     var list = await ensureRaces();
@@ -2923,7 +2957,18 @@
     setCardStat: function (kind, id, value) {
       var list = kind === 'spell' ? state.spells : state.skills;
       var card = list.find(function (c) { return c.id === id; });
-      if (card) { card.stat = value; saveSoon(); renderAll(); }
+      if (!card) return;
+      card.stat = value;
+      // ?v=54: the book stat is only a default. Picking a different stat
+      // overrides it for this card (rollCard honours the override);
+      // picking the book stat again clears the override. A library entry
+      // with no stat has no book value to return to, so any explicit
+      // pick is an override of the no-modifier default. Untouched cards
+      // carry no flag and roll exactly as before.
+      var lib = findLib(card.name);
+      var bookStat = lib && lib.stat ? String(lib.stat).toLowerCase() : null;
+      card.statOverride = bookStat === null ? true : (String(value).toLowerCase() !== bookStat);
+      saveSoon(); renderAll();
     },
     setCardCheck: function (kind, id, value) {
       var list = kind === 'spell' ? state.spells : state.skills;
@@ -3349,7 +3394,10 @@
       if (!card) return;
       var stats = computeStats();
       var lib = findLib(card.name);
-      var mod = (lib && !lib.stat) ? 0 : (stats[card.stat] ? stats[card.stat].mod : 0);
+      // ?v=54: a card whose stat was explicitly overridden rolls with the
+      // chosen stat's modifier. Untouched cards keep exactly the old
+      // rule — a library entry with no stat rolls with no modifier.
+      var mod = (card.statOverride || !(lib && !lib.stat)) ? (stats[card.stat] ? stats[card.stat].mod : 0) : 0;
       if (kind === 'skill' && R.isAttackSkill(card.name)) {
         promptEffectThenRoll(card.name, card.stat, mod, null, cardRank(card));
       } else {
@@ -3718,14 +3766,10 @@
     var f3d = $('floor3-dm'); if (f3d) f3d.addEventListener('change', function () { if (f3) floor3DmToggle(f3d.checked); });
     click('levelup-rollall', function () { rollAllLevelUp(); });
     click('item-pick', openItemPicker);
-    click('skill-add', function () {
-      state.skills.push({ id: uid(), name: 'New Skill', kind: 'skill', ownRank: 1, stat: 'str', checkType: 'Active Check', effect: '', used: false, gearGrants: {} });
-      saveSoon(); renderAll(); showTab('skills');
-    });
-    click('spell-add', function () {
-      state.spells.push({ id: uid(), name: 'New Spell', kind: 'spell', ownRank: 1, stat: 'int', checkType: 'Active Check', effect: '', used: false, gearGrants: {} });
-      saveSoon(); renderAll(); showTab('spells');
-    });
+    click('skill-add', function () { openSkillCreate('skill'); });
+    click('spell-add', function () { openSkillCreate('spell'); });
+    click('skill-create-save', function () { createCustomSkill(); });
+    click('skill-create-cancel', function () { $('skill-create-modal').hidden = true; });
     click('item-add', function () { openItemCreate(); });
     click('item-create-save', function () { createCustomItem(); });
     click('item-create-cancel', function () { $('item-create-modal').hidden = true; });
