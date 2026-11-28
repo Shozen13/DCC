@@ -2422,7 +2422,7 @@
     var sub = $('item-create-subtype').value;
     $('item-create-gear').hidden = k !== 'gear';
     $('item-create-consumable').hidden = k !== 'consumable';
-    $('item-create-freetype').hidden = !(k === 'coupon' || k === 'material');
+    $('item-create-freetypegroup').hidden = !(k === 'coupon' || k === 'material');
     var cons = k === 'consumable';
     $('item-create-qtygroup').hidden = !(cons || k === 'material');
     $('item-create-spellgroup').hidden = !(cons && (sub === 'Scroll' || sub === 'Spellbook'));
